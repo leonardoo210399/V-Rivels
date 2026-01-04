@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+.checker-background::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-image:
+    linear-gradient(#e6e6e690 1px, transparent 1px),
+    linear-gradient(90deg, #e6e6e690 1px, transparent 1px);
+  background-size: 3.7em 3.7em;
+  mask-image: radial-gradient(ellipse at 50% 40%, black 0%, transparent 55%);
+  z-index: -1;
+  background-position-x: center;
+}
+
+.hero-heading {
+  @apply text-6xl leading-[0.8] font-black uppercase sm:text-9xl;
+  font-family: var(--font-anton), sans-serif;
+}
+
+.special-font {
+  font-family: var(--font-anton), sans-serif;
+}
+
+.absolute-center {
+  @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2;
+}
+
+.mask-clip-path {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.contact-clip-path-1 {
+    clip-path: polygon(29% 0, 71% 0, 100% 35%, 100% 100%, 71% 100%, 25% 100%, 0 100%, 0 32%);
+}
+
+.contact-clip-path-2 {
+    clip-path: polygon(29% 0, 100% 0, 100% 100%, 0 100%, 0 26%);
+}
+
+.sword-man-clip-path {
+    clip-path: polygon(15% 0, 85% 0, 100% 35%, 85% 100%, 15% 100%, 0 35%);
+}
+
+.font-zentry {
+   font-family: var(--font-anton), sans-serif;
+}
+
+/* Custom Date/Time Picker Styling */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+input[type="datetime-local"] {
+    position: relative;
+}
