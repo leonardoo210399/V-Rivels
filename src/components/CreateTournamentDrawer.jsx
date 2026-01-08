@@ -1,8 +1,44 @@
-"use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createTournament } from "@/lib/tournaments";
-import { X, Trophy, Calendar, Users, Info, Gamepad2 } from "lucide-react";
+import { X, Trophy, Calendar, Users, Info, Gamepad2, Bold, List, Heading2, Eye, Edit3, Undo2, Redo2 } from "lucide-react";
 import Loader from "@/components/Loader";
+
+// Import the same parser logic used in the detail page
+const RichPreview = ({ text }) => {
+    if (!text) return <p className="text-slate-600 italic text-sm">Preview will appear here...</p>;
+    const lines = text.split('\n');
+    return (
+        <div className="space-y-3 p-4 rounded-xl bg-slate-950 border border-white/5 min-h-[150px]">
+            {lines.map((line, i) => {
+                const trimmed = line.trim();
+                if (!trimmed) return <div key={i} className="h-2" />;
+                const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
+                let content = isBullet ? trimmed.replace(/^[•\-*]\s*/, '') : trimmed;
+                const parts = content.split(/(\*\*.*?\*\*)/g);
+                const formattedContent = parts.map((part, j) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                        return <span key={j} className="font-bold text-white">{part.slice(2, -2)}</span>;
+                    }
+                    return part;
+                });
+                if (isBullet) {
+                    return (
+                        <div key={i} className="flex gap-3 pl-2 items-start">
+                            <div className="mt-2 h-1 w-1 rounded-full bg-rose-500 shrink-0" />
+                            <p className="text-sm text-slate-300 leading-relaxed">{formattedContent}</p>
+                        </div>
+                    );
+                }
+                const isHeader = !isBullet && ((trimmed === trimmed.toUpperCase() && trimmed.length > 3) || /^[A-Z\s]{4,}:/.test(trimmed));
+                return (
+                    <p key={i} className={`text-sm leading-relaxed ${isHeader ? 'font-bold text-rose-500 uppercase tracking-wider text-[10px] pt-2' : 'text-slate-400'}`}>
+                        {formattedContent}
+                    </p>
+                );
+            })}
+        </div>
+    );
+};
 
 export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -18,6 +54,62 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
       checkInEnabled: false,
       checkInStart: ""
   });
+  const [showPreview, setShowPreview] = useState(false);
+  const [history, setHistory] = useState([formData.description]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const textareaRef = useRef(null);
+
+  const updateDescription = (newText) => {
+    setFormData(prev => ({ ...prev, description: newText }));
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newText);
+    if (newHistory.length > 50) newHistory.shift();
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setFormData(prev => ({ ...prev, description: history[newIndex] }));
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+        const newIndex = historyIndex + 1;
+        setHistoryIndex(newIndex);
+        setFormData(prev => ({ ...prev, description: history[newIndex] }));
+    }
+  };
+
+  const insertFormat = (prefix, suffix = "") => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = formData.description;
+    const selection = text.substring(start, end);
+    
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    
+    let finalPrefix = prefix;
+    if (prefix === "• " && before.length > 0 && !before.endsWith('\n')) {
+        finalPrefix = "\n• ";
+    }
+
+    const newText = before + finalPrefix + selection + suffix + after;
+    setFormData({ ...formData, description: newText });
+    
+    setTimeout(() => {
+        textarea.focus();
+        const cursorOffset = finalPrefix.length;
+        textarea.setSelectionRange(start + cursorOffset, end + cursorOffset);
+    }, 0);
+  };
 
   if (!isOpen) return null;
 
@@ -209,16 +301,84 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
               {/* Description */}
               <div className="space-y-4 pt-4 border-t border-white/5">
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block flex items-center gap-1">
-                    <Info className="h-3 w-3" /> About / Rules
-                  </label>
-                  <textarea 
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Enter tournament rules, map pool, and general info..."
-                    className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-rose-500/50 outline-none transition-all resize-none"
-                  />
+                  <div className="mb-3 flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1">
+                        <Info className="h-3 w-3" /> About / Rules
+                    </label>
+                    <div className="flex bg-slate-950 rounded-lg p-1 border border-white/5">
+                        <button 
+                            type="button"
+                            onClick={() => setShowPreview(false)}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${!showPreview ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            <Edit3 className="h-3 w-3" />
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setShowPreview(true)}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${showPreview ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            <Eye className="h-3 w-3" />
+                        </button>
+                    </div>
+                  </div>
+
+                  {!showPreview ? (
+                    <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-950 border border-white/10 rounded-t-xl border-b-0">
+                            <button 
+                                type="button" 
+                                onClick={() => insertFormat("**", "**")}
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
+                            >
+                                <Bold className="h-4 w-4" />
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => insertFormat("• ")}
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
+                            >
+                                <List className="h-4 w-4" />
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => insertFormat("HEADER: \n")}
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
+                            >
+                                <Heading2 className="h-4 w-4" />
+                            </button>
+                            <div className="h-4 w-[1px] bg-white/5 mx-1" />
+                            <button 
+                                type="button" 
+                                onClick={undo}
+                                disabled={historyIndex === 0}
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors disabled:opacity-20"
+                                title="Undo"
+                            >
+                                <Undo2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={redo}
+                                disabled={historyIndex === history.length - 1}
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors disabled:opacity-20"
+                                title="Redo"
+                            >
+                                <Redo2 className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                        <textarea 
+                            ref={textareaRef}
+                            rows={8}
+                            value={formData.description}
+                            onChange={(e) => updateDescription(e.target.value)}
+                            placeholder="Enter tournament rules..."
+                            className="w-full bg-slate-950 border border-white/10 rounded-b-xl px-4 py-3 text-sm text-white focus:border-rose-500/50 outline-none transition-all resize-none min-h-[200px]"
+                        />
+                    </div>
+                  ) : (
+                    <RichPreview text={formData.description} />
+                  )}
                 </div>
               </div>
             </form>

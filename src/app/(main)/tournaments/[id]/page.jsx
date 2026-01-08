@@ -2,7 +2,7 @@
 import { useEffect, useState, use } from "react";
 import { getTournament, registerForTournament, getRegistrations, deleteTournament, checkInForTournament } from "@/lib/tournaments";
 import { getMatches } from "@/lib/brackets";
-import TournamentBracket from "@/components/TournamentBracket";
+import CompleteBracket from "@/components/CompleteBracket";
 import { useAuth } from "@/context/AuthContext";
 import { getUserProfile } from "@/lib/users";
 import { getAccount } from "@/lib/valorant";
@@ -10,7 +10,61 @@ import { useRouter } from "next/navigation";
 import { Calendar, Trophy, Users, AlertCircle, CheckCircle, Trash2, UserCheck, UserX, ShieldCheck, ChevronLeft, ExternalLink } from "lucide-react";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
-import { updateTournament } from "@/lib/tournaments";
+const RichText = ({ text }) => {
+    if (!text) return null;
+    
+    // Group lines into paragraphs/sections
+    const lines = text.split('\n');
+    
+    return (
+        <div className="space-y-3">
+            {lines.map((line, i) => {
+                const trimmed = line.trim();
+                if (!trimmed) return <div key={i} className="h-2" />;
+
+                // Check for bullet points
+                const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
+                let content = isBullet ? trimmed.replace(/^[•\-*]\s*/, '') : trimmed;
+
+                // Handle bold text within the line
+                const parts = content.split(/(\*\*.*?\*\*)/g);
+                const formattedContent = parts.map((part, j) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                        return <span key={j} className="font-black text-white">{part.slice(2, -2)}</span>;
+                    }
+                    return part;
+                });
+
+                if (isBullet) {
+                    return (
+                        <div key={i} className="flex gap-4 pl-4 items-start group">
+                            <div className="mt-2 h-1 w-1 rounded-full bg-rose-500 shrink-0 group-hover:scale-150 transition-transform" />
+                            <p className="text-sm opacity-80 leading-relaxed group-hover:opacity-100 transition-opacity">
+                                {formattedContent}
+                            </p>
+                        </div>
+                    );
+                }
+
+                // Check if line is a header (starts with all caps keyword or is all caps)
+                const isHeader = !isBullet && (
+                    (trimmed === trimmed.toUpperCase() && trimmed.length > 3) || 
+                    /^[A-Z\s]{4,}:/.test(trimmed)
+                );
+
+                return (
+                    <p key={i} className={`text-sm leading-relaxed transition-all ${
+                        isHeader 
+                        ? 'font-black text-white uppercase tracking-[0.15em] text-[10px] pt-4 mb-1 border-b border-white/5 pb-2 inline-block' 
+                        : 'opacity-70 hover:opacity-100'
+                    }`}>
+                        {formattedContent}
+                    </p>
+                );
+            })}
+        </div>
+    );
+};
 
 export default function TournamentDetailPage({ params }) {
   const unwrappedParams = use(params);
@@ -188,19 +242,26 @@ export default function TournamentDetailPage({ params }) {
   const isCheckedIn = userRegistration?.checkedIn;
   const isFull = registrations.length >= tournament.maxTeams;
 
-  const handleCheckIn = async () => {
-      setCheckingIn(true);
-      try {
-          await checkInForTournament(userRegistration.$id);
-          // Refresh data
-          const regs = await getRegistrations(id);
-          setRegistrations(regs.documents);
-      } catch (e) {
-          alert("Check-in failed: " + e.message);
-      } finally {
-          setCheckingIn(false);
-      }
-  };
+    const handleCheckIn = async () => {
+        setCheckingIn(true);
+        try {
+            await checkInForTournament(userRegistration.$id);
+            // Refresh data
+            const regs = await getRegistrations(id);
+            setRegistrations(regs.documents);
+        } catch (e) {
+            alert("Check-in failed: " + e.message);
+        } finally {
+            setCheckingIn(false);
+        }
+    };
+
+    const scrollToBracket = () => {
+        const element = document.getElementById('tournament-map');
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -217,7 +278,14 @@ export default function TournamentDetailPage({ params }) {
         </div>
         
         <div className="container relative z-20 mx-auto flex h-full flex-col justify-end px-6 pb-12 sm:pb-16">
-            <div className="max-w-4xl space-y-6">
+            <div className="max-w-5xl space-y-8">
+                <div className="space-y-4">
+                    <p className="text-xs font-black uppercase tracking-[0.4em] text-rose-500/80 pl-1">Tournament Entry</p>
+                    <h1 className="special-font text-6xl md:text-8xl lg:text-9xl font-black uppercase text-white leading-[0.85] tracking-tighter filter drop-shadow-2xl">
+                        {tournament.name}
+                    </h1>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-3">
                     <div className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg backdrop-blur-md ${
                         (tournament.status || 'open') === 'open' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
@@ -245,13 +313,14 @@ export default function TournamentDetailPage({ params }) {
                         </div>
                     )}
                 </div>
+            </div>
 
-                <div className="space-y-2">
-                    <p className="text-xs font-black uppercase tracking-[0.4em] text-rose-500/80 pl-1">Tournament Entry</p>
-                    <h1 className="special-font text-6xl md:text-8xl lg:text-9xl font-black uppercase text-white leading-[0.85] tracking-tighter filter drop-shadow-2xl">
-                        {tournament.name}
-                    </h1>
+            {/* Scroll Indicator */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30 animate-bounce">
+                <div className="w-5 h-8 rounded-full border-2 border-white flex justify-center pt-2">
+                    <div className="w-1 h-2 bg-white rounded-full" />
                 </div>
+                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-white">Scroll</span>
             </div>
         </div>
       </section>
@@ -259,7 +328,7 @@ export default function TournamentDetailPage({ params }) {
       <div className="mx-auto max-w-6xl px-6 py-12 relative -mt-10 z-30">
         <button 
           onClick={() => router.back()}
-          className="mb-10 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-all group"
+          className="mt-5 mb-5 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-white transition-all group"
         >
           <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
           Back to Tournaments
@@ -268,25 +337,39 @@ export default function TournamentDetailPage({ params }) {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-8 backdrop-blur-xl">
-                <div className="mb-8 flex gap-4 border-b border-white/10">
-                    <button 
-                        onClick={() => setActiveTab("overview")}
-                        className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "overview" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
-                    >
-                        Overview
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab("brackets")}
-                        className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "brackets" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
-                    >
-                        {tournament.gameType === 'Deathmatch' ? 'Standings' : 'Brackets'}
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab("participants")}
-                        className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "participants" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
-                    >
-                        Participants
-                    </button>
+                <div className="mb-8 flex items-center justify-between border-b border-white/10">
+                    <div className="flex gap-4">
+                        <button 
+                            onClick={() => setActiveTab("overview")}
+                            className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "overview" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                        >
+                            Overview
+                        </button>
+                        {tournament.gameType === 'Deathmatch' && (
+                            <button 
+                                onClick={() => setActiveTab("brackets")}
+                                className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "brackets" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                            >
+                                Standings
+                            </button>
+                        )}
+                        <button 
+                            onClick={() => setActiveTab("participants")}
+                            className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "participants" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                        >
+                            Participants
+                        </button>
+                    </div>
+
+                    {tournament.bracketGenerated && tournament.gameType !== 'Deathmatch' && (
+                        <button 
+                            onClick={scrollToBracket}
+                            className="mb-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white transition-all group shadow-lg shadow-rose-500/5"
+                        >
+                            <span>View Tournament Map</span>
+                            <ChevronLeft className="h-3 w-3 -rotate-90 transition-transform group-hover:translate-y-0.5" />
+                        </button>
+                    )}
                 </div>
 
                 {activeTab === "overview" && (
@@ -296,9 +379,12 @@ export default function TournamentDetailPage({ params }) {
                                 <div className="h-2 w-2 rounded-full bg-rose-500" />
                                 Tournament Brief
                             </h2>
-                            <p className="leading-relaxed text-sm opacity-80">
-                                {tournament.description || "Compete against the best teams in this exciting tournament. Prove your skills and climb the rankings."}
-                            </p>
+                            <div className="mt-2">
+                                <RichText text={tournament.description} />
+                                {!tournament.description && (
+                                    <p className="text-sm opacity-50 italic">No description provided for this tournament.</p>
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid sm:grid-cols-2 gap-8 border-t border-white/5 pt-8">
@@ -332,29 +418,25 @@ export default function TournamentDetailPage({ params }) {
                     </div>
                 )}
 
-                {activeTab === "brackets" && (
+                {activeTab === "brackets" && tournament.gameType === 'Deathmatch' && (
                     <div className="animate-in fade-in duration-500">
                         {tournament.bracketGenerated ? (
-                            tournament.gameType === 'Deathmatch' ? (
-                                <DeathmatchStandings 
-                                    registrations={registrations} 
-                                    tournament={tournament} 
-                                    isAdmin={isAdmin} 
-                                    matches={matches}
-                                />
-                            ) : (
-                                <TournamentBracket matches={matches} participants={participantMap} tournament={tournament} />
-                            )
+                            <DeathmatchStandings 
+                                registrations={registrations} 
+                                tournament={tournament} 
+                                isAdmin={isAdmin} 
+                                matches={matches}
+                            />
                         ) : (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <div className="p-4 rounded-full bg-slate-950 border border-white/5 mb-4">
                                     <Trophy className="h-10 w-10 text-slate-800" />
                                 </div>
                                 <h3 className="text-lg font-bold text-slate-500 uppercase tracking-widest">
-                                    {tournament.gameType === 'Deathmatch' ? 'Standings Not Live' : 'Bracket Not Generated'}
+                                    Standings Not Live
                                 </h3>
                                 <p className="text-sm text-slate-600 mt-2">
-                                    {tournament.gameType === 'Deathmatch' ? 'The leaderboard will appear here once the match starts.' : 'The tournament matches will be visible here once the bracket is created.'}
+                                    The leaderboard will appear here once the match starts.
                                 </p>
                             </div>
                         )}
@@ -603,6 +685,13 @@ export default function TournamentDetailPage({ params }) {
           </div>
         </div>
       </div>
+
+      {/* Complete Bracket Section */}
+      {tournament.gameType !== 'Deathmatch' && (
+        <div id="tournament-map" className="container mx-auto px-6 pb-20 mt-12 scroll-mt-24">
+            <CompleteBracket matches={matches} participants={participantMap} tournament={tournament} />
+        </div>
+      )}
     </div>
   );
 }

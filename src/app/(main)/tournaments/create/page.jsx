@@ -1,10 +1,48 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createTournament } from "@/lib/tournaments";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { Bold, List, Heading2, Eye, Edit3, Type, Undo2, Redo2 } from "lucide-react";
 
 import Loader from "@/components/Loader";
+
+// Import the same parser logic used in the detail page
+const RichPreview = ({ text }) => {
+    if (!text) return <p className="text-slate-600 italic text-sm">Preview will appear here...</p>;
+    const lines = text.split('\n');
+    return (
+        <div className="space-y-3 p-4 rounded-md bg-slate-950/30 border border-white/5 min-h-[150px]">
+            {lines.map((line, i) => {
+                const trimmed = line.trim();
+                if (!trimmed) return <div key={i} className="h-2" />;
+                const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
+                let content = isBullet ? trimmed.replace(/^[•\-*]\s*/, '') : trimmed;
+                const parts = content.split(/(\*\*.*?\*\*)/g);
+                const formattedContent = parts.map((part, j) => {
+                    if (part.startsWith('**') && part.endsWith('**')) {
+                        return <span key={j} className="font-bold text-white">{part.slice(2, -2)}</span>;
+                    }
+                    return part;
+                });
+                if (isBullet) {
+                    return (
+                        <div key={i} className="flex gap-3 pl-2 items-start">
+                            <div className="mt-2 h-1 w-1 rounded-full bg-rose-500 shrink-0" />
+                            <p className="text-sm text-slate-300 leading-relaxed">{formattedContent}</p>
+                        </div>
+                    );
+                }
+                const isHeader = !isBullet && ((trimmed === trimmed.toUpperCase() && trimmed.length > 3) || /^[A-Z\s]{4,}:/.test(trimmed));
+                return (
+                    <p key={i} className={`text-sm leading-relaxed ${isHeader ? 'font-bold text-rose-500 uppercase tracking-wider text-xs pt-2' : 'text-slate-400'}`}>
+                        {formattedContent}
+                    </p>
+                );
+            })}
+        </div>
+    );
+};
 
 export default function CreateTournamentPage() {
   const router = useRouter();
@@ -22,6 +60,67 @@ export default function CreateTournamentPage() {
       checkInEnabled: false,
       checkInStart: ""
   });
+  const [showPreview, setShowPreview] = useState(false);
+  const [history, setHistory] = useState([formData.description]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const textareaRef = useRef(null);
+
+  const updateDescription = (newText) => {
+    setFormData(prev => ({ ...prev, description: newText }));
+    
+    // Add to history
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newText);
+    if (newHistory.length > 50) newHistory.shift(); // Limit history
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setFormData(prev => ({ ...prev, description: history[newIndex] }));
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+        const newIndex = historyIndex + 1;
+        setHistoryIndex(newIndex);
+        setFormData(prev => ({ ...prev, description: history[newIndex] }));
+    }
+  };
+
+  const insertFormat = (prefix, suffix = "") => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = formData.description;
+    const selection = text.substring(start, end);
+    
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    
+    // If it's a list item, check if we need a newline
+    let finalPrefix = prefix;
+    if (prefix === "• " && before.length > 0 && !before.endsWith('\n')) {
+        finalPrefix = "\n• ";
+    }
+
+    const newText = before + finalPrefix + selection + suffix + after;
+    
+    setFormData({ ...formData, description: newText });
+    
+    // Reset focus and selection
+    setTimeout(() => {
+        textarea.focus();
+        const cursorOffset = finalPrefix.length;
+        textarea.setSelectionRange(start + cursorOffset, end + cursorOffset);
+    }, 0);
+  };
 
   useEffect(() => {
     if (!authLoading) {
@@ -169,15 +268,97 @@ export default function CreateTournamentPage() {
                 </div>
              )}
             
-             <div className="pt-4 border-t border-white/5">
-                <label className="mb-1 block text-sm font-medium text-slate-400">Description</label>
-                <textarea 
-                    className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Rules, schedule, and other details..."
-                />
+              <div className="pt-4 border-t border-white/5">
+                <div className="mb-2 flex items-center justify-between">
+                    <label className="text-sm font-medium text-slate-400">Description / Rules</label>
+                    <div className="flex bg-slate-950 rounded-lg p-1 border border-white/5">
+                        <button 
+                            type="button"
+                            onClick={() => setShowPreview(false)}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${!showPreview ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <Edit3 className="h-3 w-3" />
+                                Edit
+                            </div>
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setShowPreview(true)}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${showPreview ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-white'}`}
+                        >
+                             <div className="flex items-center gap-1.5">
+                                <Eye className="h-3 w-3" />
+                                Preview
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                {!showPreview ? (
+                    <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-950 border border-white/10 rounded-t-md border-b-0">
+                            <button 
+                                type="button" 
+                                onClick={() => insertFormat("**", "**")}
+                                title="Bold"
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
+                            >
+                                <Bold className="h-4 w-4" />
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => insertFormat("• ")}
+                                title="Bullet List"
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
+                            >
+                                <List className="h-4 w-4" />
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => insertFormat("HEADER: \n")}
+                                title="Section Header"
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
+                            >
+                                <Heading2 className="h-4 w-4" />
+                            </button>
+                            <div className="h-4 w-[1px] bg-white/5 mx-1" />
+                            <button 
+                                type="button" 
+                                onClick={undo}
+                                disabled={historyIndex === 0}
+                                title="Undo"
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors disabled:opacity-20"
+                            >
+                                <Undo2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={redo}
+                                disabled={historyIndex === history.length - 1}
+                                title="Redo"
+                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors disabled:opacity-20"
+                            >
+                                <Redo2 className="h-3.5 w-3.5" />
+                            </button>
+                            <div className="h-4 w-[1px] bg-white/5 mx-1" />
+                            <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-2">Styling Toolbar</span>
+                        </div>
+                        <textarea 
+                            ref={textareaRef}
+                            className="w-full rounded-b-md border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white focus:border-rose-500 focus:outline-none min-h-[200px]"
+                            rows={8}
+                            value={formData.description}
+                            onChange={(e) => updateDescription(e.target.value)}
+                            placeholder="**MISSION STATEMENT**&#10;Welcome to our tournament...&#10;&#10;• Rule 1...&#10;• Rule 2..."
+                        />
+                    </div>
+                ) : (
+                    <RichPreview text={formData.description} />
+                )}
+                <p className="mt-2 text-[10px] text-slate-500 italic">
+                    Tip: Use **text** for bold, • for lists, and ALL CAPS for headers.
+                </p>
             </div>
 
              <button 

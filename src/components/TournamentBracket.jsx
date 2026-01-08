@@ -98,67 +98,78 @@ export default function TournamentBracket({ matches = [], participants = {}, tou
     }, {});
 
     const roundKeys = Object.keys(rounds).sort((a, b) => parseInt(a) - parseInt(b));
-
     const getTeam = (id) => participants[id] || { name: 'TBD' };
 
+    // Compact heights for Tab view
+    const BASE_SLOT_HEIGHT = 160;
+
     return (
-        <div className="w-full overflow-x-auto pb-10 custom-scrollbar">
-            <div className="flex gap-24 min-w-max px-8 pt-16">
-                {roundKeys.map((round, rIndex) => (
-                    <div key={round} className="flex flex-col justify-around gap-16 relative py-4">
-                        {/* Round Header */}
-                        <div className="absolute -top-10 left-0 right-0 text-center">
-                            <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.4em] italic opacity-80 whitespace-nowrap">
-                                {rIndex === roundKeys.length - 1 ? 'Championship' : 
-                                 rIndex === roundKeys.length - 2 ? 'Semi Finals' : 
-                                 rIndex === roundKeys.length - 3 ? 'Quarter Finals' :
-                                 `Round ${round}`}
-                            </span>
-                        </div>
+        <div className="w-full overflow-x-auto pb-10 custom-scrollbar scroll-smooth">
+            <div className="flex gap-12 min-w-max">
+                {roundKeys.map((round, rIndex) => {
+                    const roundMatches = [...rounds[round]].sort((a, b) => a.matchIndex - b.matchIndex);
+                    const slotHeight = BASE_SLOT_HEIGHT * Math.pow(2, rIndex);
+                    
+                    return (
+                        <div key={round} className="flex flex-col relative w-60">
+                            {/* Round Header */}
+                            <div className="mb-8 text-center">
+                                <span className="text-[9px] font-black text-rose-500/60 uppercase tracking-[0.3em] italic whitespace-nowrap">
+                                    {rIndex === roundKeys.length - 1 ? 'Finals' : 
+                                     rIndex === roundKeys.length - 2 ? 'Semi' : 
+                                     rIndex === roundKeys.length - 3 ? 'Quarter' :
+                                     `Round ${round}`}
+                                </span>
+                            </div>
 
-                        {/* Matches for this round */}
-                        {rounds[round].sort((a, b) => a.matchIndex - b.matchIndex).map((match, mIndex) => (
-                            <div key={match.$id} className="relative flex items-center">
-                                {/* Connector Lines to NEXT round */}
-                                {rIndex < roundKeys.length - 1 && (
-                                    <div className="absolute -right-24 top-1/2 w-24 h-px pointer-events-none z-0">
-                                        {/* Horizontal branch from current card to midpoint */}
-                                        <div className="absolute left-0 top-0 w-12 h-px bg-white/10 shadow-[0_0_8px_rgba(255,255,255,0.05)]" />
-                                        
-                                        {/* Vertical fork line */}
-                                        <div className={`absolute left-12 w-px bg-white/10 shadow-[0_0_8px_rgba(255,255,255,0.05)] ${
-                                            mIndex % 2 === 0 
-                                            ? 'top-0 h-[84px]' // Top match connects down
-                                            : 'bottom-0 h-[84px]' // Bottom match connects up
-                                        }`} />
+                            {/* Matches */}
+                            {roundMatches.map((match, mIndex) => {
+                                const connectorHeight = slotHeight / 2;
+                                
+                                return (
+                                    <div 
+                                        key={match.$id} 
+                                        className="relative flex items-center justify-center"
+                                        style={{ height: `${slotHeight}px` }}
+                                    >
+                                        <div className="relative z-10 scale-90 origin-center">
+                                            <MatchCard 
+                                                match={{ ...match, tournamentId: tournament.$id, tournamentDate: tournament?.date }} 
+                                                teamA={getTeam(match.teamA)} 
+                                                teamB={getTeam(match.teamB)}
+                                                isFinal={rIndex === roundKeys.length - 1} 
+                                            />
+                                        </div>
 
-                                        {/* Final horizontal connector to the actual match in NEXT round */}
-                                        {/* Only show this from the top match of each pair */}
-                                        {mIndex % 2 === 0 && (
-                                            <div className="absolute left-12 top-[84px] w-12 h-px bg-white/10 shadow-[0_0_8px_rgba(255,255,255,0.05)]" />
+                                        {/* Connector Lines */}
+                                        {rIndex < roundKeys.length - 1 && (
+                                            <div className="absolute -right-12 top-1/2 w-12 pointer-events-none z-0">
+                                                <div className="absolute left-0 top-0 w-6 h-px bg-white/10" />
+                                                <div 
+                                                    className="absolute left-6 w-px bg-white/10" 
+                                                    style={{ 
+                                                        height: `${connectorHeight}px`,
+                                                        top: mIndex % 2 === 0 ? '0' : `-${connectorHeight}px`
+                                                    }}
+                                                />
+                                                {mIndex % 2 === 0 && (
+                                                    <div className="absolute left-6 w-6 h-px bg-white/10" style={{ top: `${connectorHeight}px` }} />
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                )}
-                                
-                                <div className="relative z-10">
-                                    <MatchCard 
-                                        match={{ ...match, tournamentDate: tournament?.date }} 
-                                        teamA={getTeam(match.teamA)} 
-                                        teamB={getTeam(match.teamB)}
-                                        isFinal={rIndex === roundKeys.length - 1} 
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ))}
+                                );
+                            })}
+                        </div>
+                    );
+                })}
             </div>
 
             <style jsx>{`
-                .custom-scrollbar::-webkit-scrollbar { height: 6px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(225, 29, 72, 0.2); }
+                .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(225, 29, 72, 0.4); border: 2px solid transparent; background-clip: content-box; }
             `}</style>
         </div>
     );
