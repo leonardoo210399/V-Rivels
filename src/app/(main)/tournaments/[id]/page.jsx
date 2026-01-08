@@ -343,7 +343,7 @@ export default function TournamentDetailPage({ params }) {
                                     matches={matches}
                                 />
                             ) : (
-                                <TournamentBracket matches={matches} participants={participantMap} />
+                                <TournamentBracket matches={matches} participants={participantMap} tournament={tournament} />
                             )
                         ) : (
                             <div className="flex flex-col items-center justify-center py-20 text-center">

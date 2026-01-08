@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Users, Shield, Target, Medal, Edit2, Check, X } from 'lucide-react';
+import { Trophy, Users, Shield, Target, Medal, Edit2, Check, X, Clock } from 'lucide-react';
 import { updateParticipantScore } from '@/lib/brackets';
 
 export default function DeathmatchStandings({ registrations, tournament, isAdmin, matches = [] }) {
@@ -55,9 +55,19 @@ export default function DeathmatchStandings({ registrations, tournament, isAdmin
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-slate-950 border border-white/5 rounded-xl">
-                    <Users className="h-4 w-4 text-rose-500" />
-                    <span className="text-xs font-bold text-white uppercase">{registrations.length} Players</span>
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-950 border border-white/5 rounded-xl">
+                        <Users className="h-4 w-4 text-rose-500" />
+                        <span className="text-xs font-bold text-white uppercase">{registrations.length} Players</span>
+                    </div>
+                    {(lobbyMatch?.scheduledTime || tournament?.date) && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-950 border border-white/5 rounded-xl self-end" suppressHydrationWarning>
+                            <Clock className="h-3.5 w-3.5 text-rose-500" />
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                {new Date(lobbyMatch?.scheduledTime || tournament?.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 

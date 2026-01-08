@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 const MatchCard = ({ match, teamA, teamB, isFinal }) => {
@@ -11,6 +11,17 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
 
     const isWinnerA = match.winner && match.winner === match.teamA;
     const isWinnerB = match.winner && match.winner === match.teamB;
+
+    const time = match.scheduledTime;
+    let displayTime = time;
+    if (!time && match.round && match.matchIndex !== undefined && match.tournamentDate) {
+        const startDate = new Date(match.tournamentDate);
+        const offset = (match.round - 1) * 4 + match.matchIndex;
+        startDate.setHours(startDate.getHours() + offset);
+        displayTime = startDate.toISOString();
+    }
+
+    const formattedTime = displayTime ? new Date(displayTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
 
     return (
         <Link href={`/tournaments/${match.tournamentId}/match/${match.$id}`} className={`
@@ -51,6 +62,16 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
                     {match.scoreB !== null ? match.scoreB : '-'}
                 </span>
             </div>
+
+            {formattedTime && match.status !== 'completed' && (
+                <div 
+                    className="flex items-center gap-1.5 mt-1 pt-2 border-t border-white/5 opacity-50 group-hover:opacity-100 transition-opacity"
+                    suppressHydrationWarning
+                >
+                    <Clock className="w-3 h-3 text-rose-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Scheduled: {formattedTime}</span>
+                </div>
+            )}
             
             {isFinal && (
                 <div className="absolute -top-1 -right-1 bg-gradient-to-br from-yellow-400 to-yellow-600 text-black p-2 rounded-bl-xl shadow-lg shadow-yellow-500/20 z-20">
@@ -61,7 +82,7 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
     );
 };
 
-export default function TournamentBracket({ matches = [], participants = {} }) {
+export default function TournamentBracket({ matches = [], participants = {}, tournament = {} }) {
     if (!matches.length) return (
         <div className="flex flex-col items-center justify-center p-20 text-slate-600 bg-slate-950/20 border border-dashed border-white/5 rounded-3xl">
             <Trophy className="w-12 h-12 mb-4 opacity-10" />
@@ -121,7 +142,7 @@ export default function TournamentBracket({ matches = [], participants = {} }) {
                                 
                                 <div className="relative z-10">
                                     <MatchCard 
-                                        match={match} 
+                                        match={{ ...match, tournamentDate: tournament?.date }} 
                                         teamA={getTeam(match.teamA)} 
                                         teamB={getTeam(match.teamB)}
                                         isFinal={rIndex === roundKeys.length - 1} 

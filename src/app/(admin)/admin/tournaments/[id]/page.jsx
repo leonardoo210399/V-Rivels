@@ -32,7 +32,8 @@ import {
     Trash2,
     ExternalLink,
     Loader as LoaderIcon,
-    RotateCcw
+    RotateCcw,
+    Clock
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import Link from "next/link";
@@ -616,9 +617,37 @@ export default function TournamentControlPage({ params }) {
                                                                             </span>
                                                                         )}
                                                                     </p>
-                                                                    <p className="text-[10px] text-slate-600 font-black uppercase">
-                                                                        ID: {match.$id.substring(0, 8)}...
-                                                                    </p>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <p className="text-[10px] text-slate-600 font-black uppercase">
+                                                                            ID: {match.$id.substring(0, 8)}...
+                                                                        </p>
+                                                                        {(() => {
+                                                                            const time = match.scheduledTime;
+                                                                            let displayTime = time;
+                                                                            
+                                                                            if (!time && tournament.date) {
+                                                                                // Calculate fallback time for 5v5
+                                                                                if (tournament.gameType === '5v5') {
+                                                                                    const startDate = new Date(tournament.date);
+                                                                                    // Simple heuristic: Round 1 starts at T+0, R2 at T+(MatchesInR1) etc.
+                                                                                    // But we can just use a simpler one: (Round-1)*4 + MatchIndex
+                                                                                    // To keep it simple and clean:
+                                                                                    const offset = (match.round - 1) * 4 + match.matchIndex;
+                                                                                    startDate.setHours(startDate.getHours() + offset);
+                                                                                    displayTime = startDate.toISOString();
+                                                                                } else {
+                                                                                    displayTime = tournament.date;
+                                                                                }
+                                                                            }
+
+                                                                            return displayTime ? (
+                                                                                <p className="text-[10px] text-rose-500/60 font-black uppercase tracking-widest flex items-center gap-1" suppressHydrationWarning>
+                                                                                    <Clock className="h-3 w-3" />
+                                                                                    {new Date(displayTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                                </p>
+                                                                            ) : null;
+                                                                        })()}
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
