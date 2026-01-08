@@ -141,7 +141,7 @@ export default function TournamentsPage() {
                             <div className="mb-6 rounded-2xl bg-rose-500/[0.03] p-6 border border-rose-500/10 flex flex-col justify-center min-h-[120px]">
                                 <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.2em] text-rose-500/60">Prize Pool</span>
                                 <span className="text-4xl font-black text-white italic tracking-tighter">
-                                    {tournament.prizePool}
+                                    ₹{tournament.prizePool}
                                 </span>
                             </div>
 

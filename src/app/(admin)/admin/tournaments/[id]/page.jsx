@@ -192,6 +192,15 @@ export default function TournamentControlPage({ params }) {
                     updateParticipantScore(regId, values.kills, values.deaths)
                 )
             );
+
+            // Automatically mark matches and tournament as completed for Deathmatch
+            if (tournament.gameType === 'Deathmatch' && matches.length > 0) {
+                await Promise.all(matches.map(m => updateMatchStatus(m.$id, 'completed')));
+                setMatches(prev => prev.map(m => ({ ...m, status: 'completed' })));
+                
+                await updateTournament(id, { status: 'completed' });
+                setTournament(prev => ({ ...prev, status: 'completed' }));
+            }
             
             setRegistrations(prev => prev.map(reg => {
                 const newValues = bulkEditValues[reg.$id];
@@ -206,6 +215,7 @@ export default function TournamentControlPage({ params }) {
 
             setEditingTournamentId(null);
             setBulkEditValues({});
+            alert("Scores saved and tournament marked as completed!");
         } catch (e) {
             alert("Failed to update scores: " + e.message);
         } finally {

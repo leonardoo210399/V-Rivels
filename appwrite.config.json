@@ -321,6 +321,56 @@
                     ],
                     "format": "enum",
                     "default": "scheduled"
+                },
+                {
+                    "key": "vetoData",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "matchStartTime",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "matchEndTime",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "duration",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 1440,
+                    "default": null
+                },
+                {
+                    "key": "isOvertime",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "maximumRounds",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 1,
+                    "max": 50,
+                    "default": null
                 }
             ],
             "indexes": []
@@ -329,9 +379,13 @@
             "$id": "tournaments",
             "$permissions": [
                 "create(\"users\")",
-                "read(\"any\")",
+                "read(\"users\")",
                 "update(\"users\")",
-                "delete(\"users\")"
+                "delete(\"users\")",
+                "create(\"any\")",
+                "read(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
             ],
             "databaseId": "valo-website-database",
             "name": "tournaments",
@@ -447,6 +501,42 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "entryFee",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "firstPrize",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "secondPrize",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "additionalPrizes",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": []

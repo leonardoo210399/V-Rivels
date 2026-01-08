@@ -3,11 +3,12 @@ import { useEffect, useState, use } from "react";
 import { getTournament, registerForTournament, getRegistrations, deleteTournament, checkInForTournament } from "@/lib/tournaments";
 import { getMatches } from "@/lib/brackets";
 import CompleteBracket from "@/components/CompleteBracket";
+import CompleteStandings from "@/components/CompleteStandings";
 import { useAuth } from "@/context/AuthContext";
 import { getUserProfile } from "@/lib/users";
 import { getAccount } from "@/lib/valorant";
 import { useRouter } from "next/navigation";
-import { Calendar, Trophy, Users, AlertCircle, CheckCircle, Trash2, UserCheck, UserX, ShieldCheck, ChevronLeft, ExternalLink } from "lucide-react";
+import { Calendar, Trophy, Users, AlertCircle, CheckCircle, Trash2, UserCheck, UserX, ShieldCheck, ChevronLeft, ExternalLink, Info } from "lucide-react";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
 const RichText = ({ text }) => {
@@ -99,6 +100,14 @@ export default function TournamentDetailPage({ params }) {
             return typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
         } catch (e) {
             return null;
+        }
+    };
+
+    const parsePrizes = (prizes) => {
+        try {
+            return typeof prizes === 'string' ? JSON.parse(prizes) : [];
+        } catch (e) {
+            return [];
         }
     };
 
@@ -257,7 +266,7 @@ export default function TournamentDetailPage({ params }) {
     };
 
     const scrollToBracket = () => {
-        const element = document.getElementById('tournament-map');
+        const element = document.getElementById(tournament.gameType === 'Deathmatch' ? 'tournament-standings' : 'tournament-map');
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -309,7 +318,7 @@ export default function TournamentDetailPage({ params }) {
                     {tournament.bracketGenerated && (
                         <div className="flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 border border-emerald-500/30 shadow-lg backdrop-blur-md">
                             <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            Bracket Live
+                            {tournament.gameType === 'Deathmatch' ? 'Standings Live' : 'Bracket Live'}
                         </div>
                     )}
                 </div>
@@ -345,14 +354,6 @@ export default function TournamentDetailPage({ params }) {
                         >
                             Overview
                         </button>
-                        {tournament.gameType === 'Deathmatch' && (
-                            <button 
-                                onClick={() => setActiveTab("brackets")}
-                                className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "brackets" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
-                            >
-                                Standings
-                            </button>
-                        )}
                         <button 
                             onClick={() => setActiveTab("participants")}
                             className={`pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all ${activeTab === "participants" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
@@ -361,12 +362,12 @@ export default function TournamentDetailPage({ params }) {
                         </button>
                     </div>
 
-                    {tournament.bracketGenerated && tournament.gameType !== 'Deathmatch' && (
+                    {tournament.bracketGenerated && (
                         <button 
                             onClick={scrollToBracket}
                             className="mb-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white transition-all group shadow-lg shadow-rose-500/5"
                         >
-                            <span>View Tournament Map</span>
+                            <span>{tournament.gameType === 'Deathmatch' ? 'View Standings' : 'View Tournament Map'}</span>
                             <ChevronLeft className="h-3 w-3 -rotate-90 transition-transform group-hover:translate-y-0.5" />
                         </button>
                     )}
@@ -386,6 +387,7 @@ export default function TournamentDetailPage({ params }) {
                                 )}
                             </div>
                         </div>
+                        
 
                         <div className="grid sm:grid-cols-2 gap-8 border-t border-white/5 pt-8">
                             <div className="space-y-4">
@@ -418,30 +420,6 @@ export default function TournamentDetailPage({ params }) {
                     </div>
                 )}
 
-                {activeTab === "brackets" && tournament.gameType === 'Deathmatch' && (
-                    <div className="animate-in fade-in duration-500">
-                        {tournament.bracketGenerated ? (
-                            <DeathmatchStandings 
-                                registrations={registrations} 
-                                tournament={tournament} 
-                                isAdmin={isAdmin} 
-                                matches={matches}
-                            />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <div className="p-4 rounded-full bg-slate-950 border border-white/5 mb-4">
-                                    <Trophy className="h-10 w-10 text-slate-800" />
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-500 uppercase tracking-widest">
-                                    Standings Not Live
-                                </h3>
-                                <p className="text-sm text-slate-600 mt-2">
-                                    The leaderboard will appear here once the match starts.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                )}
 
                 {activeTab === "participants" && (
                     <div className="animate-in fade-in duration-500 space-y-4">
@@ -479,7 +457,7 @@ export default function TournamentDetailPage({ params }) {
                              <div className="p-6 rounded-2xl bg-[#11141a] border border-white/5 relative overflow-hidden group">
                                 <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500/60 mb-2">Prize Pool</p>
-                                <p className="text-4xl font-black text-white italic tracking-tighter leading-none">{tournament.prizePool}</p>
+                                <p className="text-4xl font-black text-white italic tracking-tighter leading-none">₹{tournament.prizePool}</p>
                              </div>
                          </div>
                     </div>
@@ -527,12 +505,63 @@ export default function TournamentDetailPage({ params }) {
 
             </div>
 
+
+            {/* Prize Breakdown Card */}
+            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 backdrop-blur-xl">
+                <h3 className="mb-6 text-sm font-black uppercase tracking-[0.2em] text-white flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-500" />
+                    Prizes
+                </h3>
+                <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/10 flex items-center justify-between group hover:scale-[1.02] transition-transform">
+                        <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">1st Place</p>
+                            <p className="text-xl font-black text-white italic">₹{tournament.firstPrize}</p>
+                        </div>
+                        <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                            <Trophy className="h-4 w-4 text-emerald-500" />
+                        </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/10 flex items-center justify-between group hover:scale-[1.02] transition-transform">
+                        <div>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-amber-500">2nd Place</p>
+                            <p className="text-xl font-black text-white italic">₹{tournament.secondPrize}</p>
+                        </div>
+                        <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                            <Trophy className="h-4 w-4 text-amber-500" />
+                        </div>
+                    </div>
+
+                    {parsePrizes(tournament.additionalPrizes).map((prize, idx) => (
+                        <div key={idx} className="p-4 rounded-xl bg-slate-950/50 border border-white/5 flex items-center justify-between hover:border-rose-500/20 transition-all">
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">{prize.label || "Special"}</p>
+                                <p className="text-lg font-black text-white italic truncate max-w-[140px]">₹{prize.value}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             {/* Registration Card */}
             <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.02] p-6 backdrop-blur-xl">
                 <h3 className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-white flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-rose-500" />
                     Entry Details
                 </h3>
+                
+                <div className="mb-6 p-5 rounded-2xl bg-slate-950 border border-white/5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2" />
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                        {tournament.gameType === 'Deathmatch' ? 'Individual Fee' : 'Team Entry Fee'}
+                    </p>
+                    <p className="text-3xl font-black text-white italic tracking-tighter">₹{tournament.entryFee}</p>
+                    <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-rose-500/60 uppercase tracking-widest">
+                        <Info className="h-3 w-3" />
+                        One-time registration payment
+                    </div>
+                </div>
                 {tournament.checkInEnabled && (
                     <div className="mb-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 space-y-2">
                         <p className="text-[10px] font-black text-amber-500/80 uppercase tracking-widest flex items-center gap-2">
@@ -686,10 +715,24 @@ export default function TournamentDetailPage({ params }) {
         </div>
       </div>
 
-      {/* Complete Bracket Section */}
-      {tournament.gameType !== 'Deathmatch' && (
-        <div id="tournament-map" className="container mx-auto px-6 pb-20 mt-12 scroll-mt-24">
-            <CompleteBracket matches={matches} participants={participantMap} tournament={tournament} />
+      {/* Complete Bracket / Standings Section */}
+      {tournament.bracketGenerated && (
+        <div className="pb-20 scroll-mt-24">
+            {tournament.gameType === 'Deathmatch' ? (
+                <CompleteStandings 
+                    registrations={registrations} 
+                    tournament={tournament} 
+                    matches={matches} 
+                />
+            ) : (
+                <div id="tournament-map" className="container mx-auto px-6 mt-12">
+                    <CompleteBracket 
+                        matches={matches} 
+                        participants={participantMap} 
+                        tournament={tournament} 
+                    />
+                </div>
+            )}
         </div>
       )}
     </div>
