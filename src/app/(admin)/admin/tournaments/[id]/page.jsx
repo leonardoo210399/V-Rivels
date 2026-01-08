@@ -314,7 +314,7 @@ export default function TournamentControlPage({ params }) {
 
     const participantMap = registrations?.reduce((acc, r) => {
         acc[r.$id] = r.teamName ? { name: r.teamName } : (
-            r.metadata ? { name: parseMetadata(r.metadata).playerName || "Unknown" } : { name: "Player" }
+            r.metadata ? { name: parseMetadata(r.metadata)?.playerName || "Unknown" } : { name: "Player" }
         );
         return acc;
     }, {}) || {};

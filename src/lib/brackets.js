@@ -235,7 +235,14 @@ export async function updateParticipantScore(registrationId, kills, deaths) {
     
     // Fetch current registration to get existing metadata
     const reg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, registrationId);
-    let metadata = reg.metadata ? JSON.parse(reg.metadata) : {};
+    
+    let metadata = {};
+    try {
+        metadata = reg.metadata ? (typeof reg.metadata === 'string' ? JSON.parse(reg.metadata) : reg.metadata) : {};
+    } catch (e) {
+        console.warn("Failed to parse metadata for registration:", registrationId, e);
+        metadata = {};
+    }
     
     metadata.kills = kills;
     metadata.deaths = deaths;

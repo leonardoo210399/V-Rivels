@@ -25,8 +25,12 @@ export default function DeathmatchStandings({ registrations, tournament, isAdmin
     };
     // Sort registrations by score if available (stored in metadata or a score field)
     const sortedParticipants = [...registrations].sort((a, b) => {
-        const metaA = a.metadata ? JSON.parse(a.metadata) : {};
-        const metaB = b.metadata ? JSON.parse(b.metadata) : {};
+        const parseMeta = (str) => {
+            try { return str ? (typeof str === 'string' ? JSON.parse(str) : str) : {}; }
+            catch (e) { return {}; }
+        };
+        const metaA = parseMeta(a.metadata);
+        const metaB = parseMeta(b.metadata);
         return (metaB.kills || 0) - (metaA.kills || 0);
     });
 
@@ -70,7 +74,12 @@ export default function DeathmatchStandings({ registrations, tournament, isAdmin
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {sortedParticipants.map((reg, index) => {
-                            const metadata = reg.metadata ? JSON.parse(reg.metadata) : {};
+                            let metadata = {};
+                            try {
+                                metadata = reg.metadata ? (typeof reg.metadata === 'string' ? JSON.parse(reg.metadata) : reg.metadata) : {};
+                            } catch (e) {
+                                metadata = {};
+                            }
                             const isTop3 = index < 3;
                             
                             return (
