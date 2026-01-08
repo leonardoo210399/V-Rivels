@@ -2,8 +2,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
+import Loader from "@/components/Loader";
 
 export default function AdminLayout({ children }) {
     const { user, loading, isAdmin } = useAuth();
@@ -20,11 +20,7 @@ export default function AdminLayout({ children }) {
     }, [user, loading, isAdmin, router]);
 
     if (loading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-slate-950">
-                <Loader2 className="h-10 w-10 animate-spin text-rose-500" />
-            </div>
-        );
+        return <Loader />;
     }
 
     if (!user || !isAdmin) return null;

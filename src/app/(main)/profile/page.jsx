@@ -4,10 +4,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getAccount, getMMR, getMMRByName, getMatches, getAccountByPuuid, getPlayerCard, getAgents } from "@/lib/valorant";
 import { saveUserProfile, getUserProfile } from "@/lib/users";
-import { Loader2, User, Trophy, Activity, TrendingUp, TrendingDown, UserPlus, Sword, Shield, Crosshair, Zap, Brain, RefreshCw, ChevronDown, CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
+import { User, Trophy, Activity, TrendingUp, TrendingDown, UserPlus, Sword, Shield, Crosshair, Zap, Brain, RefreshCw, ChevronDown, CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
 import MatchDetailsModal from "@/components/MatchDetailsModal";
 import { createFreeAgentPost, deleteFreeAgentPost, getUserFreeAgentPost, updateFreeAgentPost } from "@/lib/players";
 import { Trash2 } from "lucide-react";
+import Loader from "@/components/Loader";
 
 // Fallback icon for Controller
 const Cloud = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.5 19c0-1.7-1.3-3-3-3h-11c-1.7 0-3-1.3-3-3s1.3-3 3-3 1 1.4 1 3h2c0-2.8-2.2-5-5-5S1.5 6.2 1.5 9c0 .4.1.8.2 1.1C.6 15 4.8 19 10 19h7.5c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.3 0-.6.1-.8.2.3-1.4 0-2.8-1.2-3.8" /></svg>;
@@ -263,11 +264,7 @@ export default function ProfilePage() {
   };
 
   if (authLoading || !user) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
-        <Loader2 className="h-10 w-10 animate-spin text-rose-500" />
-      </div>
-    );
+    return <Loader />;
   }
 
   return (
@@ -430,7 +427,7 @@ export default function ProfilePage() {
                                 disabled={posting || !formData.mainAgent || formData.secondaryAgents.length === 0 || !formData.description.trim()}
                                 className="flex-1 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-white/5 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-rose-600/20 active:shadow-none uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 active:scale-[0.98] border border-transparent"
                             >
-                                {posting ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserPlus className="h-5 w-5" />}
+                                {posting ? <Loader fullScreen={false} size="sm" /> : <UserPlus className="h-5 w-5" />}
                                 {userPost ? 'Update Scouting Report' : 'Publish Scouting Report'}
                             </button>
                             <button 
@@ -448,7 +445,7 @@ export default function ProfilePage() {
 
         {loading && !valProfile ? (
             <div className="flex flex-col items-center justify-center py-20 rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm">
-                <Loader2 className="h-12 w-12 animate-spin text-rose-500 mb-4" />
+                <Loader fullScreen={false} />
                 <p className="text-slate-400 animate-pulse font-medium">Fetching Valorant Profile...</p>
             </div>
         ) : !valProfile ? (
@@ -495,7 +492,7 @@ export default function ProfilePage() {
                         disabled={loading}
                         className="flex w-full items-center justify-center rounded-md bg-rose-600 py-2 font-medium text-white hover:bg-rose-700 disabled:opacity-50"
                     >
-                        {loading ? <Loader2 className="h-5 w-5 animate-spin"/> : "Link Account"}
+                        {loading ? <Loader fullScreen={false} size="sm" /> : "Link Account"}
                     </button>
                 </form>
              </div>
@@ -574,8 +571,8 @@ export default function ProfilePage() {
                         <div className="space-y-3">
                             {loading && matches.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 bg-slate-950/50 rounded-lg border border-white/5">
-                                    <Loader2 className="h-8 w-8 animate-spin text-rose-500 mb-2" />
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Loading Battle History</p>
+                                    <Loader fullScreen={false} size="sm" />
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">Loading Battle History</p>
                                 </div>
                             ) : matches.length === 0 ? (
                                 <div className="text-center py-12 bg-slate-950/50 rounded-lg border border-white/5">
@@ -738,8 +735,8 @@ export default function ProfilePage() {
                                 </div>
                             ) : loading ? (
                                 <div className="flex flex-col items-center justify-center py-10">
-                                    <Loader2 className="h-10 w-10 animate-spin text-rose-500 mb-3" />
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Syncing Data</p>
+                                    <Loader fullScreen={false} size="sm" />
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-3">Syncing Data</p>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-10 opacity-50">

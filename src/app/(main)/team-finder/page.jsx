@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getFreeAgents, deleteFreeAgentPost } from "@/lib/players";
 import { getAccount, getMMR, getMMRByName, getPlayerCard, getAgents } from "@/lib/valorant";
-import { Loader2, Trash2, Sword, Shield, Crosshair, Zap, Brain, RefreshCw, UserPlus } from "lucide-react";
+import { Trash2, Sword, Shield, Crosshair, Zap, Brain, RefreshCw, UserPlus } from "lucide-react";
+import Loader from "@/components/Loader";
 import Link from "next/link";
 
 // Fallback icon
@@ -136,9 +137,7 @@ export default function TeamFinderPage() {
 
                 {/* Listings Grid */}
                 {loading ? (
-                    <div className="flex justify-center py-24">
-                        <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
-                    </div>
+                    <Loader fullScreen={false} />
                 ) : filteredAgents.length === 0 ? (
                     <div className="text-center py-24 border border-dashed border-white/10 rounded-2xl">
                         <p className="text-slate-500 mb-2 font-bold uppercase tracking-widest text-xs">No Results Found</p>
@@ -281,7 +280,7 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
                     <div className="w-16 h-16 rounded-xl bg-slate-800 border-2 border-slate-950 overflow-hidden shadow-xl">
                         {loading ? (
                             <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                                <Loader2 className="h-5 w-5 animate-spin text-slate-700" />
+                                <Loader fullScreen={false} size="sm" />
                             </div>
                         ) : playerCard ? (
                             <img src={playerCard} alt="" className="w-full h-full object-cover" />

@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { createTournament } from "@/lib/tournaments";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2 } from "lucide-react";
+
+import Loader from "@/components/Loader";
 
 export default function CreateTournamentPage() {
   const router = useRouter();
@@ -16,7 +17,10 @@ export default function CreateTournamentPage() {
       maxTeams: 16,
       status: "open",
       description: "",
-      gameType: "5v5" // Default value
+      gameType: "5v5",
+      location: "Online",
+      checkInEnabled: false,
+      checkInStart: ""
   });
 
   useEffect(() => {
@@ -28,11 +32,7 @@ export default function CreateTournamentPage() {
   }, [user, authLoading, isAdmin, router]);
 
   if (authLoading) {
-      return (
-        <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
-            <Loader2 className="h-10 w-10 animate-spin text-rose-500" />
-        </div>
-      );
+      return <Loader />;
   }
 
   if (!user || !isAdmin) return null;
@@ -48,8 +48,12 @@ export default function CreateTournamentPage() {
             maxTeams: parseInt(formData.maxTeams),
             gameType: formData.gameType,
             status: formData.status,
-            location: "Online", // default from schema
-            registeredTeams: 0
+            description: formData.description,
+            location: formData.location || "Online",
+            checkInEnabled: formData.checkInEnabled,
+            checkInStart: formData.checkInEnabled && formData.checkInStart ? new Date(formData.checkInStart).toISOString() : null,
+            registeredTeams: 0,
+            bracketGenerated: false
         };
 
         await createTournament(tournamentData);
@@ -84,7 +88,7 @@ export default function CreateTournamentPage() {
                     <label className="mb-1 block text-sm font-medium text-slate-400">Date</label>
                     <input 
                         type="datetime-local" 
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none" // Calendar icon might be dark, but built-in
+                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none [color-scheme:dark]"
                          value={formData.date}
                         onChange={(e) => setFormData({...formData, date: e.target.value})}
                         required
@@ -95,7 +99,7 @@ export default function CreateTournamentPage() {
                     <input 
                         type="text" 
                          className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                         placeholder="$1000"
+                         placeholder="₹3,000"
                          value={formData.prizePool}
                         onChange={(e) => setFormData({...formData, prizePool: e.target.value})}
                         required
@@ -112,35 +116,76 @@ export default function CreateTournamentPage() {
                         <option value="Deathmatch">Deathmatch</option>
                      </select>
                 </div>
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-400">Location</label>
+                    <input 
+                        type="text" 
+                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
+                        value={formData.location}
+                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        placeholder="Online"
+                    />
+                </div>
              </div>
-             
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-400">Max Teams</label>
-                <input 
-                    type="number" 
-                    className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                    value={formData.maxTeams}
-                    onChange={(e) => setFormData({...formData, maxTeams: e.target.value})}
-                    required
-                />
-            </div>
+
+             <div className="grid gap-4 md:grid-cols-2 pt-4 border-t border-white/5">
+                <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-400">Max Teams/Players</label>
+                    <input 
+                        type="number" 
+                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
+                        value={formData.maxTeams}
+                        onChange={(e) => setFormData({...formData, maxTeams: e.target.value})}
+                        required
+                    />
+                </div>
+                <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                            <input 
+                                type="checkbox" 
+                                className="sr-only"
+                                checked={formData.checkInEnabled}
+                                onChange={(e) => setFormData({...formData, checkInEnabled: e.target.checked})}
+                            />
+                            <div className={`w-10 h-5 rounded-full transition-colors ${formData.checkInEnabled ? 'bg-rose-500' : 'bg-slate-800'}`} />
+                            <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${formData.checkInEnabled ? 'translate-x-5' : ''}`} />
+                        </div>
+                        <span className="text-sm font-medium text-slate-400 group-hover:text-slate-300 transition-colors">Enable Check-in</span>
+                    </label>
+                </div>
+             </div>
+
+             {formData.checkInEnabled && (
+                <div className="animate-in slide-in-from-top-2">
+                    <label className="mb-1 block text-sm font-medium text-slate-400">Check-in Opens At</label>
+                    <input 
+                        type="datetime-local" 
+                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none [color-scheme:dark]"
+                        value={formData.checkInStart}
+                        onChange={(e) => setFormData({...formData, checkInStart: e.target.value})}
+                        required={formData.checkInEnabled}
+                    />
+                </div>
+             )}
             
-             <div>
+             <div className="pt-4 border-t border-white/5">
                 <label className="mb-1 block text-sm font-medium text-slate-400">Description</label>
                 <textarea 
                     className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
                     rows={4}
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Rules, schedule, and other details..."
                 />
             </div>
 
              <button 
                 type="submit" 
                 disabled={loading}
-                className="flex w-full items-center justify-center rounded-md bg-rose-600 py-3 font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+                className="flex w-full items-center justify-center rounded-xl bg-rose-600 py-4 font-black text-white hover:bg-rose-700 disabled:opacity-50 shadow-lg shadow-rose-900/20 transition-all uppercase tracking-widest text-sm"
             >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin"/> : "Create Tournament"}
+                {loading ? <Loader fullScreen={false} size="sm" /> : "Publish Tournament"}
             </button>
         </form>
       </div>

@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Users, Trophy, Swords, Zap, Loader2 } from "lucide-react";
+import { Users, Trophy, Swords, Zap } from "lucide-react";
+import Loader from "@/components/Loader";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 
@@ -97,7 +98,7 @@ export default function AdminDashboard() {
                 <h1 className="text-3xl font-bold text-white tracking-tight">Admin Overview</h1>
                 <p className="text-slate-400 mt-1">Logged in as {user?.name}</p>
             </div>
-            {loading && <Loader2 className="h-5 w-5 animate-spin text-rose-500" />}
+            {loading && <Loader fullScreen={false} size="sm" />}
         </div>
 
         {/* Stats Grid */}

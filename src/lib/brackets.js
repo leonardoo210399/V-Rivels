@@ -19,16 +19,34 @@ export async function getMatches(tournamentId) {
     }
 }
 
-export async function createBracket(tournamentId, registrations) {
+export async function createBracket(tournamentId, registrations, gameType = "5v5") {
     if (!registrations || registrations.length < 2) {
-        throw new Error("Need at least 2 teams to generate a bracket.");
+        throw new Error("Need at least 2 participants to start.");
     }
 
-    // 1. Generate the match structure in memory
+    if (gameType === "Deathmatch") {
+        // For Deathmatch, we create a single "Lobby" match document
+        // that represents the entire FFA match. 
+        return await databases.createDocument(
+            DATABASE_ID,
+            MATCHES_COLLECTION_ID,
+            ID.unique(),
+            {
+                tournamentId,
+                round: 1,
+                matchIndex: 0,
+                teamA: "LOBBY", // Marker for DM
+                status: "scheduled",
+                // For DM, we can store the participant list in metadata if needed,
+                // but for now the UI uses registrations list filtered by tournamentId.
+            }
+        );
+    }
+
+    // 1. Generate the match structure in memory (Single Elimination)
     const matches = generateSingleEliminationBracket(registrations);
     
     // 2. Save each match to the database
-    // validation: ensure matches collection exists first in your head/schema
     const promises = matches.map(match => {
         return databases.createDocument(
             DATABASE_ID,
@@ -44,7 +62,6 @@ export async function createBracket(tournamentId, registrations) {
                 scoreA: 0,
                 scoreB: 0,
                 status: match.status,
-                // startTime: match.startTime // Optional feature for later
             }
         );
     });
@@ -189,4 +206,128 @@ export async function updateMatchScore(matchId, scoreA, scoreB, winnerId) {
             status: "completed"
         }
     );
+}
+
+export async function updateMatchStatus(matchId, status) {
+    return await databases.updateDocument(
+        DATABASE_ID,
+        MATCHES_COLLECTION_ID,
+        matchId,
+        {
+            status
+        }
+    );
+}
+
+export async function updateMatchVeto(matchId, vetoData) {
+    return await databases.updateDocument(
+        DATABASE_ID,
+        MATCHES_COLLECTION_ID,
+        matchId,
+        {
+            vetoData: JSON.stringify(vetoData)
+        }
+    );
+}
+
+export async function updateParticipantScore(registrationId, kills, deaths) {
+    const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
+    
+    // Fetch current registration to get existing metadata
+    const reg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, registrationId);
+    let metadata = reg.metadata ? JSON.parse(reg.metadata) : {};
+    
+    metadata.kills = kills;
+    metadata.deaths = deaths;
+
+    return await databases.updateDocument(
+        DATABASE_ID,
+        REGISTRATIONS_COLLECTION_ID,
+        registrationId,
+        {
+            metadata: JSON.stringify(metadata)
+        }
+    );
+}
+
+const TOURNAMENTS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID;
+
+export async function finalizeMatch(matchId, scoreA, scoreB) {
+    // 1. Get current match
+    const match = await databases.getDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matchId);
+    
+    // 2. Determine winner
+    // Winner is TBD if score is tied (shouldn't happen in Valo, but handle)
+    const winnerId = scoreA > scoreB ? match.teamA : (scoreB > scoreA ? match.teamB : null);
+    
+    if (!winnerId) throw new Error("Match cannot be completed without a winner (score tie).");
+
+    // 3. Update current match
+    await databases.updateDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matchId, {
+        scoreA,
+        scoreB,
+        winner: winnerId,
+        status: 'completed'
+    });
+
+    // 4. Advance winner to next round if it's a bracket match
+    const nextRoundNum = match.round + 1;
+    const nextMatchIndex = Math.floor(match.matchIndex / 2);
+    
+    try {
+        const nextMatchesRes = await databases.listDocuments(
+            DATABASE_ID,
+            MATCHES_COLLECTION_ID,
+            [
+                Query.equal("tournamentId", match.tournamentId),
+                Query.equal("round", nextRoundNum),
+                Query.equal("matchIndex", nextMatchIndex)
+            ]
+        );
+
+        if (nextMatchesRes.total > 0) {
+            const nextMatch = nextMatchesRes.documents[0];
+            const isTeamA = match.matchIndex % 2 === 0;
+            
+            await databases.updateDocument(DATABASE_ID, MATCHES_COLLECTION_ID, nextMatch.$id, {
+                [isTeamA ? 'teamA' : 'teamB']: winnerId
+            });
+        }
+    } catch (e) {
+        // Final match or error finding next
+        console.log("No next round match found or final match reached.");
+    }
+
+    // 5. Check if all matches are completed
+    try {
+        const matches = await getMatches(match.tournamentId);
+        const allCompleted = matches.length > 0 && matches.every(m => m.status === 'completed');
+        
+        if (allCompleted) {
+            await databases.updateDocument(
+                DATABASE_ID,
+                TOURNAMENTS_COLLECTION_ID,
+                match.tournamentId,
+                { status: 'completed' }
+            );
+        }
+    } catch (error) {
+        console.error("Failed to check if tournament completed:", error);
+    }
+
+    return winnerId;
+}
+
+export async function deleteMatches(tournamentId) {
+    try {
+        const matches = await getMatches(tournamentId);
+        const promises = matches.map(m => 
+            databases.deleteDocument(DATABASE_ID, MATCHES_COLLECTION_ID, m.$id)
+        );
+        await Promise.all(promises);
+        return true;
+    } catch (error) {
+        console.error("Failed to delete matches:", error);
+        throw error;
+    }
 }

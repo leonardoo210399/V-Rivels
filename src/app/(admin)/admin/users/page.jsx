@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { databases } from "@/lib/appwrite";
-import { Loader2, User, Mail, Shield, ShieldAlert, BadgeCheck } from "lucide-react";
+import { User, Mail, Shield, ShieldAlert, BadgeCheck } from "lucide-react";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";

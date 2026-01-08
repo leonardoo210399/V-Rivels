@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { createTournament } from "@/lib/tournaments";
-import { Loader2, X, Trophy, Calendar, Users, Info, Gamepad2 } from "lucide-react";
+import { X, Trophy, Calendar, Users, Info, Gamepad2 } from "lucide-react";
+import Loader from "@/components/Loader";
 
 export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -12,7 +13,10 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
       maxTeams: 16,
       status: "open",
       description: "",
-      gameType: "5v5"
+      gameType: "5v5",
+      location: "Online",
+      checkInEnabled: false,
+      checkInStart: ""
   });
 
   if (!isOpen) return null;
@@ -29,8 +33,11 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
             gameType: formData.gameType,
             description: formData.description,
             status: formData.status,
-            location: "Online",
-            registeredTeams: 0
+            location: formData.location || "Online",
+            checkInEnabled: formData.checkInEnabled,
+            checkInStart: formData.checkInEnabled && formData.checkInStart ? new Date(formData.checkInStart).toISOString() : null,
+            registeredTeams: 0,
+            bracketGenerated: false
         };
 
         await createTournament(tournamentData);
@@ -44,7 +51,10 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
             maxTeams: 16,
             status: "open",
             description: "",
-            gameType: "5v5"
+            gameType: "5v5",
+            location: "Online",
+            checkInEnabled: false,
+            checkInStart: ""
         });
     } catch (error) {
         console.error("Failed to create tournament", error);
@@ -122,7 +132,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
                       required
                       value={formData.prizePool}
                       onChange={(e) => setFormData({...formData, prizePool: e.target.value})}
-                      placeholder="$500"
+                      placeholder="₹3,000"
                       className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-rose-500/50 outline-none transition-all"
                     />
                   </div>
@@ -158,6 +168,42 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Location</label>
+                  <input 
+                    type="text" 
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    placeholder="Online"
+                    className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-rose-500/50 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Check-in Settings */}
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Enable Check-in</label>
+                    <button 
+                        type="button"
+                        onClick={() => setFormData({...formData, checkInEnabled: !formData.checkInEnabled})}
+                        className={`w-10 h-5 rounded-full relative transition-colors ${formData.checkInEnabled ? 'bg-rose-500' : 'bg-slate-800'}`}
+                    >
+                        <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${formData.checkInEnabled ? 'translate-x-5' : ''}`} />
+                    </button>
+                </div>
+                {formData.checkInEnabled && (
+                    <div className="animate-in slide-in-from-top-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Check-in Opens At</label>
+                        <input 
+                            type="datetime-local" 
+                            required={formData.checkInEnabled}
+                            value={formData.checkInStart}
+                            onChange={(e) => setFormData({...formData, checkInStart: e.target.value})}
+                            className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:border-rose-500/50 outline-none transition-all [color-scheme:dark]"
+                        />
+                    </div>
+                )}
               </div>
 
               {/* Description */}
@@ -167,7 +213,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
                     <Info className="h-3 w-3" /> About / Rules
                   </label>
                   <textarea 
-                    rows={6}
+                    rows={4}
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Enter tournament rules, map pool, and general info..."
@@ -188,7 +234,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader fullScreen={false} size="sm" />
                   Creating...
                 </>
               ) : (

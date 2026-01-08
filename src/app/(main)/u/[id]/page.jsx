@@ -2,7 +2,8 @@
 import { useEffect, useState, use } from "react";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
-import { Loader2, User, Trophy, Crosshair, MapPin, Gauge, Activity, Sword, Skull, Target } from "lucide-react";
+import { User, Trophy, Crosshair, MapPin, Gauge, Activity, Sword, Skull, Target } from "lucide-react";
+import Loader from "@/components/Loader";
 import { getAccount, getMMR, getMMRByName, getMatches, getPlayerCard } from "@/lib/valorant";
 
 // Assuming we have these from your config:
@@ -97,7 +98,7 @@ export default function PublicProfilePage({ params }) {
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-rose-500 h-10 w-10" /></div>;
+    if (loading) return <Loader />;
     
     if (!profile) return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white pt-24 px-4">

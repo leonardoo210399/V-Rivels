@@ -19,7 +19,6 @@ export default function AdminSidebar() {
         { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { name: "Tournaments", href: "/admin/tournaments", icon: Trophy },
         { name: "Users", href: "/admin/users", icon: Users },
-        { name: "Matches", href: "/admin/matches", icon: Swords },
     ];
 
     return (

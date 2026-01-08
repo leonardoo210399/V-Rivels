@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getTournaments, deleteTournament } from "@/lib/tournaments";
-import { Loader2, Trophy, Calendar, Users, Trash2, ExternalLink, Plus } from "lucide-react";
+import { Trophy, Calendar, Users, Trash2, ExternalLink, Plus, Edit2 } from "lucide-react";
 import Link from "next/link";
 import CreateTournamentDrawer from "@/components/CreateTournamentDrawer";
 
@@ -45,24 +45,7 @@ export default function AdminTournamentsPage() {
         loadTournaments();
     }, []);
 
-    const handleDelete = async (id) => {
-        console.log("Delete requested for ID:", id);
-        if (!window.confirm("Are you sure you want to delete this tournament?")) {
-            console.log("Delete cancelled by user");
-            return;
-        }
 
-        try {
-            console.log("Proceeding with deletion...");
-            await deleteTournament(id);
-            console.log("Delete successful in database");
-            setTournaments(prev => prev.filter(t => t.$id !== id));
-            console.log("UI updated");
-        } catch (error) {
-            console.error("Delete failed:", error);
-            alert("Failed to delete tournament: " + error.message);
-        }
-    };
 
     return (
         <div className="space-y-8">
@@ -116,10 +99,10 @@ export default function AdminTournamentsPage() {
                                                 <div className="p-2 bg-rose-500/10 rounded-lg text-rose-500">
                                                     <Trophy className="h-4 w-4" />
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-white group-hover:text-rose-500 transition-colors">{t.name}</p>
+                                                <Link href={`/admin/tournaments/${t.$id}`} className="group/name block">
+                                                    <p className="font-bold text-white group-hover/name:text-rose-500 transition-colors uppercase tracking-tight">{t.name}</p>
                                                     <p className="text-[10px] text-slate-500 font-mono">{t.$id}</p>
-                                                </div>
+                                                </Link>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -134,9 +117,16 @@ export default function AdminTournamentsPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                             <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                                <Users className="h-3 w-3" />
-                                                {registrationCounts[t.$id] || 0} / {t.maxTeams}
+                                             <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2 text-white font-bold text-sm">
+                                                    <Users className="h-3 w-3 text-rose-500" />
+                                                    {registrationCounts[t.$id] || 0} / {t.maxTeams}
+                                                </div>
+                                                <p className={`text-[10px] font-black uppercase tracking-widest ${
+                                                    (t.maxTeams - (registrationCounts[t.$id] || 0)) <= 2 ? "text-rose-500 animate-pulse" : "text-emerald-500"
+                                                }`}>
+                                                    {(t.maxTeams - (registrationCounts[t.$id] || 0))} SLOTS LEFT
+                                                </p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -149,19 +139,20 @@ export default function AdminTournamentsPage() {
                                         <td className="px-6 py-4">
                                             <div className="flex justify-end gap-2">
                                                 <Link 
+                                                    href={`/admin/tournaments/${t.$id}`}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-950 border border-white/5 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-rose-600 transition-all"
+                                                >
+                                                    <Edit2 className="h-3 w-3" />
+                                                    Manage
+                                                </Link>
+                                                <Link 
                                                     href={`/tournaments/${t.$id}`}
+                                                    target="_blank"
                                                     className="p-2 bg-slate-950 border border-white/5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
                                                     title="View Public Page"
                                                 >
                                                     <ExternalLink className="h-4 w-4" />
                                                 </Link>
-                                                <button 
-                                                    onClick={() => handleDelete(t.$id)}
-                                                    className="p-2 bg-slate-950 border border-white/5 rounded-lg text-rose-500/50 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-                                                    title="Delete Tournament"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>

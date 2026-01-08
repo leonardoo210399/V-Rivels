@@ -31,6 +31,15 @@ export async function createTournament(data) {
   );
 }
 
+export async function updateTournament(id, data) {
+    return await databases.updateDocument(
+        DATABASE_ID,
+        TOURNAMENTS_COLLECTION_ID,
+        id,
+        data
+    );
+}
+
 export async function registerForTournament(tournamentId, userId, teamName, data = {}) {
     // Check for existing registration and tournament capacity
     const [tournament, existing, totalRegs] = await Promise.all([
@@ -54,7 +63,7 @@ export async function registerForTournament(tournamentId, userId, teamName, data
         throw new Error("Tournament is full");
     }
 
-    return await databases.createDocument(
+    const registration = await databases.createDocument(
         DATABASE_ID,
         REGISTRATIONS_COLLECTION_ID,
         ID.unique(),
@@ -64,9 +73,26 @@ export async function registerForTournament(tournamentId, userId, teamName, data
             teamName,
             metadata: data.metadata || null,
             registeredAt: new Date().toISOString(),
-            checkedIn: false // Default to false
+            checkedIn: false
         }
     );
+
+    // Increment registeredTeams count on the tournament document (optional cache update)
+    try {
+        await databases.updateDocument(
+            DATABASE_ID,
+            TOURNAMENTS_COLLECTION_ID,
+            tournamentId,
+            {
+                registeredTeams: (tournament.registeredTeams || 0) + 1
+            }
+        );
+    } catch (e) {
+        // Log but don't fail registration if this cache update fails
+        console.warn("Failed to update tournament cache field:", e.message);
+    }
+
+    return registration;
 }
 
 export async function checkInForTournament(registrationId) {
@@ -89,23 +115,68 @@ export async function getRegistrations(tournamentId) {
     );
 }
 
-export async function deleteTournament(id) {
-    // 1. Get all registrations for this tournament
-    const regs = await getRegistrations(id);
-    
-    // 2. Delete all associated registrations in parallel
-    if (regs.total > 0) {
-        await Promise.all(
-            regs.documents.map(reg => 
-                databases.deleteDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, reg.$id)
-            )
-        );
-    }
-
-    // 3. Delete the tournament document
-    return await databases.deleteDocument(
+export async function getRegistration(registrationId) {
+    return await databases.getDocument(
         DATABASE_ID,
-        TOURNAMENTS_COLLECTION_ID,
-        id
+        REGISTRATIONS_COLLECTION_ID,
+        registrationId
     );
+}
+
+export async function updateRegistrationPaymentStatus(registrationId, status) {
+    return await databases.updateDocument(
+        DATABASE_ID,
+        REGISTRATIONS_COLLECTION_ID,
+        registrationId,
+        {
+            paymentStatus: status
+        }
+    );
+}
+
+export async function deleteTournament(id) {
+    try {
+        // 1. Delete all associated registrations
+        try {
+            const regs = await getRegistrations(id);
+            if (regs.total > 0) {
+                await Promise.all(
+                    regs.documents.map(reg => 
+                        databases.deleteDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, reg.$id)
+                    )
+                );
+            }
+        } catch (e) {
+            console.warn("Failed to clean up registrations, might be empty or missing collection:", e.message);
+        }
+
+        // 2. Delete all associated matches
+        try {
+            const MATCHES_COLLECTION_ID = "matches"; // Based on brackets.js
+            const matches = await databases.listDocuments(
+                DATABASE_ID,
+                MATCHES_COLLECTION_ID,
+                [Query.equal("tournamentId", id)]
+            );
+            if (matches.total > 0) {
+                await Promise.all(
+                    matches.documents.map(m => 
+                        databases.deleteDocument(DATABASE_ID, MATCHES_COLLECTION_ID, m.$id)
+                    )
+                );
+            }
+        } catch (e) {
+            console.warn("Failed to clean up matches:", e.message);
+        }
+
+        // 3. Finally delete the tournament document
+        return await databases.deleteDocument(
+            DATABASE_ID,
+            TOURNAMENTS_COLLECTION_ID,
+            id
+        );
+    } catch (error) {
+        console.error("Critical failure during tournament deletion:", error);
+        throw error;
+    }
 }

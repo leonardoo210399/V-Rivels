@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState, use } from "react";
-import { getMatch, updateMatchScore } from "@/lib/brackets";
-import { getTournament } from "@/lib/tournaments";
-import { getRegistration } from "@/lib/registrations"; // Need to implement this or fetch differently
+import { getMatch, updateMatchScore, updateMatchVeto } from "@/lib/brackets";
+import { getTournament, getRegistration } from "@/lib/tournaments";
+import { client } from "@/lib/appwrite";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2, Trophy, Clock, Skull, Shield, Map as MapIcon } from "lucide-react";
+import { Trophy, Clock, Skull, Shield, Map as MapIcon } from "lucide-react";
+import Loader from "@/components/Loader";
 
 // Mock Map Pool
 const MAP_POOL = [
@@ -20,6 +21,7 @@ const MAP_POOL = [
 export default function MatchLobbyPage({ params }) {
     const { id, matchId } = use(params);
     const { user } = useAuth();
+    const isAdmin = user?.labels?.includes('admin');
     
     // Data State
     const [match, setMatch] = useState(null);
@@ -42,6 +44,26 @@ export default function MatchLobbyPage({ params }) {
 
     useEffect(() => {
         loadData();
+
+        // Subscribe to real-time updates for this match
+        const unsubscribe = client.subscribe(
+            `databases.${process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID}.collections.matches.documents.${matchId}`,
+            (response) => {
+                if (response.events.some(e => e.includes('update'))) {
+                    const updatedMatch = response.payload;
+                    setMatch(updatedMatch);
+                    if (updatedMatch.vetoData) {
+                        try {
+                            setVetoState(JSON.parse(updatedMatch.vetoData));
+                        } catch (e) {
+                            console.error("Failed to parse veto data", e);
+                        }
+                    }
+                }
+            }
+        );
+
+        return () => unsubscribe();
     }, [matchId, id]);
 
     const loadData = async () => {
@@ -50,21 +72,25 @@ export default function MatchLobbyPage({ params }) {
             const matchData = await getMatch(matchId);
             setMatch(matchData);
 
+            if (matchData.vetoData) {
+                try {
+                    setVetoState(JSON.parse(matchData.vetoData));
+                } catch (e) {
+                    console.error("Veto data parsing failed", e);
+                }
+            }
+
             // Fetch Tournament
             const tourneyData = await getTournament(matchData.tournamentId);
             setTournament(tourneyData);
-
-            // Fetch Teams (mock implementation for now inside the lib calls, assuming relations work or we fetch manually)
-            // Ideally Appwrite returns expanded relations if configured, or we fetch manually using IDs.
-            // Since we stored registration IDs in teamA/teamB:
-            // Check if teamA is an object (expanded) or string (ID)
             
-            // For now, let's assume valid ID strings and we need to fetch user names? 
-            // Or maybe registrations collection has teamName.
-            
-            // TODO: Fetch Registration Details for Team A and B
-            // const teamAData = await databases.getDocument(..., matchData.teamA)
-            
+            // Fetch Teams
+            if (matchData.teamA && matchData.teamA !== "LOBBY") {
+                getRegistration(matchData.teamA).then(setTeamA).catch(console.error);
+            }
+            if (matchData.teamB) {
+                getRegistration(matchData.teamB).then(setTeamB).catch(console.error);
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -72,8 +98,21 @@ export default function MatchLobbyPage({ params }) {
         }
     };
 
-    const handleBanMap = (mapName) => {
-        // Simple client-side veto logic for demo
+    const handleBanMap = async (mapName) => {
+        // Validation: Turn check
+        if (!isAdmin) {
+            const isTeamATurn = vetoState.currentTurn === "teamA";
+            const userRegistrationId = isTeamATurn ? match.teamA : match.teamB;
+            
+            // Simple check: Is the user associated with the team whose turn it is?
+            // This requires the registration to have the userId
+            const currentReg = isTeamATurn ? teamA : teamB;
+            if (currentReg?.userId !== user?.$id) {
+                alert("It's not your turn to ban!");
+                return;
+            }
+        }
+
         if (vetoState.selectedMap) return;
         
         const newBanned = [...vetoState.bannedMaps, mapName];
@@ -81,15 +120,22 @@ export default function MatchLobbyPage({ params }) {
         
         let selected = null;
         if (newBanned.length === MAP_POOL.length - 1) {
-            // One map left
             selected = MAP_POOL.find(m => !newBanned.includes(m.name)).name;
         }
 
-        setVetoState({
+        const newState = {
             bannedMaps: newBanned,
             currentTurn: newTurn,
             selectedMap: selected
-        });
+        };
+
+        // Persist to DB
+        try {
+            await updateMatchVeto(matchId, newState);
+            setVetoState(newState); // Optimistic update
+        } catch (e) {
+            alert("Failed to save veto: " + e.message);
+        }
     };
 
     const handleReportScore = async () => {
@@ -108,7 +154,7 @@ export default function MatchLobbyPage({ params }) {
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="animate-spin text-rose-500 h-10 w-10" /></div>;
+    if (loading) return <Loader />;
     if (!match) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Match not found</div>;
 
     const isCompleted = match.status === 'completed';
@@ -134,7 +180,7 @@ export default function MatchLobbyPage({ params }) {
 
                     {/* Team A */}
                     <div className="text-center z-10 w-1/3">
-                        <h2 className="text-4xl font-black mb-2">{match.teamA || "TBD"}</h2>
+                        <h2 className="text-4xl font-black mb-2 uppercase italic">{teamA?.teamName || (match.teamA ? "Loading..." : "TBD")}</h2>
                         <span className="text-rose-500 font-mono">TEAM A</span>
                     </div>
 
@@ -153,7 +199,7 @@ export default function MatchLobbyPage({ params }) {
 
                     {/* Team B */}
                     <div className="text-center z-10 w-1/3">
-                         <h2 className="text-4xl font-black mb-2">{match.teamB || "TBD"}</h2>
+                         <h2 className="text-4xl font-black mb-2 uppercase italic">{teamB?.teamName || (match.teamB ? "Loading..." : "TBD")}</h2>
                          <span className="text-cyan-500 font-mono">TEAM B</span>
                     </div>
                 </div>
@@ -202,7 +248,7 @@ export default function MatchLobbyPage({ params }) {
                     </div>
 
                     {/* Admin/Score Controls */}
-                    {!isCompleted && match.teamA && match.teamB && (
+                    {isAdmin && !isCompleted && match.teamA && match.teamB && (
                         <div className="bg-slate-900/50 border border-white/10 rounded-xl p-6">
                             <div className="flex items-center gap-3 mb-6">
                                 <Shield className="h-6 w-6 text-emerald-500" />
@@ -238,7 +284,7 @@ export default function MatchLobbyPage({ params }) {
                                     disabled={submitting}
                                     className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
                                 >
-                                    {submitting ? <Loader2 className="animate-spin" /> : "Submit Final Score"}
+                                    {submitting ? <Loader fullScreen={false} size="sm" /> : "Submit Final Score"}
                                 </button>
                                 <p className="text-xs text-center text-slate-500">
                                     Submitting will end the match and advance the winner. Irreversible.
