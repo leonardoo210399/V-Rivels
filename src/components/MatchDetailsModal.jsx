@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import { X, Trophy, Target, Shield, Zap } from "lucide-react";
+import { rankIcons } from "@/assets/images/ranks";
+import { agentIcons } from "@/assets/images/agents";
 
 export default function MatchDetailsModal({ match, isOpen, onClose, puuid }) {
   if (!isOpen || !match) return null;
@@ -114,7 +116,7 @@ export default function MatchDetailsModal({ match, isOpen, onClose, puuid }) {
                                             <div className="flex items-center gap-3">
                                                 <div className="relative">
                                                      <img 
-                                                        src={player.assets.agent.small} 
+                                                        src={typeof agentIcons[player.character] === 'object' ? agentIcons[player.character]?.src : (agentIcons[player.character] || player.assets.agent.small)} 
                                                         alt={player.character} 
                                                         className={`h-10 w-10 rounded bg-slate-800 border-l-2 ${player.team === "Red" ? "border-rose-500" : "border-blue-500"}`}
                                                     />
@@ -132,14 +134,10 @@ export default function MatchDetailsModal({ match, isOpen, onClose, puuid }) {
                                             <div className="flex items-center justify-center">
                                                 {player.currenttier > 2 ? (
                                                     <img 
-                                                        src={`https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/${player.currenttier}/largeicon.png`}
+                                                        src={typeof rankIcons[player.currenttier] === 'object' ? rankIcons[player.currenttier]?.src : rankIcons[player.currenttier]}
                                                         alt={player.currenttier_patched}
                                                         title={player.currenttier_patched}
                                                         className="h-10 w-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]"
-                                                        onError={(e) => {
-                                                            // If large icon fails, try small icon from the same set
-                                                            e.target.src = `https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/${player.currenttier}/smallicon.png`;
-                                                        }}
                                                     />
                                                 ) : (
                                                     <div className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-800 border border-white/5">
@@ -234,7 +232,7 @@ export default function MatchDetailsModal({ match, isOpen, onClose, puuid }) {
                                         <div className="relative">
                                             <div className="absolute -inset-1 rounded-xl bg-gradient-to-tr from-rose-500 to-rose-900 opacity-50 blur-sm" />
                                             <img 
-                                                src={me.assets.agent.small} 
+                                                src={typeof agentIcons[me.character] === 'object' ? agentIcons[me.character]?.src : (agentIcons[me.character] || me.assets.agent.small)} 
                                                 alt={me.character} 
                                                 className="relative h-20 w-20 rounded-xl bg-slate-800 border-2 border-slate-700 object-cover" 
                                             />

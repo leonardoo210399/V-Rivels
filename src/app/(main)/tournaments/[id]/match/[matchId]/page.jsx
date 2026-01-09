@@ -6,16 +6,20 @@ import { client } from "@/lib/appwrite";
 import { useAuth } from "@/context/AuthContext";
 import { Trophy, Clock, Skull, Shield, Map as MapIcon } from "lucide-react";
 import Loader from "@/components/Loader";
+import { mapImages } from "@/assets/images/maps";
 
-// Mock Map Pool
 const MAP_POOL = [
-    { name: "Ascent", image: "/maps/ascent.jpg" },
-    { name: "Bind", image: "/maps/bind.jpg" },
-    { name: "Haven", image: "/maps/haven.jpg" },
-    { name: "Split", image: "/maps/split.jpg" },
-    { name: "Icebox", image: "/maps/icebox.jpg" },
-    { name: "Breeze", image: "/maps/breeze.jpg" },
-    { name: "Fracture", image: "/maps/fracture.jpg" }
+    { name: "Ascent", image: mapImages["Ascent"] },
+    { name: "Bind", image: mapImages["Bind"] },
+    { name: "Haven", image: mapImages["Haven"] },
+    { name: "Split", image: mapImages["Split"] },
+    { name: "Icebox", image: mapImages["Icebox"] },
+    { name: "Breeze", image: mapImages["Breeze"] },
+    { name: "Fracture", image: mapImages["Fracture"] },
+    { name: "Lotus", image: mapImages["Lotus"] },
+    { name: "Pearl", image: mapImages["Pearl"] },
+    { name: "Sunset", image: mapImages["Sunset"] },
+    { name: "Abyss", image: mapImages["Abyss"] }
 ];
 
 export default function MatchLobbyPage({ params }) {
@@ -215,9 +219,22 @@ export default function MatchLobbyPage({ params }) {
                         </div>
 
                         {vetoState.selectedMap ? (
-                            <div className="text-center py-8">
-                                <p className="text-slate-400 mb-2">Map Selected</p>
-                                <p className="text-4xl font-black text-white">{vetoState.selectedMap}</p>
+                            <div className="relative text-center py-16 rounded-xl overflow-hidden group">
+                                <div 
+                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                                    style={{ 
+                                        backgroundImage: `url(${(() => {
+                                            const img = MAP_POOL.find(m => m.name === vetoState.selectedMap)?.image;
+                                            return typeof img === 'object' ? img?.src : img;
+                                        })()})` 
+                                    }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
+                                
+                                <div className="relative z-10">
+                                    <p className="text-rose-400 font-bold tracking-widest uppercase mb-2 text-sm shadow-black drop-shadow-md">Map Selected</p>
+                                    <p className="text-5xl font-black text-white uppercase tracking-tighter drop-shadow-2xl">{vetoState.selectedMap}</p>
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -232,13 +249,23 @@ export default function MatchLobbyPage({ params }) {
                                                 key={map.name}
                                                 onClick={() => handleBanMap(map.name)}
                                                 disabled={isBanned || isCompleted}
-                                                className={`p-3 rounded-lg border text-sm font-bold transition-all
+                                                className={`group relative p-3 h-24 rounded-lg border text-sm font-bold transition-all overflow-hidden flex items-center justify-center
                                                     ${isBanned 
-                                                        ? 'border-transparent bg-slate-800/50 text-slate-600 line-through' 
-                                                        : 'border-white/10 bg-slate-800 hover:border-rose-500 hover:bg-rose-500/10'}
+                                                        ? 'border-transparent opacity-50 grayscale' 
+                                                        : 'border-white/10 hover:border-rose-500 hover:scale-105 shadow-lg'}
                                                 `}
                                             >
-                                                {map.name}
+                                                <div 
+                                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" 
+                                                    style={{ 
+                                                        backgroundImage: `url(${typeof map.image === 'object' ? map.image?.src : map.image})` 
+                                                    }} 
+                                                />
+                                                <div className={`absolute inset-0 ${isBanned ? 'bg-slate-900/90' : 'bg-slate-900/60 group-hover:bg-rose-900/60'} transition-colors`} />
+                                                
+                                                <span className={`relative z-10 uppercase tracking-widest ${isBanned ? 'text-slate-600 line-through' : 'text-white'}`}>
+                                                    {map.name}
+                                                </span>
                                             </button>
                                         );
                                     })}

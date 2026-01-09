@@ -6,6 +6,8 @@ import { getAccount, getMMR, getMMRByName, getPlayerCard, getAgents } from "@/li
 import { Trash2, Sword, Shield, Crosshair, Zap, Brain, RefreshCw, UserPlus } from "lucide-react";
 import Loader from "@/components/Loader";
 import Link from "next/link";
+import { rankIcons } from "@/assets/images/ranks";
+import { agentIcons } from "@/assets/images/agents";
 
 // Fallback icon
 const Cloud = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.5 19c0-1.7-1.3-3-3-3h-11c-1.7 0-3-1.3-3-3s1.3-3 3-3 1 1.4 1 3h2c0-2.8-2.2-5-5-5S1.5 6.2 1.5 9c0 .4.1.8.2 1.1C.6 15 4.8 19 10 19h7.5c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.3 0-.6.1-.8.2.3-1.4 0-2.8-1.2-3.8" /></svg>;
@@ -245,7 +247,8 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
     }, [agent.ingameName]);
 
     const rankDisplay = valData?.mmr?.current_data?.currenttierpatched || "Unranked";
-    const rankImage = valData?.mmr?.current_data?.images?.large || valData?.mmr?.current_data?.images?.small;
+    const currentTier = valData?.mmr?.current_data?.currenttier;
+    const rankImage = typeof rankIcons[currentTier] === 'object' ? rankIcons[currentTier]?.src : (rankIcons[currentTier] || valData?.mmr?.current_data?.images?.large || valData?.mmr?.current_data?.images?.small);
     const wideCard = valData?.card?.wideArt;
     const playerCard = valData?.card?.smallArt;
 
@@ -342,7 +345,7 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
                                 <div className="relative w-14 h-14 rounded-xl border-2 border-rose-500 bg-slate-950 overflow-hidden shadow-xl shadow-rose-500/10">
                                     {availableAgents.find(a => a.displayName?.toLowerCase() === agent.mainAgent?.toLowerCase())?.displayIcon ? (
                                         <img 
-                                            src={availableAgents.find(a => a.displayName?.toLowerCase() === agent.mainAgent?.toLowerCase()).displayIcon} 
+                                            src={typeof agentIcons[availableAgents.find(a => a.displayName?.toLowerCase() === agent.mainAgent?.toLowerCase()).displayName] === 'object' ? agentIcons[availableAgents.find(a => a.displayName?.toLowerCase() === agent.mainAgent?.toLowerCase()).displayName]?.src : (agentIcons[availableAgents.find(a => a.displayName?.toLowerCase() === agent.mainAgent?.toLowerCase()).displayName] || availableAgents.find(a => a.displayName?.toLowerCase() === agent.mainAgent?.toLowerCase()).displayIcon)} 
                                             alt={agent.mainAgent} 
                                             className="w-full h-full object-cover scale-110"
                                         />
@@ -363,7 +366,7 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
                             <div className="flex -space-x-3">
                                 {agent.secondaryAgents.slice(0, 4).map((name, idx) => {
                                     const agentInfo = availableAgents.find(a => a.displayName?.toLowerCase() === name?.toLowerCase());
-                                    const icon = agentInfo?.displayIcon;
+                                    const icon = typeof agentIcons[agentInfo?.displayName] === 'object' ? agentIcons[agentInfo?.displayName]?.src : (agentIcons[agentInfo?.displayName] || agentInfo?.displayIcon);
                                     return (
                                         <div key={idx} className="relative w-12 h-12 rounded-xl border-2 border-slate-950 bg-slate-900 overflow-hidden hover:z-10 hover:scale-110 transition-all cursor-help shadow-lg" title={name}>
                                             {icon ? (

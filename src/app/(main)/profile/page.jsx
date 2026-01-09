@@ -9,6 +9,8 @@ import MatchDetailsModal from "@/components/MatchDetailsModal";
 import { createFreeAgentPost, deleteFreeAgentPost, getUserFreeAgentPost, updateFreeAgentPost } from "@/lib/players";
 import { Trash2 } from "lucide-react";
 import Loader from "@/components/Loader";
+import { rankIcons } from "@/assets/images/ranks";
+import { agentIcons } from "@/assets/images/agents";
 
 // Fallback icon for Controller
 const Cloud = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17.5 19c0-1.7-1.3-3-3-3h-11c-1.7 0-3-1.3-3-3s1.3-3 3-3 1 1.4 1 3h2c0-2.8-2.2-5-5-5S1.5 6.2 1.5 9c0 .4.1.8.2 1.1C.6 15 4.8 19 10 19h7.5c2.5 0 4.5-2 4.5-4.5S20 10 17.5 10c-.3 0-.6.1-.8.2.3-1.4 0-2.8-1.2-3.8" /></svg>;
@@ -335,7 +337,7 @@ export default function ProfilePage() {
                         <div className="flex items-end">
                             <div className="w-full bg-slate-950 border border-white/10 rounded-xl p-4 flex items-center gap-4 opacity-60">
                                 {mmrData?.current_data?.images?.small && (
-                                    <img src={mmrData.current_data.images.small} alt="" className="h-8 w-8 object-contain" />
+                                    <img src={typeof rankIcons[mmrData.current_data.currenttier] === 'object' ? rankIcons[mmrData.current_data.currenttier]?.src : (rankIcons[mmrData.current_data.currenttier] || mmrData.current_data.images.small)} alt="" className="h-8 w-8 object-contain" />
                                 )}
                                 <div>
                                     <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest leading-none mb-1">Auto-Synced Rank</p>
@@ -364,7 +366,7 @@ export default function ProfilePage() {
                                         className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${formData.mainAgent === agent.displayName ? 'border-rose-500 scale-110 shadow-2xl shadow-rose-500/40 z-10' : 'border-white/5 opacity-30 hover:opacity-100 hover:scale-105'}`}
                                         title={agent.displayName}
                                     >
-                                        <img src={agent.displayIcon} alt={agent.displayName} className="w-full h-full object-cover" />
+                                        <img src={typeof agentIcons[agent.displayName] === 'object' ? agentIcons[agent.displayName]?.src : (agentIcons[agent.displayName] || agent.displayIcon)} alt={agent.displayName} className="w-full h-full object-cover" />
                                         {formData.mainAgent === agent.displayName && (
                                             <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center">
                                                 <div className="bg-rose-500 text-[8px] font-black text-white px-1 rounded absolute bottom-0 w-full text-center py-0.5">MAIN</div>
@@ -397,7 +399,7 @@ export default function ProfilePage() {
                                         className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${formData.secondaryAgents.includes(agent.displayName) ? 'border-rose-400 scale-105 shadow-xl shadow-rose-400/20 z-10' : 'border-white/5 opacity-30 hover:opacity-100 hover:scale-105'}`}
                                         title={agent.displayName}
                                     >
-                                        <img src={agent.displayIcon} alt={agent.displayName} className="w-full h-full object-cover" />
+                                        <img src={typeof agentIcons[agent.displayName] === 'object' ? agentIcons[agent.displayName]?.src : (agentIcons[agent.displayName] || agent.displayIcon)} alt={agent.displayName} className="w-full h-full object-cover" />
                                         {formData.secondaryAgents.includes(agent.displayName) && (
                                             <div className="absolute top-0 right-0 p-1">
                                                 <div className="w-2 h-2 rounded-full bg-rose-400 shadow-sm shadow-rose-400/50" />
@@ -606,7 +608,7 @@ export default function ProfilePage() {
                                             <div className="flex items-center gap-4">
                                                 {/* Agent Icon */}
                                                 <div className="relative">
-                                                    <img src={me.assets.agent.small} alt={me.character} className="h-12 w-12 rounded-md bg-slate-900" />
+                                                    <img src={typeof agentIcons[me.character] === 'object' ? agentIcons[me.character]?.src : (agentIcons[me.character] || me.assets.agent.small)} alt={me.character} className="h-12 w-12 rounded-md bg-slate-900" />
                                                     <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-white border border-slate-700">
                                                         {me.level}
                                                     </div>
@@ -674,7 +676,7 @@ export default function ProfilePage() {
                                     <div className="relative mb-6">
                                         <div className="absolute inset-0 bg-white/5 blur-2xl rounded-full" />
                                         <img 
-                                            src={mmrData.current_data.images?.large || mmrData.current_data.images?.small} 
+                                            src={typeof rankIcons[mmrData.current_data.currenttier] === 'object' ? rankIcons[mmrData.current_data.currenttier]?.src : (rankIcons[mmrData.current_data.currenttier] || mmrData.current_data.images?.large || mmrData.current_data.images?.small)} 
                                             alt="Rank" 
                                             className="h-32 w-32 relative z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-transform group-hover:scale-110 duration-500"
                                         />
@@ -741,7 +743,7 @@ export default function ProfilePage() {
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-10 opacity-50">
                                      <img 
-                                        src="https://media.valorant-api.com/competitivetiers/03621f13-43b2-ad59-3904-c3a77a961e97/0/largeicon.png" 
+                                        src={typeof rankIcons[0] === 'object' ? rankIcons[0]?.src : rankIcons[0]} 
                                         alt="Unranked" 
                                         className="h-16 w-16 grayscale mb-4 opacity-20"
                                     />
