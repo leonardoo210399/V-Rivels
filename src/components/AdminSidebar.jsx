@@ -8,7 +8,8 @@ import {
     Users, 
     Swords, 
     LogOut,
-    Settings
+    Settings,
+    MessageSquare
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -19,6 +20,7 @@ export default function AdminSidebar() {
         { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { name: "Tournaments", href: "/admin/tournaments", icon: Trophy },
         { name: "Users", href: "/admin/users", icon: Users },
+        { name: "Support", href: "/admin/support", icon: MessageSquare },
     ];
 
     return (

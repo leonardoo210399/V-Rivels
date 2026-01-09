@@ -8,7 +8,7 @@ export default function RulesAndRegulations() {
       {/* Hero Section */}
       <div className="relative bg-slate-900 py-16 px-6 text-center border-b border-white/5">
         <h1 className="font-anton text-4xl md:text-6xl uppercase text-white mb-4">
-          Rules & <span className="text-teal-500">Regulations</span>
+          Rules & <span className="text-rose-500">Regulations</span>
         </h1>
         <p className="text-slate-400 max-w-2xl mx-auto">
           To ensure fair play and a competitive environment, all participants must adhere to the following rules.
@@ -19,9 +19,9 @@ export default function RulesAndRegulations() {
         <div className="space-y-8">
           
           {/* Section 1: General */}
-          <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-teal-500/20 transition-all">
+          <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-rose-500/20 transition-all">
             <div className="flex items-center gap-4 mb-6">
-                <div className="bg-teal-500/10 p-3 rounded-lg text-teal-500">
+                <div className="bg-rose-500/10 p-3 rounded-lg text-rose-500">
                     <Shield size={28} />
                 </div>
                 <h2 className="text-2xl font-bold text-white uppercase">1. General Integrity</h2>
@@ -34,9 +34,9 @@ export default function RulesAndRegulations() {
           </section>
 
           {/* Section 2: Tournament Procedures */}
-          <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-teal-500/20 transition-all">
+          <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-rose-500/20 transition-all">
             <div className="flex items-center gap-4 mb-6">
-                <div className="bg-teal-500/10 p-3 rounded-lg text-teal-500">
+                <div className="bg-rose-500/10 p-3 rounded-lg text-rose-500">
                     <Users size={28} />
                 </div>
                 <h2 className="text-2xl font-bold text-white uppercase">2. Tournament Procedures</h2>
@@ -49,9 +49,9 @@ export default function RulesAndRegulations() {
           </section>
 
            {/* Section 3: In-Game Rules */}
-           <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-teal-500/20 transition-all">
+           <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-rose-500/20 transition-all">
             <div className="flex items-center gap-4 mb-6">
-                <div className="bg-teal-500/10 p-3 rounded-lg text-teal-500">
+                <div className="bg-rose-500/10 p-3 rounded-lg text-rose-500">
                     <Monitor size={28} />
                 </div>
                 <h2 className="text-2xl font-bold text-white uppercase">3. In-Game Rules</h2>
@@ -64,9 +64,9 @@ export default function RulesAndRegulations() {
           </section>
 
           {/* Section 4: Disputes */}
-          <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-teal-500/20 transition-all">
+          <section className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-rose-500/20 transition-all">
             <div className="flex items-center gap-4 mb-6">
-                <div className="bg-teal-500/10 p-3 rounded-lg text-teal-500">
+                <div className="bg-rose-500/10 p-3 rounded-lg text-rose-500">
                     <Gavel size={28} />
                 </div>
                 <h2 className="text-2xl font-bold text-white uppercase">4. Disputes & Reporting</h2>
@@ -85,7 +85,7 @@ export default function RulesAndRegulations() {
             <p className="text-slate-400 mb-6">
                 Detailed specifics for each tournament type (Deathmatch vs 5v5) can be found on individual tournament pages.
             </p>
-            <Link href="/support" className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-full transition-all hover:scale-105">
+            <Link href="/support" className="inline-block bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-8 rounded-full transition-all hover:scale-105">
                 Contact Support for Clarifications
             </Link>
           </div>

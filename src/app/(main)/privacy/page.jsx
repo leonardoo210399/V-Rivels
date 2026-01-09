@@ -7,7 +7,7 @@ export default function PrivacyPolicy() {
       {/* Hero Section */}
       <div className="relative bg-slate-900 py-16 px-6 text-center border-b border-white/5">
         <h1 className="font-anton text-4xl md:text-6xl uppercase text-white mb-4">
-          Privacy <span className="text-teal-500">Policy</span>
+          Privacy <span className="text-rose-500">Policy</span>
         </h1>
         <p className="text-slate-400 max-w-2xl mx-auto">
           We value your trust and are committed to protecting your personal information.
@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
         <div className="bg-slate-900/50 p-8 md:p-12 rounded-xl border border-white/5 text-sm md:text-base leading-relaxed space-y-8">
           
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-teal-500 pl-4">1. Information We Collect</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-rose-500 pl-4">1. Information We Collect</h2>
             <p className="text-slate-400 mb-2">We collect information you provide directly to us when you create an account, register for a tournament, or contact support.</p>
             <ul className="list-disc list-inside space-y-2 text-slate-400 ml-2">
               <li><strong>Personal Information:</strong> Name, email address, date of birth, and Discord ID.</li>
@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-teal-500 pl-4">2. How We Use Your Information</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-rose-500 pl-4">2. How We Use Your Information</h2>
             <p className="text-slate-400">We use the information we collect to:</p>
             <ul className="list-disc list-inside space-y-2 text-slate-400 ml-2 mt-2">
               <li>Facilitate tournament organization, bracketing, and prize distribution.</li>
@@ -39,7 +39,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-teal-500 pl-4">3. Data Sharing</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-rose-500 pl-4">3. Data Sharing</h2>
             <p className="text-slate-400">
               We do not sell your personal data. We may share information with:
             </p>
@@ -51,20 +51,20 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-teal-500 pl-4">4. Data Security</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-rose-500 pl-4">4. Data Security</h2>
             <p className="text-slate-400">
               We implement appropriate technical and organizational measures to protect your data. However, no method of transmission over the Internet is 100% secure.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-teal-500 pl-4">5. Contact Us</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-rose-500 pl-4">5. Contact Us</h2>
             <p className="text-slate-400">
               If you have any questions about this Privacy Policy, please contact our Data Protection Officer:
             </p>
             <div className="mt-4 bg-slate-800/50 p-4 rounded-lg inline-block text-slate-300">
-              <p>Email: <a href="mailto:aditya210399@gmail.com" className="text-teal-400 hover:underline">aditya210399@gmail.com</a></p>
-              <p>Phone: <span className="text-teal-400">+91 90284 10543</span></p>
+              <p>Email: <a href="mailto:aditya210399@gmail.com" className="text-rose-400 hover:underline">aditya210399@gmail.com</a></p>
+              <p>Phone: <span className="text-rose-400">+91 90284 10543</span></p>
             </div>
           </section>
 

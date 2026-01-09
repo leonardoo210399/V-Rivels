@@ -9,7 +9,7 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="space-y-4">
             <h2 className="font-anton text-2xl tracking-wider text-white uppercase">
-              VALOLANT <span className="text-teal-500">TOURNAMENT</span>
+              VALOLANT <span className="text-rose-500">TOURNAMENT</span>
             </h2>
             <p className="text-sm leading-relaxed text-slate-400">
               The premier destination for Valorant tournaments. Compete, win,
@@ -26,7 +26,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/tournaments"
-                  className="transition-colors hover:text-teal-400"
+                  className="transition-colors hover:text-rose-400"
                 >
                   Tournaments
                 </Link>
@@ -34,7 +34,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/leaderboard"
-                  className="transition-colors hover:text-teal-400"
+                  className="transition-colors hover:text-rose-400"
                 >
                   Leaderboard
                 </Link>
@@ -42,7 +42,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/teams"
-                  className="transition-colors hover:text-teal-400"
+                  className="transition-colors hover:text-rose-400"
                 >
                   Find a Team
                 </Link>
@@ -59,7 +59,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/rules"
-                  className="transition-colors hover:text-teal-400"
+                  className="transition-colors hover:text-rose-400"
                 >
                   Rules & Regulations
                 </Link>
@@ -67,7 +67,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/support"
-                  className="transition-colors hover:text-teal-400"
+                  className="transition-colors hover:text-rose-400"
                 >
                   Contact Us
                 </Link>
@@ -75,7 +75,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/support"
-                  className="transition-colors hover:text-teal-400"
+                  className="transition-colors hover:text-rose-400"
                 >
                   FAQ
                 </Link>
@@ -91,25 +91,25 @@ export default function Footer() {
             <div className="flex space-x-4">
               <a
                 href="#"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-teal-500 hover:text-white"
+                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
               >
                 <FaDiscord size={20} />
               </a>
               <a
                 href="#"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-teal-500 hover:text-white"
+                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
               >
                 <FaTwitter size={20} />
               </a>
               <a
                 href="#"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-teal-500 hover:text-white"
+                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
               >
                 <FaInstagram size={20} />
               </a>
               <a
                 href="#"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-teal-500 hover:text-white"
+                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
               >
                 <FaTwitch size={20} />
               </a>
