@@ -30,10 +30,7 @@ export default function SupportPage() {
       question: "I encountered a bug/issue. What should I do?",
       answer: "Please assume the issue is on your end first! If it persists, join our Discord and open a ticket in the #support channel, or use the contact form on this page."
     },
-    {
-      question: "How can I withdraw my winnings?",
-      answer: "Go to your Profile and select 'Withdraw'. We currently support bank transfers and UPI. Minimum withdrawal amount applies."
-    }
+
   ];
 
   return (
@@ -58,7 +55,7 @@ export default function SupportPage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-3">Email Support</h3>
             <p className="text-slate-400 mb-4">For general inquiries and account issues.</p>
-            <a href="mailto:support@valolant.com" className="text-teal-400 font-medium hover:text-teal-300">support@valolant.com</a>
+            <a href="mailto:aditya210399@gmail.com" className="text-teal-400 font-medium hover:text-teal-300">aditya210399@gmail.com</a>
           </div>
 
           <div className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-teal-500/50 transition-all group">
@@ -167,7 +164,7 @@ export default function SupportPage() {
             <div className="mt-10 p-6 bg-gradient-to-r from-teal-900/20 to-slate-900 rounded-xl border border-teal-500/20">
               <h4 className="text-white font-bold mb-2">Still have questions?</h4>
               <p className="text-sm text-slate-400 mb-4">Our support team is available 24/7 to assist you with any inquiries.</p>
-              <a href="mailto:support@valolant.com" className="text-teal-400 text-sm font-bold hover:underline">Contact Support &rarr;</a>
+              <a href="mailto:aditya210399@gmail.com" className="text-teal-400 text-sm font-bold hover:underline">Contact Support &rarr;</a>
             </div>
           </div>
         </div>
@@ -176,15 +173,9 @@ export default function SupportPage() {
           <h3 className="text-white font-bold mb-6 uppercase tracking-wide text-sm">Official Business Details</h3>
           <div className="flex flex-col md:flex-row justify-center gap-10 text-slate-400 text-sm">
             <div>
-              <p className="font-bold text-slate-300 mb-1">Registered Office:</p>
-              <p>123 Gaming Street, Tech Park</p>
-              <p>Mumbai, Maharashtra, 400001</p>
-              <p>India</p>
-            </div>
-            <div>
               <p className="font-bold text-slate-300 mb-1">Contact Details:</p>
-              <p>Email: business@valolant.com</p>
-              <p>Phone: +91 98765 43210 (Mon-Fri, 9AM-6PM)</p>
+              <p>Email: aditya210399@gmail.com</p>
+              <p>Phone: +91 90284 10543</p>
             </div>
           </div>
           <p className="mt-6 text-xs text-slate-500 max-w-2xl mx-auto">
