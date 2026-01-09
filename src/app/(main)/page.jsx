@@ -13,9 +13,7 @@ export default function Home() {
       <BentoGrid />
       <Contact />
       
-      <footer className="w-screen bg-[#5542ff] py-10 text-center text-white font-general">
-         <p>&copy; 2024 Valorant Tournament. Not affiliated with Riot Games.</p>
-      </footer>
+
     </main>
   );
 }
