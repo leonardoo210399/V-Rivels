@@ -302,7 +302,7 @@ export async function finalizeMatch(matchId, scoreA, scoreB) {
         }
     } catch (e) {
         // Final match or error finding next
-        console.log("No next round match found or final match reached.");
+        // console.log("No next round match found or final match reached.");
     }
 
     // 5. Check if all matches are completed
