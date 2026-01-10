@@ -31,7 +31,7 @@ export default function About() {
     <div id="about" className="min-h-screen w-screen relative">
       <div className="relative mb-8 mt-36 flex flex-col items-center gap-5">
         <p className="font-general text-sm uppercase md:text-[10px] text-rose-500 font-bold tracking-widest">
-            Welcome to Valolant
+            Welcome to VRivals
         </p>
 
         <AnimatedTitle
@@ -42,7 +42,7 @@ export default function About() {
         <div className="about-subtext mt-5 text-center px-4">
           <p className="text-slate-300 text-lg md:max-w-2xl mx-auto font-medium">
             The Metagame begins here. Your life, now an epic MMORPG. 
-            Valolant unites every player from every region into a single persistent tournament economy.
+            VRivals unites every player from every region into a single persistent tournament economy.
           </p>
         </div>
       </div>

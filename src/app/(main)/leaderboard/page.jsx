@@ -90,7 +90,7 @@ export default function LeaderboardPage() {
                         TOURNAMENT <span className="text-rose-600">LEGENDS</span>
                     </h1>
                     <p className="text-slate-500 text-lg max-w-2xl mx-auto font-medium">
-                        The elite performers of Valolant. Witness the masters who have dominated our brackets and claimed the ultimate rewards.
+                        The elite performers of VRivals. Witness the masters who have dominated our brackets and claimed the ultimate rewards.
                     </p>
                 </div>
 

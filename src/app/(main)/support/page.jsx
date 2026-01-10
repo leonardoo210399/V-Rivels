@@ -110,7 +110,7 @@ export default function SupportPage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-3">Discord Community</h3>
             <p className="text-slate-400 mb-4">Get real-time help from mods and the community.</p>
-            <a href="https://discord.gg/valolant" target="_blank" rel="noopener noreferrer" className="text-rose-400 font-medium hover:text-rose-300">Join Discord Server</a>
+            <a href="https://discord.gg/vrivals" target="_blank" rel="noopener noreferrer" className="text-rose-400 font-medium hover:text-rose-300">Join Discord Server</a>
           </div>
 
           <div className="bg-slate-900/50 p-8 rounded-xl border border-white/5 hover:border-rose-500/50 transition-all group">

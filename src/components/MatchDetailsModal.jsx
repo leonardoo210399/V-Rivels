@@ -402,7 +402,7 @@ export default function MatchDetailsModal({ match, isOpen, onClose, puuid }) {
         
         {/* Footer */}
         <div className="border-t border-white/10 p-4 bg-slate-950/50 text-center">
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Valolant Match Intelligence</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest">VRivals Match Intelligence</p>
         </div>
       </div>
     </div>

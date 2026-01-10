@@ -20,7 +20,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-rose-500 pl-4">1. Acceptance of Terms</h2>
             <p className="text-slate-400">
-              By accessing or using the Valolant Tournament platform, you agree to be bound by these Terms of Service. If you do not agree, you may not use our services.
+              By accessing or using the VRivals Tournament platform, you agree to be bound by these Terms of Service. If you do not agree, you may not use our services.
             </p>
           </section>
 
@@ -29,7 +29,7 @@ export default function TermsOfService() {
             <ul className="list-disc list-inside space-y-2 text-slate-400 ml-2">
               <li>You must be at least 13 years of age (or the minimum age of digital consent in your country).</li>
               <li>You must have a valid Valorant account in good standing.</li>
-              <li>Employees and immediate family members of Valolant Tournament organizers may be restricted from winning prizes.</li>
+              <li>Employees and immediate family members of VRivals Tournament organizers may be restricted from winning prizes.</li>
             </ul>
           </section>
 
@@ -56,7 +56,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-xl md:text-2xl font-bold text-white mb-4 border-l-4 border-rose-500 pl-4">5. Limitation of Liability</h2>
             <p className="text-slate-400">
-              Valolant Tournament is not affiliated with Riot Games. We are not liable for any direct, indirect, incidental, or consequential damages resulting from your use of the service or participation in tournaments.
+              VRivals Tournament is not affiliated with Riot Games. We are not liable for any direct, indirect, incidental, or consequential damages resulting from your use of the service or participation in tournaments.
             </p>
           </section>
 

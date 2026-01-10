@@ -5,12 +5,12 @@ export default function Footer() {
   return (
     <footer className="w-full border-t border-slate-800 bg-slate-900 pt-16 pb-8 text-slate-300">
       <div className="container mx-auto px-4">
-        <div className="mb-12 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-12 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-5">
           {/* Brand Column */}
-          <div className="space-y-4">
-            <h2 className="font-anton text-2xl tracking-wider text-white uppercase">
-              VALOLANT <span className="text-rose-500">TOURNAMENT</span>
-            </h2>
+          <div className="flex flex-col gap-6 lg:col-span-2 lg:flex-row lg:items-center">
+            <Link href="/" className="inline-block flex-shrink-0">
+              <img src="/vrivals_logo_vertical.png" alt="VRivals Tournament" className="h-32 w-auto object-contain" />
+            </Link>
             <p className="text-sm leading-relaxed text-slate-400">
               The premier destination for Valorant tournaments. Compete, win,
               and rise through the ranks in our automated competitive ecosystem.
@@ -120,7 +120,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col items-center justify-between border-t border-slate-800 pt-8 text-xs text-slate-500 md:flex-row">
           <p>
-            &copy; {new Date().getFullYear()} Valolant Tournament. All rights
+            &copy; {new Date().getFullYear()} VRivals Tournament. All rights
             reserved.
           </p>
           <div className="mt-4 flex space-x-6 md:mt-0">

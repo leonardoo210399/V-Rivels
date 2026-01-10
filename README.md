@@ -1,8 +1,8 @@
-# 🎮 VALOLANT — The Ultimate Valorant Tournament Platform
+# 🎮 VRIVALS — The Ultimate Valorant Tournament Platform
 
 ![Banner](https://images.unsplash.com/photo-1624138784614-87fd1b6528f2?q=80&w=2000&auto=format&fit=crop)
 
-**VALOLANT** is a premium, high-performance web platform designed for Valorant players to compete, track their progress, and find teammates. Built with a modern tech stack (Next.js 15 + Appwrite), it offers a seamless experience from registration to final victory.
+**VRIVALS** is a premium, high-performance web platform designed for Valorant players to compete, track their progress, and find teammates. Built with a modern tech stack (Next.js 15 + Appwrite), it offers a seamless experience from registration to final victory.
 
 ---
 
