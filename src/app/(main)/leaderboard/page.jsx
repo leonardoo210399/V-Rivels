@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
-import { Trophy, Swords, DollarSign, Award as Medal, Crown, ArrowRight, User } from "lucide-react";
+import { Trophy, Swords, Award as Medal, Crown, ArrowRight, User } from "lucide-react";
 import Loader from "@/components/Loader";
 import Link from "next/link";
 
@@ -32,27 +32,30 @@ export default function LeaderboardPage() {
                     ]
                 );
 
-                let results = usersRes.documents.map(user => ({
-                    id: user.$id,
-                    name: user.ingameName || "Unknown Player",
-                    tag: user.tag || "000",
-                    wins: user.tournamentsWon || 0,
-                    earnings: user.totalEarnings || 0,
-                    matchesWon: user.matchesWon || 0,
-                    runnerUp: user.runnerUp || 0,
-                    region: user.region || "AP",
-                    avatar: user.puuid ? `https://media.valorant-api.com/playercards/${user.card}/smallart.png` : null,
-                    isLegend: user.isLegend || false
-                }));
+                let results = usersRes.documents.map(user => {
+                    const cardId = user.card || "aec37452-4467-f9d6-c3cc-9097e0766160"; // Fallback to standard card
+                    return {
+                        id: user.$id,
+                        name: user.ingameName || "Unknown Player",
+                        tag: user.tag || "000",
+                        wins: user.tournamentsWon || 0,
+                        earnings: user.totalEarnings || 0,
+                        matchesWon: user.matchesWon || 0,
+                        runnerUp: user.runnerUp || 0,
+                        region: user.region || "AP",
+                        avatar: `https://media.valorant-api.com/playercards/${cardId}/displayicon.png`,
+                        isLegend: user.isLegend || false
+                    };
+                });
                 
                 // If no real users found at all, use high-quality mock data for demo
                 if (results.length === 0) {
                     results = [
-                        { id: "1", name: "TenZ", tag: "SEN", wins: 12, runnerUp: 5, earnings: 50000, matchesWon: 45, region: "NA", isLegend: true },
-                        { id: "2", name: "Aspas", tag: "LEV", wins: 9, runnerUp: 3, earnings: 35000, matchesWon: 38, region: "BR", isLegend: true },
-                        { id: "3", name: "Forsaken", tag: "PRX", wins: 7, runnerUp: 8, earnings: 28000, matchesWon: 32, region: "AP", isLegend: true },
-                        { id: "4", name: "Derke", tag: "FNC", wins: 6, runnerUp: 4, earnings: 25000, matchesWon: 29, region: "EU", isLegend: false },
-                        { id: "5", name: "ScreaM", tag: "KMT", wins: 5, runnerUp: 2, earnings: 18000, matchesWon: 24, region: "EU", isLegend: false },
+                        { id: "1", name: "TenZ", tag: "SEN", wins: 12, runnerUp: 5, earnings: 50000, matchesWon: 45, region: "NA", isLegend: true, avatar: "https://media.valorant-api.com/playercards/33ca32df-4279-88c9-cf63-2292f72a4439/displayicon.png" },
+                        { id: "2", name: "Aspas", tag: "LEV", wins: 9, runnerUp: 3, earnings: 35000, matchesWon: 38, region: "BR", isLegend: true, avatar: "https://media.valorant-api.com/playercards/60867808-4171-ec31-6453-2786a3d6a457/displayicon.png" },
+                        { id: "3", name: "Forsaken", tag: "PRX", wins: 7, runnerUp: 8, earnings: 28000, matchesWon: 32, region: "AP", isLegend: true, avatar: "https://media.valorant-api.com/playercards/a755a6d3-4613-2d5c-df33-3d923d6a4439/displayicon.png" },
+                        { id: "4", name: "Derke", tag: "FNC", wins: 6, runnerUp: 4, earnings: 25000, matchesWon: 29, region: "EU", isLegend: false, avatar: "https://media.valorant-api.com/playercards/33ca32df-4279-88c9-cf63-2292f72a4439/displayicon.png" },
+                        { id: "5", name: "ScreaM", tag: "KMT", wins: 5, runnerUp: 2, earnings: 18000, matchesWon: 24, region: "EU", isLegend: false, avatar: "https://media.valorant-api.com/playercards/7ca656b2-4d7a-72ef-ea7b-408990666060/displayicon.png" },
                     ];
                 }
 
@@ -98,14 +101,14 @@ export default function LeaderboardPage() {
                         <div className="order-2 md:order-1 flex flex-col items-center">
                             <div className="relative mb-4 group cursor-pointer">
                                 <div className="absolute inset-0 bg-slate-400/20 blur-3xl rounded-full scale-150 group-hover:bg-slate-400/30 transition-all" />
-                                <div className="relative w-32 h-32 rounded-2xl bg-slate-900 border-2 border-slate-400/30 flex items-center justify-center overflow-hidden">
+                                <div className="relative w-32 h-32 rounded-2xl bg-slate-900 border-2 border-slate-400/30 flex items-center justify-center overflow-hidden shadow-2xl">
                                      {legends[1].avatar ? (
-                                        <img src={legends[1].avatar} className="w-full h-full object-cover" />
+                                        <img src={legends[1].avatar} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                      ) : (
                                         <User className="h-12 w-12 text-slate-700" />
                                      )}
                                 </div>
-                                <div className="absolute -top-4 -left-4 w-10 h-10 bg-slate-400 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl shadow-xl border-2 border-slate-900">2</div>
+                                <div className="absolute -top-4 -left-4 w-10 h-10 bg-slate-400 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl shadow-xl border-2 border-slate-900 z-10">2</div>
                             </div>
                             <h3 className="text-xl font-black text-white">{legends[1].name}</h3>
                             <p className="text-slate-500 text-xs font-bold uppercase mb-2">#{legends[1].tag}</p>
@@ -130,15 +133,15 @@ export default function LeaderboardPage() {
                                 <div className="absolute inset-0 bg-rose-600/30 blur-[100px] rounded-full scale-150 group-hover:bg-rose-600/40 transition-all animate-pulse" />
                                 <div className="relative w-48 h-48 rounded-3xl bg-slate-900 border-4 border-rose-600 flex items-center justify-center overflow-hidden shadow-2xl shadow-rose-900/40">
                                      {legends[0].avatar ? (
-                                        <img src={legends[0].avatar} className="w-full h-full object-cover" />
+                                        <img src={legends[0].avatar} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                      ) : (
                                         <User className="h-24 w-24 text-slate-700" />
                                      )}
                                 </div>
-                                <div className="absolute -top-6 -left-6 w-16 h-16 bg-rose-600 rounded-xl flex items-center justify-center font-black text-white text-3xl shadow-2xl border-4 border-slate-900 rotate-[-10deg]">
+                                <div className="absolute -top-6 -left-6 w-16 h-16 bg-rose-600 rounded-xl flex items-center justify-center font-black text-white text-3xl shadow-2xl border-4 border-slate-900 rotate-[-10deg] z-10">
                                     <Crown className="h-8 w-8 fill-current" />
                                 </div>
-                                <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center font-black text-slate-900 text-2xl shadow-xl border-4 border-slate-900 animate-bounce">1</div>
+                                <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center font-black text-slate-900 text-2xl shadow-xl border-4 border-slate-900 animate-bounce z-10">1</div>
                             </div>
                             <h3 className="text-3xl font-black text-white tracking-tighter">{legends[0].name}</h3>
                             <p className="text-rose-500 text-sm font-black uppercase mb-3">#{legends[0].tag}</p>
@@ -166,14 +169,14 @@ export default function LeaderboardPage() {
                         <div className="order-3 flex flex-col items-center">
                             <div className="relative mb-4 group cursor-pointer">
                                 <div className="absolute inset-0 bg-amber-700/20 blur-3xl rounded-full scale-150 group-hover:bg-amber-700/30 transition-all" />
-                                <div className="relative w-32 h-32 rounded-2xl bg-slate-900 border-2 border-amber-700/30 flex items-center justify-center overflow-hidden">
+                                <div className="relative w-32 h-32 rounded-2xl bg-slate-900 border-2 border-amber-700/30 flex items-center justify-center overflow-hidden shadow-2xl">
                                      {legends[2].avatar ? (
-                                        <img src={legends[2].avatar} className="w-full h-full object-cover" />
+                                        <img src={legends[2].avatar} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                      ) : (
                                         <User className="h-12 w-12 text-slate-700" />
                                      )}
                                 </div>
-                                <div className="absolute -top-4 -left-4 w-10 h-10 bg-amber-700 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl shadow-xl border-2 border-slate-900">3</div>
+                                <div className="absolute -top-4 -left-4 w-10 h-10 bg-amber-700 rounded-lg flex items-center justify-center font-black text-slate-950 text-xl shadow-xl border-2 border-slate-900 z-10">3</div>
                             </div>
                             <h3 className="text-xl font-black text-white">{legends[2].name}</h3>
                             <p className="text-slate-500 text-xs font-bold uppercase mb-2">#{legends[2].tag}</p>
@@ -216,9 +219,9 @@ export default function LeaderboardPage() {
                                     </span>
                                 </div>
                                 <div className="col-span-4 flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center overflow-hidden">
+                                    <div className="relative w-10 h-10 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
                                         {player.avatar ? (
-                                            <img src={player.avatar} className="w-full h-full object-cover" />
+                                            <img src={player.avatar} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         ) : (
                                             <User className="h-5 w-5 text-slate-600" />
                                         )}
@@ -253,9 +256,8 @@ export default function LeaderboardPage() {
                                 </div>
                                 <div className="col-span-2 text-right">
                                     <div className="flex items-center justify-end gap-1 text-emerald-400">
-                                        <DollarSign className="h-3 w-3" />
                                         <span className="text-sm font-mono font-black tracking-tight">
-                                            {player.earnings.toLocaleString()}
+                                            ₹{player.earnings.toLocaleString()}
                                         </span>
                                     </div>
                                 </div>

@@ -202,6 +202,7 @@ export default function ProfilePage() {
                 tag: accountData.data.tag,
                 region: region, // Save the manually selected region
                 card: accountData.data.card, // Save card ID for leaderboard
+                level: accountData.data.account_level, // Save level for leaderboard
                 createdTimestamp: new Date().toISOString(),
                 totalEarnings: 0,
                 tournamentsWon: 0,

@@ -102,8 +102,16 @@ export default function CompleteStandings({ registrations, tournament, matches =
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="shrink-0 p-3 bg-slate-900 rounded-2xl border border-white/5 group-hover:border-rose-500/30 transition-all shadow-lg">
-                                                        <Target className={`h-5 w-5 ${isTop3 ? 'text-rose-500' : 'text-slate-600'}`} />
+                                                    <div className="shrink-0 w-12 h-12 bg-slate-900 rounded-xl border border-white/5 overflow-hidden group-hover:border-rose-500/30 transition-all shadow-lg flex items-center justify-center">
+                                                        {metadata.playerCard ? (
+                                                            <img 
+                                                                src={`https://media.valorant-api.com/playercards/${metadata.playerCard}/displayicon.png`} 
+                                                                alt="Card" 
+                                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                            />
+                                                        ) : (
+                                                            <Target className={`h-5 w-5 ${isTop3 ? 'text-rose-500' : 'text-slate-600'}`} />
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <p className="font-black text-white group-hover:text-rose-500 transition-colors uppercase italic tracking-tighter text-lg">
@@ -134,10 +142,10 @@ export default function CompleteStandings({ registrations, tournament, matches =
                                                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-[0.2em] border border-rose-500/20 shadow-lg shadow-rose-500/5">
                                                             <Medal className="h-3 w-3" /> Winner
                                                         </div>
-                                                    ) : index < (tournament.maxTeams / 2) ? (
-                                                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Qualified</span>
+                                                    ) : (index === 1 && isCompleted) ? (
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Runner Up</span>
                                                     ) : (
-                                                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-700">Active</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-700">Contender</span>
                                                     )}
                                                 </div>
                                             </td>

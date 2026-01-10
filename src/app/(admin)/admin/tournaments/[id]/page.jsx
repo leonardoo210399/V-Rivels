@@ -32,6 +32,7 @@ import {
     X,
     Edit2,
     Trash2,
+    Plus,
     ExternalLink,
     Loader as LoaderIcon,
     RotateCcw,
@@ -67,7 +68,10 @@ export default function TournamentControlPage({ params }) {
         prizePool: "",
         maxTeams: 8,
         location: "Online",
-        date: ""
+        date: "",
+        firstPrize: "",
+        secondPrize: "",
+        additionalPrizes: []
     });
 
     const loadData = async () => {
@@ -89,7 +93,10 @@ export default function TournamentControlPage({ params }) {
                 prizePool: tData.prizePool || "",
                 maxTeams: tData.maxTeams || 8,
                 location: tData.location || "Online",
-                date: tData.date ? new Date(tData.date).toISOString().split('T')[0] : ""
+                date: tData.date ? new Date(tData.date).toISOString().split('T')[0] : "",
+                firstPrize: tData.firstPrize || "",
+                secondPrize: tData.secondPrize || "",
+                additionalPrizes: tData.additionalPrizes ? (typeof tData.additionalPrizes === 'string' ? JSON.parse(tData.additionalPrizes) : tData.additionalPrizes) : []
             });
         } catch (error) {
             console.error("Failed to load tournament data", error);
@@ -248,8 +255,12 @@ export default function TournamentControlPage({ params }) {
         if (e) e.preventDefault();
         setUpdating(true);
         try {
-            await updateTournament(id, editForm);
-            setTournament(prev => ({ ...prev, ...editForm }));
+            const dataToUpdate = {
+                ...editForm,
+                additionalPrizes: JSON.stringify(editForm.additionalPrizes)
+            };
+            await updateTournament(id, dataToUpdate);
+            setTournament(prev => ({ ...prev, ...dataToUpdate }));
             alert("Tournament updated successfully!");
         } catch (e) {
             alert("Failed to update tournament: " + e.message);
@@ -825,91 +836,200 @@ export default function TournamentControlPage({ params }) {
                                     </div>
                                 </div>
 
-                                <form onSubmit={handleSaveSettings} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Event Name</label>
-                                            <input 
-                                                type="text"
-                                                required
-                                                value={editForm.name}
-                                                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                                                className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:border-rose-500 outline-none transition-all placeholder:text-slate-700"
-                                            />
-                                        </div>
+                                <form onSubmit={handleSaveSettings} className="space-y-10">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                        {/* Left Side: Basic Info */}
+                                        <div className="space-y-8">
+                                            <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">General Information</h4>
+                                            </div>
 
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Game Mode</label>
-                                            <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-900/50 border border-white/5 rounded-2xl">
-                                                {['5v5', 'Deathmatch'].map(mode => (
-                                                    <button
-                                                        key={mode}
-                                                        type="button"
-                                                        onClick={() => setEditForm({...editForm, gameType: mode})}
-                                                        className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                                            editForm.gameType === mode 
-                                                            ? 'bg-rose-600 text-white shadow-lg' 
-                                                            : 'text-slate-500 hover:text-white'
-                                                        }`}
-                                                    >
-                                                        {mode}
-                                                    </button>
-                                                ))}
+                                            <div className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Event Name</label>
+                                                    <input 
+                                                        type="text"
+                                                        required
+                                                        value={editForm.name}
+                                                        onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                                        className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:border-rose-500 outline-none transition-all placeholder:text-slate-700 shadow-inner"
+                                                        placeholder="Tournament Title"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Physical Location</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={editForm.location}
+                                                        onChange={(e) => setEditForm({...editForm, location: e.target.value})}
+                                                        className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:border-rose-500 outline-none transition-all shadow-inner"
+                                                        placeholder="Online"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Game Mode</label>
+                                                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-900/50 border border-white/5 rounded-2xl shadow-inner">
+                                                        {['5v5', 'Deathmatch'].map(mode => (
+                                                            <button
+                                                                key={mode}
+                                                                type="button"
+                                                                onClick={() => setEditForm({...editForm, gameType: mode})}
+                                                                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                                    editForm.gameType === mode 
+                                                                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20' 
+                                                                    : 'text-slate-500 hover:text-white hover:bg-white/5'
+                                                                }`}
+                                                            >
+                                                                {mode}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Match Date</label>
+                                                        <input 
+                                                            type="date"
+                                                            value={editForm.date}
+                                                            onChange={(e) => setEditForm({...editForm, date: e.target.value})}
+                                                            className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-3.5 text-white font-bold focus:border-rose-500 outline-none transition-all [color-scheme:dark] shadow-inner"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Max Capacity</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={editForm.maxTeams}
+                                                            onChange={(e) => setEditForm({...editForm, maxTeams: parseInt(e.target.value)})}
+                                                            className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-3.5 text-white font-bold focus:border-rose-500 outline-none transition-all shadow-inner"
+                                                            placeholder="16"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Prize Pool</label>
-                                                <input 
-                                                    type="text"
-                                                    value={editForm.prizePool}
-                                                    onChange={(e) => setEditForm({...editForm, prizePool: e.target.value})}
-                                                    className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-3 text-white font-bold focus:border-rose-500 outline-none transition-all"
-                                                />
+                                        {/* Right Side: Prizes */}
+                                        <div className="space-y-8">
+                                            <div className="flex items-center gap-3 pb-2 border-b border-white/5">
+                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Prize Distribution</h4>
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Max Entries</label>
-                                                <input 
-                                                    type="number"
-                                                    value={editForm.maxTeams}
-                                                    onChange={(e) => setEditForm({...editForm, maxTeams: parseInt(e.target.value)})}
-                                                    className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-3 text-white font-bold focus:border-rose-500 outline-none transition-all"
-                                                />
+
+                                            <div className="space-y-6">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Total Prize Pool</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={editForm.prizePool}
+                                                        onChange={(e) => setEditForm({...editForm, prizePool: e.target.value})}
+                                                        className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:border-rose-500 outline-none transition-all placeholder:text-slate-700 shadow-inner"
+                                                        placeholder="e.g. ₹10,000"
+                                                    />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 ml-1">Winner (1st)</label>
+                                                        <input 
+                                                            type="text"
+                                                            value={editForm.firstPrize}
+                                                            onChange={(e) => setEditForm({...editForm, firstPrize: e.target.value})}
+                                                            className="w-full bg-slate-950 border border-white/5 rounded-2xl px-5 py-3.5 text-white font-bold focus:border-emerald-500 outline-none transition-all placeholder:text-slate-700"
+                                                            placeholder="Winner Price"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-amber-500/50 ml-1">Runner Up (2nd)</label>
+                                                        <input 
+                                                            type="text"
+                                                            value={editForm.secondPrize}
+                                                            onChange={(e) => setEditForm({...editForm, secondPrize: e.target.value})}
+                                                            className="w-full bg-slate-950 border border-white/5 rounded-2xl px-5 py-3.5 text-white font-bold focus:border-amber-500 outline-none transition-all placeholder:text-slate-700"
+                                                            placeholder="Second Price"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-4 pt-2">
+                                                    <div className="flex items-center justify-between px-1">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Additional Rewards</label>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setEditForm({
+                                                                ...editForm,
+                                                                additionalPrizes: [...editForm.additionalPrizes, { label: "", value: "" }]
+                                                            })}
+                                                            className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-[9px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white flex items-center gap-1.5 transition-all"
+                                                        >
+                                                            <Plus className="h-3 w-3" /> Add Item
+                                                        </button>
+                                                    </div>
+                                                    <div className="space-y-3">
+                                                        {editForm.additionalPrizes.map((prize, idx) => (
+                                                            <div key={idx} className="flex gap-2 group animate-in slide-in-from-top-1 duration-200">
+                                                                <input 
+                                                                    type="text"
+                                                                    value={prize.label}
+                                                                    onChange={(e) => {
+                                                                        const newPrizes = [...editForm.additionalPrizes];
+                                                                        newPrizes[idx].label = e.target.value;
+                                                                        setEditForm({ ...editForm, additionalPrizes: newPrizes });
+                                                                    }}
+                                                                    placeholder="Title"
+                                                                    className="flex-[1.5] bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-xs text-white font-bold focus:border-rose-500 outline-none transition-all"
+                                                                />
+                                                                <input 
+                                                                    type="text"
+                                                                    value={prize.value}
+                                                                    onChange={(e) => {
+                                                                        const newPrizes = [...editForm.additionalPrizes];
+                                                                        newPrizes[idx].value = e.target.value;
+                                                                        setEditForm({ ...editForm, additionalPrizes: newPrizes });
+                                                                    }}
+                                                                    placeholder="Value"
+                                                                    className="flex-1 bg-slate-950 border border-white/5 rounded-xl px-4 py-3 text-xs text-white font-bold focus:border-rose-500 outline-none transition-all"
+                                                                />
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const newPrizes = editForm.additionalPrizes.filter((_, i) => i !== idx);
+                                                                        setEditForm({ ...editForm, additionalPrizes: newPrizes });
+                                                                    }}
+                                                                    className="p-3 text-slate-600 hover:text-rose-500 transition-colors"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                        {editForm.additionalPrizes.length === 0 && (
+                                                            <div className="text-center py-8 border border-dashed border-white/5 rounded-2xl bg-slate-950/20">
+                                                                <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">No extra rewards defined</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Location</label>
-                                            <input 
-                                                type="text"
-                                                value={editForm.location}
-                                                onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                                                className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:border-rose-500 outline-none transition-all"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Event Date</label>
-                                            <input 
-                                                type="date"
-                                                value={editForm.date}
-                                                onChange={(e) => setEditForm({...editForm, date: e.target.value})}
-                                                className="w-full bg-slate-900/50 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold focus:border-rose-500 outline-none transition-all [color-scheme:dark]"
-                                            />
-                                        </div>
-
-                                        <div className="pt-4">
-                                            <button 
-                                                type="submit"
-                                                disabled={updating}
-                                                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] py-5 rounded-2xl transition-all shadow-xl disabled:opacity-50"
-                                            >
-                                                {updating ? <LoaderIcon className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4" /> Save Tournament Settings</>}
-                                            </button>
-                                        </div>
+                                    <div className="pt-10 border-t border-white/5">
+                                        <button 
+                                            type="submit"
+                                            disabled={updating}
+                                            className="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-[0.2em] text-[11px] py-6 rounded-2xl transition-all shadow-xl shadow-emerald-900/10 disabled:opacity-50 group"
+                                        >
+                                            {updating ? <LoaderIcon className="h-5 w-5 animate-spin" /> : (
+                                                <>
+                                                    <Check className="h-5 w-5 group-hover:scale-125 transition-transform" /> 
+                                                    Save Tournament Configuration
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </form>
                             </div>

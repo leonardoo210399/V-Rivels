@@ -210,7 +210,9 @@ export default function TournamentDetailPage({ params }) {
     try {
         const metadata = {
             members: tournament.gameType === "5v5" ? members.map(m => ({ name: m.name, tag: m.tag })) : null,
-            playerName: tournament.gameType !== "5v5" ? `${userProfile.ingameName}#${userProfile.tag}` : null
+            playerName: tournament.gameType !== "5v5" ? `${userProfile.ingameName}#${userProfile.tag}` : null,
+            playerCard: userProfile?.card || null,
+            puuid: userProfile?.puuid || null
         };
 
         await registerForTournament(id, user.$id, tournament.gameType === "5v5" ? teamName : userProfile.ingameName, { metadata: JSON.stringify(metadata) });

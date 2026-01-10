@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { databases } from "@/lib/appwrite";
-import { User, Mail, Shield, ShieldAlert, BadgeCheck } from "lucide-react";
+import { User, Mail, Shield, ShieldAlert, BadgeCheck, Search, Target, X } from "lucide-react";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";
@@ -9,6 +9,7 @@ const USERS_COLLECTION_ID = "users";
 export default function AdminUsersPage() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         async function loadUsers() {
@@ -24,11 +25,43 @@ export default function AdminUsersPage() {
         loadUsers();
     }, []);
 
+    const filteredUsers = users.filter(u => {
+        const searchLower = searchQuery.toLowerCase();
+        return (
+            u.ingameName?.toLowerCase().includes(searchLower) ||
+            u.email?.toLowerCase().includes(searchLower) ||
+            u.tag?.toLowerCase().includes(searchLower)
+        );
+    });
+
     return (
         <div className="space-y-8">
-             <div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">User Management</h1>
-                <p className="text-slate-400 mt-1">View and manage all registered accounts</p>
+             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">User Management</h1>
+                    <p className="text-slate-400 mt-1">View and manage all registered accounts</p>
+                </div>
+
+                <div className="relative w-full md:w-96 group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-slate-500 group-focus-within:text-rose-500 transition-colors" />
+                    </div>
+                    <input 
+                        type="text"
+                        placeholder="Search by Name, Email or Tag..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-slate-900/50 border border-white/10 rounded-xl py-3 pl-11 pr-12 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/50 transition-all backdrop-blur-sm"
+                    />
+                    {searchQuery && (
+                        <button 
+                            onClick={() => setSearchQuery("")}
+                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-white transition-colors"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="bg-slate-900/50 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
@@ -51,25 +84,33 @@ export default function AdminUsersPage() {
                                         </td>
                                     </tr>
                                 ))
-                            ) : users.length === 0 ? (
+                             ) : filteredUsers.length === 0 ? (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-12 text-center text-slate-500 font-medium">
-                                        No users registered yet.
+                                        {searchQuery ? `No users found matching "${searchQuery}"` : "No users registered yet."}
                                     </td>
                                 </tr>
                             ) : (
-                                users.map((u) => {
+                                filteredUsers.map((u) => {
                                     const isAdmin = u.email === 'adityafulzele1122@gmail.com';
                                     return (
                                         <tr key={u.$id} className="hover:bg-white/[0.02] transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 border border-white/5">
-                                                        <User className="h-5 w-5" />
+                                                    <div className="h-10 w-10 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 border border-white/5 overflow-hidden group-hover:border-rose-500/30 transition-all">
+                                                        {u.card ? (
+                                                            <img 
+                                                                src={`https://media.valorant-api.com/playercards/${u.card}/displayicon.png`} 
+                                                                alt="Avatar" 
+                                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                            />
+                                                        ) : (
+                                                            <User className="h-5 w-5" />
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-white flex items-center gap-2">
-                                                            {u.name || "Unknown User"}
+                                                            {u.ingameName || u.email?.split('@')[0] || "Unknown User"}
                                                             {isAdmin && <Shield className="h-3 w-3 text-rose-500" title="Admin" />}
                                                         </p>
                                                         <div className="flex items-center gap-1.5 text-xs text-slate-500">

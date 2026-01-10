@@ -106,8 +106,16 @@ export default function DeathmatchStandings({ registrations, tournament, isAdmin
                                     </td>
                                     <td className="px-4 py-4">
                                         <div className="flex items-center gap-2">
-                                            <div className="shrink-0 p-1.5 bg-slate-950 rounded-lg border border-white/5 group-hover:border-rose-500/20 transition-all">
-                                                <Target className={`h-3.5 w-3.5 ${isTop3 ? 'text-rose-500' : 'text-slate-600'}`} />
+                                            <div className="shrink-0 w-8 h-8 bg-slate-950 rounded-lg border border-white/5 overflow-hidden group-hover:border-rose-500/20 transition-all flex items-center justify-center">
+                                                {metadata.playerCard ? (
+                                                    <img 
+                                                        src={`https://media.valorant-api.com/playercards/${metadata.playerCard}/displayicon.png`} 
+                                                        alt="Card" 
+                                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                    />
+                                                ) : (
+                                                    <Target className={`h-3.5 w-3.5 ${isTop3 ? 'text-rose-500' : 'text-slate-600'}`} />
+                                                )}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="font-bold text-white group-hover:text-rose-500 transition-colors uppercase tracking-tight truncate text-sm">
@@ -181,10 +189,10 @@ export default function DeathmatchStandings({ registrations, tournament, isAdmin
                                                     <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 text-[9px] font-black uppercase tracking-widest border border-rose-500/20 whitespace-nowrap">
                                                         <Medal className="h-2.5 w-2.5" /> Winner
                                                     </div>
-                                                ) : index < (tournament.maxTeams / 2) ? (
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 whitespace-nowrap">Qualified</span>
+                                                ) : (index === 1 && isCompleted) ? (
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 whitespace-nowrap">Runner Up</span>
                                                 ) : (
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-600 whitespace-nowrap">Active</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-600 whitespace-nowrap">Contender</span>
                                                 )}
                                             </div>
                                         </div>
