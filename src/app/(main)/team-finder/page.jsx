@@ -398,7 +398,7 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
                 </p>
 
                 <Link 
-                    href={`/u/${agent.userId}`}
+                    href={`/player/${agent.userId}`}
                     className="group/btn relative w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-950 border border-white/5 hover:bg-rose-600 hover:border-rose-500 text-white text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 overflow-hidden"
                 >
                     <span className="relative z-10 flex items-center gap-2">

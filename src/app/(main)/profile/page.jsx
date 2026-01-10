@@ -7,8 +7,10 @@ import { saveUserProfile, getUserProfile } from "@/lib/users";
 import { User, Trophy, Activity, TrendingUp, TrendingDown, UserPlus, Sword, Shield, Crosshair, Zap, Brain, RefreshCw, ChevronDown, CheckCircle, XCircle, AlertCircle, Info } from "lucide-react";
 import MatchDetailsModal from "@/components/MatchDetailsModal";
 import { createFreeAgentPost, deleteFreeAgentPost, getUserFreeAgentPost, updateFreeAgentPost } from "@/lib/players";
-import { Trash2 } from "lucide-react";
+import { Trash2, DollarSign, Crown, Swords, ArrowRight, Medal } from "lucide-react";
+import Link from "next/link";
 import Loader from "@/components/Loader";
+import ProfileSkeleton from "@/components/ProfileSkeleton";
 import { rankIcons } from "@/assets/images/ranks";
 import { agentIcons } from "@/assets/images/agents";
 
@@ -29,10 +31,13 @@ export default function ProfilePage() {
   
   // State for Valorant Data
   const [valProfile, setValProfile] = useState(null);
+  const [platformProfile, setPlatformProfile] = useState(null);
   const [mmrData, setMmrData] = useState(null);
   const [matches, setMatches] = useState([]);
   const [cardData, setCardData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [mmrLoading, setMmrLoading] = useState(false);
+  const [matchesLoading, setMatchesLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Form State for linking account
@@ -79,13 +84,21 @@ export default function ProfilePage() {
             try {
                 const profile = await getUserProfile(user.$id);
                 if (profile) {
+                    setPlatformProfile(profile);
                     setRiotId(profile.ingameName);
                     setRiotTag(profile.tag);
+                    setRegion(profile.region || 'ap');
                     
+                    // We know the user has a linked account, so we can stop showing the "Link Account" form
+                    // and show the skeleton while we fetch the rest
+                    // (LATER: we could even set a "placeholder" valProfile here if we wanted)
+
                     // Prioritize fetching by PUUID if it exists
-                    const accountData = profile.puuid 
-                        ? await getAccountByPuuid(profile.puuid)
-                        : await getAccount(profile.ingameName, profile.tag);
+                    const accountDataPromise = profile.puuid 
+                        ? getAccountByPuuid(profile.puuid)
+                        : getAccount(profile.ingameName, profile.tag);
+                        
+                    const accountData = await accountDataPromise;
                         
                     if (accountData.data) {
                         setValProfile(accountData.data);
@@ -101,17 +114,21 @@ export default function ProfilePage() {
                         const region = profile.region || accountData.data.region || 'ap';
                         const puuid = accountData.data.puuid;
 
+                        setMmrLoading(true);
                         getMMR(puuid, region)
                             .then(res => setMmrData(res.data))
                             .catch(async () => {
                                 console.error("MMR fetch by PUUID failed for profile, trying Name/Tag fallback...");
                                 const fallbackRes = await getMMRByName(region, accountData.data.name, accountData.data.tag).catch(() => null);
                                 if (fallbackRes) setMmrData(fallbackRes.data);
-                            });
+                            })
+                            .finally(() => setMmrLoading(false));
 
+                        setMatchesLoading(true);
                         getMatches(puuid, region)
                             .then(res => setMatches(res.data))
-                            .catch(() => setMatches([]));
+                            .catch(() => setMatches([]))
+                            .finally(() => setMatchesLoading(false));
 
                         // 3. Fetch Team Finder Post
                         getUserFreeAgentPost(user.$id)
@@ -127,6 +144,9 @@ export default function ProfilePage() {
                                 }
                             })
                             .catch(() => setUserPost(null));
+                    } else {
+                        // Handle case where linked account is no longer found
+                        setValProfile(null);
                     }
                 }
             } catch (err) {
@@ -175,14 +195,21 @@ export default function ProfilePage() {
                 .catch(() => setMatches([]));
             
             // 3. Save to Appwrite
-            await saveUserProfile(user.$id, {
+            const profileData = {
                 puuid: accountData.data.puuid,
                 email: user.email,
                 ingameName: accountData.data.name,
                 tag: accountData.data.tag,
                 region: region, // Save the manually selected region
-                createdTimestamp: new Date().toISOString()
-            });
+                card: accountData.data.card, // Save card ID for leaderboard
+                createdTimestamp: new Date().toISOString(),
+                totalEarnings: 0,
+                tournamentsWon: 0,
+                matchesWon: 0,
+                runnerUp: 0
+            };
+            await saveUserProfile(user.$id, profileData);
+            setPlatformProfile(profileData);
         }
         
     } catch (err) {
@@ -446,10 +473,7 @@ export default function ProfilePage() {
         )}
 
         {loading && !valProfile ? (
-            <div className="flex flex-col items-center justify-center py-20 rounded-xl border border-white/10 bg-slate-900/50 backdrop-blur-sm">
-                <Loader fullScreen={false} />
-                <p className="text-slate-400 animate-pulse font-medium">Fetching Valorant Profile...</p>
-            </div>
+            <ProfileSkeleton />
         ) : !valProfile ? (
              <div className="rounded-xl border border-white/10 bg-slate-900/50 p-8 backdrop-blur-sm">
                 <h2 className="mb-4 text-xl font-semibold text-white">Link Valorant Account</h2>
@@ -571,10 +595,11 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-3">
-                            {loading && matches.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 bg-slate-950/50 rounded-lg border border-white/5">
-                                    <Loader fullScreen={false} size="sm" />
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">Loading Battle History</p>
+                            {matchesLoading ? (
+                                <div className="space-y-3">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-20 bg-slate-950 rounded-lg border border-white/5 animate-pulse" />
+                                    ))}
                                 </div>
                             ) : matches.length === 0 ? (
                                 <div className="text-center py-12 bg-slate-950/50 rounded-lg border border-white/5">
@@ -643,8 +668,65 @@ export default function ProfilePage() {
                     </div>
                  </div>
 
-                 {/* Rank / MMR Card */}
-                 <div className="space-y-6">
+                  {/* Sidebar Stats */}
+                  <div className="space-y-6">
+                        {/* Platform Achievements Card */}
+                        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6 backdrop-blur-sm overflow-hidden relative group">
+                             <div className="absolute -top-10 -right-10 w-32 h-32 bg-rose-600/10 blur-[50px] rounded-full group-hover:bg-rose-600/20 transition-all" />
+                             
+                             <h3 className="mb-6 flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                                <Trophy className="h-4 w-4 text-rose-500" />
+                                Statistics
+                             </h3>
+                             
+                             <div className="grid grid-cols-1 gap-4">
+                                 <div className="bg-slate-950/50 border border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors">
+                                     <div className="flex items-center justify-between mb-1">
+                                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Platform Earnings</span>
+                                         <DollarSign className="h-3 w-3 text-emerald-500" />
+                                     </div>
+                                     <div className="text-2xl font-black text-white font-mono tracking-tighter">
+                                         ₹{(platformProfile?.totalEarnings || 0).toLocaleString()}
+                                     </div>
+                                 </div>
+
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div className="bg-slate-950/50 border border-white/5 p-4 rounded-xl hover:border-amber-500/20 transition-colors">
+                                         <div className="flex items-center justify-between mb-1">
+                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Won</span>
+                                             <Crown className="h-3 w-3 text-amber-500" />
+                                         </div>
+                                         <div className="text-xl font-black text-white">
+                                             {platformProfile?.tournamentsWon || 0}
+                                         </div>
+                                     </div>
+                                     <div className="bg-slate-950/50 border border-white/5 p-4 rounded-xl hover:border-slate-400/20 transition-colors">
+                                         <div className="flex items-center justify-between mb-1">
+                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Runner Up</span>
+                                             <Medal className="h-3 w-3 text-slate-400" />
+                                         </div>
+                                         <div className="text-xl font-black text-white">
+                                             {platformProfile?.runnerUp || 0}
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 <div className="bg-slate-950/50 border border-white/5 p-4 rounded-xl hover:border-rose-500/20 transition-colors">
+                                     <div className="flex items-center justify-between mb-1">
+                                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Matches Won</span>
+                                         <Swords className="h-3 w-3 text-rose-500" />
+                                     </div>
+                                     <div className="text-xl font-black text-white">
+                                         {platformProfile?.matchesWon || 0}
+                                     </div>
+                                 </div>
+                             </div>
+                             
+                             <Link href="/leaderboard" className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 py-3 text-[10px] font-black text-slate-400 hover:text-white hover:bg-white/10 transition-all uppercase tracking-widest">
+                                View Leaderboard
+                                <ArrowRight className="h-3 w-3" />
+                             </Link>
+                        </div>
                     <div className="relative group rounded-xl border border-white/10 bg-slate-900/50 p-6 backdrop-blur-sm overflow-hidden transition-all hover:bg-slate-900/80">
                          {/* Background Rank Glow */}
                          <div className={`absolute -right-20 -top-20 w-64 h-64 blur-[100px] opacity-20 pointer-events-none transition-opacity group-hover:opacity-30 
@@ -672,6 +754,8 @@ export default function ProfilePage() {
                             </div>
 
                             {mmrData?.current_data?.currenttierpatched ? (
+                                // ... existing rank display ...
+                                // (I'll keep this as is but add the loading check)
                                 <div className="flex flex-col items-center text-center">
                                     <div className="relative mb-6">
                                         <div className="absolute inset-0 bg-white/5 blur-2xl rounded-full" />
@@ -735,10 +819,11 @@ export default function ProfilePage() {
                                         </div>
                                     </div>
                                 </div>
-                            ) : loading ? (
-                                <div className="flex flex-col items-center justify-center py-10">
-                                    <Loader fullScreen={false} size="sm" />
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-3">Syncing Data</p>
+                            ) : mmrLoading ? (
+                                <div className="flex flex-col items-center py-10 animate-pulse">
+                                    <div className="w-32 h-32 rounded-full bg-slate-800 mb-6" />
+                                    <div className="h-8 w-48 bg-slate-800 rounded mb-4" />
+                                    <div className="h-4 w-32 bg-slate-800 rounded" />
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-10 opacity-50">

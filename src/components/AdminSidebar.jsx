@@ -9,7 +9,8 @@ import {
     Swords, 
     LogOut,
     Settings,
-    MessageSquare
+    MessageSquare,
+    Home
 } from "lucide-react";
 
 export default function AdminSidebar() {
@@ -69,6 +70,14 @@ export default function AdminSidebar() {
                         <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                     </div>
                 </div>
+
+                <Link 
+                    href="/"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors mb-1"
+                >
+                    <Home className="h-4 w-4" />
+                    <span>Exit to Home</span>
+                </Link>
                 
                 <button 
                     onClick={logout}

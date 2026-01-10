@@ -14,7 +14,9 @@ import {
     updateParticipantScore,
     deleteMatches,
     createBracket,
-    finalizeMatch
+    finalizeMatch,
+    finalizeDeathmatch,
+    revertTournamentStats
 } from "@/lib/brackets";
 import { 
     Trophy, 
@@ -193,6 +195,25 @@ export default function TournamentControlPage({ params }) {
                 )
             );
 
+            // Identify winner, runner-up and update global stats
+            if (tournament.gameType === 'Deathmatch') {
+                const entries = Object.entries(bulkEditValues);
+                if (entries.length >= 1) {
+                    // Sort descending by kills to find 1st and 2nd
+                    const sortedEntries = entries.sort((a, b) => b[1].kills - a[1].kills);
+                    
+                    const winnerId = sortedEntries[0][0];
+                    const runnerUpId = sortedEntries[1] ? sortedEntries[1][0] : null;
+                    
+                    try {
+                        // This will only award prizes if current tournament status is not 'completed'
+                        await finalizeDeathmatch(id, winnerId, runnerUpId);
+                    } catch (err) {
+                        console.error("Failed to update leaderboard stats for DM winner", err);
+                    }
+                }
+            }
+
             // Automatically mark matches and tournament as completed for Deathmatch
             if (tournament.gameType === 'Deathmatch' && matches.length > 0) {
                 await Promise.all(matches.map(m => updateMatchStatus(m.$id, 'completed')));
@@ -201,7 +222,7 @@ export default function TournamentControlPage({ params }) {
                 await updateTournament(id, { status: 'completed' });
                 setTournament(prev => ({ ...prev, status: 'completed' }));
             }
-            
+
             setRegistrations(prev => prev.map(reg => {
                 const newValues = bulkEditValues[reg.$id];
                 if (!newValues) return reg;
@@ -310,6 +331,9 @@ export default function TournamentControlPage({ params }) {
         setUpdating(true);
         
         try {
+            // New: Revert any prizes/wins awarded
+            await revertTournamentStats(id);
+            
             await deleteMatches(id);
             await updateTournament(id, { bracketGenerated: false, status: 'open' });
             await loadData();

@@ -118,9 +118,68 @@
                     ],
                     "format": "enum",
                     "default": null
+                },
+                {
+                    "key": "card",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "totalEarnings",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 9999999,
+                    "default": 0
+                },
+                {
+                    "key": "tournamentsWon",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 10000,
+                    "default": 0
+                },
+                {
+                    "key": "matchesWon",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 100000,
+                    "default": 0
+                },
+                {
+                    "key": "isLegend",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "runnerUp",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "min": 0,
+                    "max": 10000,
+                    "default": 0
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "leaderboard_idx",
+                    "type": "key",
+                    "attributes": ["totalEarnings"],
+                    "orders": ["DESC"]
+                }
+            ]
         },
         {
             "$id": "free_agents",
@@ -505,7 +564,7 @@
                 {
                     "key": "entryFee",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": false,
                     "size": 100,
                     "default": null,
@@ -514,7 +573,7 @@
                 {
                     "key": "firstPrize",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": false,
                     "size": 500,
                     "default": null,
@@ -523,7 +582,7 @@
                 {
                     "key": "secondPrize",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": false,
                     "size": 500,
                     "default": null,
@@ -535,6 +594,24 @@
                     "required": false,
                     "array": false,
                     "size": 2000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "winnerRegId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "runnerUpRegId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
                     "default": null,
                     "encrypt": false
                 }

@@ -2,13 +2,17 @@
 import { useEffect } from "react";
 import { rankIcons } from "@/assets/images/ranks";
 import { agentIcons } from "@/assets/images/agents";
-import { mapImages } from "@/assets/images/maps";
 
-const PRIORITY_MAPS = ["Ascent", "Bind", "Haven", "Split", "Icebox", "Breeze", "Fracture"];
+// NOTE: Maps are very large (3-7MB each), so we DO NOT preload them globally.
+// They should be lazy-loaded by components that specifically need them.
+// import { mapImages } from "@/assets/images/maps"; 
 
 export default function AssetPreloader() {
   useEffect(() => {
     const preloadImage = (src) => {
+      // Don't preload if user is on data saver or slow connection
+      if (navigator.connection?.saveData) return Promise.resolve();
+      
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.src = src;
@@ -23,64 +27,42 @@ export default function AssetPreloader() {
     };
 
     const runPreload = async () => {
-      // 1. High Priority: Ranks & Agents
-      // These are small and used frequently in Profile/Team Finder
-      const highPriorityQueue = [];
+      // only preload critical UI elements: Ranks and Agents
+      const criticalQueue = [];
 
       // Collect Rank Icons
       Object.values(rankIcons).forEach(icon => {
         const src = getSafeSrc(icon);
-        if (src) highPriorityQueue.push(src);
+        if (src) criticalQueue.push(src);
       });
 
-      // Collect Agent Icons
+      // Collect Agent Icons 
+      // (Prioritize only main agents if list is huge, but agent icons are small enough to load all)
       Object.values(agentIcons).forEach(icon => {
         const src = getSafeSrc(icon);
-        if (src) highPriorityQueue.push(src);
+        if (src) criticalQueue.push(src);
       });
 
-      // Execute High Priority
-      await Promise.allSettled(highPriorityQueue.map(preloadImage));
-      console.log(`[AssetPreloader] Preloaded ${highPriorityQueue.length} icons.`);
-
-      // 2. Medium Priority: Active Duty Maps
-      // These are larger, so we load them sequentially to avoid clogging bandwidth
-      const mapQueue = PRIORITY_MAPS.map(name => getSafeSrc(mapImages[name])).filter(Boolean);
-      
-      for (const src of mapQueue) {
-        try {
-          await preloadImage(src);
-        } catch (e) {
-          // ignore error
-        }
-      }
-      console.log(`[AssetPreloader] Preloaded ${mapQueue.length} priority maps.`);
-
-      // 3. Low Priority: Remaining Maps
-      const loadedMaps = new Set(mapQueue);
-      const remainingMaps = Object.values(mapImages)
-        .map(getSafeSrc)
-        .filter(src => src && !loadedMaps.has(src));
-
-      for (const src of remainingMaps) {
-        try {
-          await preloadImage(src);
-        } catch (e) {
-          // ignore
-        }
+      // Execute Critical Preload
+      if (criticalQueue.length > 0) {
+        await Promise.allSettled(criticalQueue.map(preloadImage));
+        console.log(`[AssetPreloader] Preloaded ${criticalQueue.length} critical assets (ranks/agents).`);
       }
     };
 
-    // Use requestIdleCallback if available, otherwise fallback to timeout
+    // Use requestIdleCallback to ensure we don't block critical main-thread work
     if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => {
-        runPreload();
-      });
+        // Wait a bit longer to ensure LCP has happened
+        setTimeout(() => {
+            requestIdleCallback(() => {
+                runPreload();
+            }, { timeout: 5000 });
+        }, 3000); 
     } else {
-      setTimeout(runPreload, 2000);
+      setTimeout(runPreload, 4000);
     }
 
   }, []);
 
-  return null; // Invisible component
+  return null; 
 }

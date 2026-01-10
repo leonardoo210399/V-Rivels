@@ -260,24 +260,76 @@ export async function updateParticipantScore(registrationId, kills, deaths) {
 const TOURNAMENTS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID;
 
 export async function finalizeMatch(matchId, scoreA, scoreB) {
-    // 1. Get current match
+    const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
+    const USERS_COLLECTION_ID = "users";
+
+    // 1. Get current match and tournament
     const match = await databases.getDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matchId);
+    const tournament = await databases.getDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, match.tournamentId);
     
-    // 2. Determine winner
-    // Winner is TBD if score is tied (shouldn't happen in Valo, but handle)
-    const winnerId = scoreA > scoreB ? match.teamA : (scoreB > scoreA ? match.teamB : null);
+    // 2. Determine winner (registration ID)
+    const winnerRegId = scoreA > scoreB ? match.teamA : (scoreB > scoreA ? match.teamB : null);
     
-    if (!winnerId) throw new Error("Match cannot be completed without a winner (score tie).");
+    if (!winnerRegId) throw new Error("Match cannot be completed without a winner (score tie).");
 
     // 3. Update current match
     await databases.updateDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matchId, {
         scoreA,
         scoreB,
-        winner: winnerId,
+        winner: winnerRegId,
         status: 'completed'
     });
 
-    // 4. Advance winner to next round if it's a bracket match
+    // 4. Update Winner's Global Stats
+    try {
+        const reg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, winnerRegId);
+        const userId = reg.userId;
+        const userProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, userId);
+
+        const updateData = {
+            matchesWon: (userProfile.matchesWon || 0) + 1
+        };
+
+        // If this is the final match, it means they won the tournament
+        const matchesRes = await getMatches(match.tournamentId);
+        const maxRound = Math.max(...matchesRes.map(m => m.round));
+        
+        if (match.round === maxRound && tournament.firstPrize) {
+            updateData.tournamentsWon = (userProfile.tournamentsWon || 0) + 1;
+            
+            // Parse earnings from tournament prize string (e.g. "₹5,000" -> 5000)
+            const prizeValue = parseInt(tournament.firstPrize?.replace(/[^0-9]/g, "")) || 0;
+            updateData.totalEarnings = (userProfile.totalEarnings || 0) + prizeValue;
+
+            // Save winner and runner up to tournament doc for reversal support
+            const runnerUpRegId = winnerRegId === match.teamA ? match.teamB : match.teamA;
+            await databases.updateDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, match.tournamentId, {
+                winnerRegId: winnerRegId,
+                runnerUpRegId: runnerUpRegId
+            });
+
+            // Also award runner up prize
+            if (runnerUpRegId && tournament.secondPrize) {
+                try {
+                    const runnerReg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, runnerUpRegId);
+                    const runnerProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, runnerReg.userId);
+                    const runnerPrize = parseInt(tournament.secondPrize?.replace(/[^0-9]/g, "")) || 0;
+                    
+                    await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, runnerReg.userId, {
+                        matchesWon: (runnerProfile.matchesWon || 0) + 1,
+                        runnerUp: (runnerProfile.runnerUp || 0) + 1,
+                        totalEarnings: (runnerProfile.totalEarnings || 0) + runnerPrize
+                    });
+                } catch (e) { console.warn("Runner up prize award failed", e); }
+            }
+        }
+
+        await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, userId, updateData);
+    } catch (err) {
+        console.warn("Failed to update user stats during match finalization:", err.message);
+    }
+
+    // 5. Advance winner to next round if it's a bracket match
     const nextRoundNum = match.round + 1;
     const nextMatchIndex = Math.floor(match.matchIndex / 2);
     
@@ -297,15 +349,14 @@ export async function finalizeMatch(matchId, scoreA, scoreB) {
             const isTeamA = match.matchIndex % 2 === 0;
             
             await databases.updateDocument(DATABASE_ID, MATCHES_COLLECTION_ID, nextMatch.$id, {
-                [isTeamA ? 'teamA' : 'teamB']: winnerId
+                [isTeamA ? 'teamA' : 'teamB']: winnerRegId
             });
         }
     } catch (e) {
         // Final match or error finding next
-        // console.log("No next round match found or final match reached.");
     }
 
-    // 5. Check if all matches are completed
+    // 6. Check if all matches are completed to finish tournament
     try {
         const matches = await getMatches(match.tournamentId);
         const allCompleted = matches.length > 0 && matches.every(m => m.status === 'completed');
@@ -322,7 +373,128 @@ export async function finalizeMatch(matchId, scoreA, scoreB) {
         console.error("Failed to check if tournament completed:", error);
     }
 
-    return winnerId;
+    return winnerRegId;
+}
+
+/**
+ * Finalizes a Deathmatch tournament by identifying winners and awarding stats
+ * Prevents duplicate rewards by checking tournament status
+ */
+export async function finalizeDeathmatch(tournamentId, winnerRegId, runnerUpRegId = null) {
+    const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
+    const USERS_COLLECTION_ID = "users";
+
+    try {
+        const tournament = await databases.getDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, tournamentId);
+        
+        // CRITICAL: If the tournament is already completed, do NOT award prizes again
+        if (tournament.status === 'completed') {
+            console.log("Tournament already completed. Skipping prize award to prevent duplication.");
+            return false;
+        }
+
+        // 1. Award Winner Stats
+        const winnerReg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, winnerRegId);
+        const winnerProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, winnerReg.userId);
+        
+        const winnerData = {
+            matchesWon: (winnerProfile.matchesWon || 0) + 1,
+            tournamentsWon: (winnerProfile.tournamentsWon || 0) + 1
+        };
+
+        if (tournament.firstPrize) {
+            const prizeValue = parseInt(tournament.firstPrize?.replace(/[^0-9]/g, "")) || 0;
+            winnerData.totalEarnings = (winnerProfile.totalEarnings || 0) + prizeValue;
+        }
+        await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, winnerReg.userId, winnerData);
+
+        // 2. Award Runner Up Stats
+        if (runnerUpRegId) {
+            const runnerUpReg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, runnerUpRegId);
+            const runnerUpProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, runnerUpReg.userId);
+            
+            const runnerData = {
+                matchesWon: (runnerUpProfile.matchesWon || 0) + 1,
+                runnerUp: (runnerUpProfile.runnerUp || 0) + 1
+            };
+
+            if (tournament.secondPrize) {
+                const prizeValue = parseInt(tournament.secondPrize?.replace(/[^0-9]/g, "")) || 0;
+                runnerData.totalEarnings = (runnerUpProfile.totalEarnings || 0) + prizeValue;
+            }
+            await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, runnerUpReg.userId, runnerData);
+        }
+
+        // 3. Mark tournament with winners for reversal support
+        await databases.updateDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, tournamentId, {
+            winnerRegId,
+            runnerUpRegId
+        });
+
+        return true;
+    } catch (err) {
+        console.error("Failed to finalize deathmatch stats:", err);
+        throw err;
+    }
+}
+
+export async function revertTournamentStats(tournamentId) {
+    const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
+    const USERS_COLLECTION_ID = "users";
+
+    try {
+        const tournament = await databases.getDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, tournamentId);
+        
+        // If not completed or no winner, nothing to revert
+        if (tournament.status !== 'completed' || !tournament.winnerRegId) return false;
+
+        console.log(`Reverting stats for tournament ${tournamentId}. Winner: ${tournament.winnerRegId}`);
+
+        // 1. Revert Winner
+        try {
+            const winnerReg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, tournament.winnerRegId);
+            const winnerProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, winnerReg.userId);
+            
+            const winnerData = {
+                matchesWon: Math.max(0, (winnerProfile.matchesWon || 0) - 1),
+                tournamentsWon: Math.max(0, (winnerProfile.tournamentsWon || 0) - 1)
+            };
+            if (tournament.firstPrize) {
+                const prizeValue = parseInt(tournament.firstPrize?.replace(/[^0-9]/g, "")) || 0;
+                winnerData.totalEarnings = Math.max(0, (winnerProfile.totalEarnings || 0) - prizeValue);
+            }
+            await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, winnerReg.userId, winnerData);
+        } catch (e) { console.warn("Failed to revert winner stats", e); }
+
+        // 2. Revert Runner Up
+        if (tournament.runnerUpRegId) {
+            try {
+                const runnerUpReg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, tournament.runnerUpRegId);
+                const runnerUpProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, runnerUpReg.userId);
+                
+                const runnerData = {
+                    matchesWon: Math.max(0, (runnerUpProfile.matchesWon || 0) - 1),
+                    runnerUp: Math.max(0, (runnerUpProfile.runnerUp || 0) - 1)
+                };
+                if (tournament.secondPrize) {
+                    const prizeValue = parseInt(tournament.secondPrize?.replace(/[^0-9]/g, "")) || 0;
+                    runnerData.totalEarnings = Math.max(0, (runnerUpProfile.totalEarnings || 0) - prizeValue);
+                }
+                await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, runnerUpReg.userId, runnerData);
+            } catch (e) { console.warn("Failed to revert runner up stats", e); }
+        }
+
+        // 3. Clear the ids on tournament
+        await databases.updateDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, tournamentId, {
+            winnerRegId: null,
+            runnerUpRegId: null
+        });
+
+        return true;
+    } catch (err) {
+        console.error("Failed to revert tournament stats:", err);
+        return false;
+    }
 }
 
 export async function deleteMatches(tournamentId) {

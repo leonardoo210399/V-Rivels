@@ -36,11 +36,11 @@ export default function About() {
 
         <AnimatedTitle
           title="Discover the world's <br /> most immersive tournament platform"
-          containerClass="mt-5 !text-black text-center"
+          containerClass="mt-5 !text-white text-center"
         />
 
         <div className="about-subtext mt-5 text-center px-4">
-          <p className="text-gray-500 text-lg md:max-w-2xl mx-auto">
+          <p className="text-slate-300 text-lg md:max-w-2xl mx-auto font-medium">
             The Metagame begins here. Your life, now an epic MMORPG. 
             Valolant unites every player from every region into a single persistent tournament economy.
           </p>
