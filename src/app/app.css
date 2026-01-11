@@ -96,21 +96,37 @@ input[type="datetime-local"] {
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #020617;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
-  border: 3px solid #020617;
   border-radius: 100px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #f43f5e;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 63, 94, 0.5);
 }
 
 /* Selection */
