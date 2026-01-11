@@ -7,32 +7,13 @@ import CreateTournamentDrawer from "@/components/CreateTournamentDrawer";
 
 export default function AdminTournamentsPage() {
     const [tournaments, setTournaments] = useState([]);
-    const [registrationCounts, setRegistrationCounts] = useState({});
     const [loading, setLoading] = useState(true);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     const loadTournaments = async () => {
         setLoading(true);
         try {
-            const [tData, regsRes] = await Promise.all([
-                getTournaments(),
-                // Import databases from lib/appwrite to fetch all registrations
-                // or use a utility if available. For now, let's just use the tournaments list.
-                // We'll actually fetch all registrations to count them.
-                import("@/lib/appwrite").then(m => m.databases.listDocuments(
-                    process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID,
-                    process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID,
-                    []
-                ))
-            ]);
-            
-            // Count registrations per tournament
-            const counts = {};
-            regsRes.documents.forEach(reg => {
-                counts[reg.tournamentId] = (counts[reg.tournamentId] || 0) + 1;
-            });
-            
-            setRegistrationCounts(counts);
+            const tData = await getTournaments();
             setTournaments(tData);
         } catch (error) {
             console.error("Failed to load tournaments", error);
@@ -120,22 +101,26 @@ export default function AdminTournamentsPage() {
                                              <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2 text-white font-bold text-sm">
                                                     <Users className="h-3 w-3 text-rose-500" />
-                                                    {registrationCounts[t.$id] || 0} / {t.maxTeams}
+                                                    {t.registeredTeams || 0} / {t.maxTeams}
                                                 </div>
                                                 <p className={`text-[10px] font-black uppercase tracking-widest ${
-                                                    (t.maxTeams - (registrationCounts[t.$id] || 0)) <= 2 ? "text-rose-500 animate-pulse" : "text-emerald-500"
+                                                    (t.maxTeams - (t.registeredTeams || 0)) <= 2 ? "text-rose-500 animate-pulse" : "text-emerald-500"
                                                 }`}>
-                                                    {(t.maxTeams - (registrationCounts[t.$id] || 0))} SLOTS LEFT
+                                                    {(t.maxTeams - (t.registeredTeams || 0))} SLOTS LEFT
                                                 </p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
-                                                (t.status || 'open') === 'open' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-800 text-slate-400'
-                                            }`}>
-                                                {t.status || 'open'}
-                                            </span>
-                                        </td>
+                                             <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
+                                                 (t.status === 'scheduled' || !t.status) ? 'bg-cyan-500/10 text-cyan-500' : 
+                                                 t.status === 'ongoing' ? 'bg-rose-500/10 text-rose-500 animate-pulse' : 
+                                                 'bg-slate-800 text-slate-400'
+                                             }`}>
+                                                 {(t.status === 'scheduled' || !t.status) ? 'SCHEDULED / UPCOMING' : 
+                                                  t.status === 'ongoing' ? 'ONGOING (LIVE)' : 
+                                                  'COMPLETED / PAST'}
+                                             </span>
+                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex justify-end gap-2">
                                                 <Link 

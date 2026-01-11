@@ -26,17 +26,6 @@ export const AuthProvider = ({ children }) => {
 
   const isAdmin = user?.labels?.includes("admin");
 
-  async function loginWithDiscord() {
-    try {
-      account.createOAuth2Session(
-        OAuthProvider.Discord,
-        `${window.location.origin}/profile`,
-        `${window.location.origin}/login`
-      );
-    } catch (error) {
-      console.error(error);
-    }
-  }
   
   async function loginWithGoogle() {
       try {
@@ -56,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loginWithDiscord, loginWithGoogle, logout, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, loginWithGoogle, logout, loading, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

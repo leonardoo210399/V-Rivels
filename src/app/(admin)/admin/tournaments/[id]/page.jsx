@@ -159,7 +159,7 @@ export default function TournamentControlPage({ params }) {
             } else if (status === 'scheduled') {
                 const anyOngoing = updatedMatches.some(m => m.status === 'ongoing');
                 const anyCompleted = updatedMatches.some(m => m.status === 'completed');
-                const newStatus = anyOngoing || anyCompleted ? 'ongoing' : 'open';
+                const newStatus = anyOngoing || anyCompleted ? 'ongoing' : 'scheduled';
                 await updateTournament(id, { status: newStatus });
                 setTournament(prev => ({ ...prev, status: newStatus }));
             }
@@ -346,7 +346,7 @@ export default function TournamentControlPage({ params }) {
             await revertTournamentStats(id);
             
             await deleteMatches(id);
-            await updateTournament(id, { bracketGenerated: false, status: 'open' });
+            await updateTournament(id, { bracketGenerated: false, status: 'scheduled' });
             await loadData();
             setResetStep(0);
         } catch (e) {
@@ -391,11 +391,13 @@ export default function TournamentControlPage({ params }) {
                             <div className="flex items-center gap-3 mb-1">
                                 <h1 className="text-3xl font-black uppercase text-white tracking-tight">{tournament.name}</h1>
                                 <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
-                                    (tournament.status || 'open') === 'open' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
+                                    (tournament.status === 'scheduled' || !tournament.status) ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20' : 
                                     tournament.status === 'ongoing' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse' :
                                     'bg-slate-800 text-slate-400 border border-white/5'
                                 }`}>
-                                    {tournament.status || 'open'}
+                                    {(tournament.status === 'scheduled' || !tournament.status) ? 'SCHEDULED / UPCOMING' : 
+                                     tournament.status === 'ongoing' ? 'ONGOING (LIVE)' : 
+                                     'COMPLETED / PAST'}
                                 </span>
                             </div>
                             <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">

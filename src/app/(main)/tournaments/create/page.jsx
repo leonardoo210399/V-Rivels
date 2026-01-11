@@ -94,7 +94,7 @@ export default function CreateTournamentPage() {
       date: "",
       prizePool: "",
       maxTeams: 16,
-      status: "open",
+      status: "scheduled",
       description: "",
       gameType: "5v5",
       location: "Online",

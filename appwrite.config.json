@@ -493,7 +493,7 @@
                     "array": false,
                     "min": 0,
                     "max": 9223372036854775807,
-                    "default": null
+                    "default": 0
                 },
                 {
                     "key": "location",
@@ -519,16 +519,15 @@
                 {
                     "key": "status",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": false,
                     "elements": [
-                        "open",
-                        "closed",
+                        "scheduled",
                         "ongoing",
                         "completed"
                     ],
                     "format": "enum",
-                    "default": null
+                    "default": "scheduled"
                 },
                 {
                     "key": "description",
@@ -564,7 +563,7 @@
                 {
                     "key": "entryFee",
                     "type": "string",
-                    "required": false,
+                    "required": true,
                     "array": false,
                     "size": 100,
                     "default": null,
@@ -573,7 +572,7 @@
                 {
                     "key": "firstPrize",
                     "type": "string",
-                    "required": false,
+                    "required": true,
                     "array": false,
                     "size": 500,
                     "default": null,
@@ -582,7 +581,7 @@
                 {
                     "key": "secondPrize",
                     "type": "string",
-                    "required": false,
+                    "required": true,
                     "array": false,
                     "size": 500,
                     "default": null,

@@ -145,7 +145,7 @@ export default function TournamentDetailPage({ params }) {
              prizePool: "$1,000",
              maxTeams: 16,
              gameType: "5v5",
-             status: "open",
+             status: "scheduled",
              description: "This is a demo tournament description since we couldn't connect to the database."
         });
       } finally {
@@ -299,17 +299,19 @@ export default function TournamentDetailPage({ params }) {
 
                 <div className="flex flex-wrap items-center gap-3">
                     <div className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg backdrop-blur-md ${
-                        (tournament.status || 'open') === 'open' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
+                        (tournament.status === 'scheduled' || !tournament.status) ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-cyan-500/10' : 
                         tournament.status === 'ongoing' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse shadow-amber-500/20' :
                         tournament.status === 'completed' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                         'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                     }`}>
                         <div className={`h-1.5 w-1.5 rounded-full ${
-                             (tournament.status || 'open') === 'open' ? 'bg-emerald-400' :
+                             (tournament.status === 'scheduled' || !tournament.status) ? 'bg-cyan-400' :
                              tournament.status === 'ongoing' ? 'bg-amber-400' :
                              tournament.status === 'completed' ? 'bg-rose-400' : 'bg-slate-400'
                         }`} />
-                        {tournament.status || 'open'}
+                        {(tournament.status === 'scheduled' || !tournament.status) ? 'SCHEDULED / UPCOMING' : 
+                         tournament.status === 'ongoing' ? 'ONGOING (LIVE)' : 
+                         'COMPLETED / PAST'}
                     </div>
 
                     <div className="flex items-center gap-2 rounded-full bg-rose-500/20 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-rose-400 border border-rose-500/30 shadow-lg backdrop-blur-md">
@@ -607,10 +609,10 @@ export default function TournamentDetailPage({ params }) {
                         <AlertCircle className="h-5 w-5" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Entry Limit Reached</span>
                     </div>
-                ) : (tournament.status || 'open') !== 'open' ? (
+                ) : (tournament.status && tournament.status !== 'scheduled') ? (
                     <div className="flex items-center gap-2 rounded-xl bg-slate-900 p-4 border border-white/5 text-slate-500">
                         <AlertCircle className="h-5 w-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Closed</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Live / Completed</span>
                     </div>
                 ) : (
                     <form onSubmit={handleRegister} className="space-y-6">
