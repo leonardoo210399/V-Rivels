@@ -56,7 +56,7 @@ const GLOBAL_CACHE = {
   playerProfiles: new Map(), // key: name#tag
 };
 
-export default function TeamFinderPage() {
+export default function PlayerFinderPage() {
   const { user } = useAuth();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -116,18 +116,27 @@ export default function TeamFinderPage() {
         {/* Header */}
         <div className="mb-8 flex flex-col justify-between gap-6 border-b border-white/5 pb-8 md:flex-row md:items-end">
           <div>
-            <h1 className="mb-2 text-4xl font-black tracking-tighter text-white uppercase">
-              Team Finder
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+              <h2 className="text-[11px] font-black tracking-[0.3em] text-rose-500 uppercase">
+                Operations Center
+              </h2>
+            </div>
+            <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">
+              <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-8">
+                Player
+              </span>{" "}
+              Finder
             </h1>
-            <p className="text-sm font-medium text-slate-500">
-              Connect with players and teams looking for recruits.
+            <p className="mt-4 text-xs font-bold tracking-widest text-slate-500 uppercase">
+              Agent Directory • Active Listings
             </p>
           </div>
           <Link
             href="/profile"
-            className="group flex items-center gap-3 rounded-xl bg-rose-600 px-6 py-3 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-700 active:scale-95"
+            className="group flex items-center gap-4 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-8 py-4 text-[11px] font-black tracking-[0.2em] text-white uppercase shadow-2xl shadow-rose-600/30 transition-all hover:scale-[1.02] hover:from-rose-500 hover:to-rose-600 active:scale-95"
           >
-            <UserPlus className="h-4 w-4" />
+            <UserPlus className="h-5 w-5" />
             Post Your Listing
           </Link>
         </div>
@@ -319,7 +328,7 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
 
   return (
     <div
-      className="group relative overflow-hidden rounded-2xl border border-b-4 border-white/10 bg-slate-900/50 p-6 transition-all hover:bg-slate-900/80"
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-b-4 border-white/10 bg-slate-900/50 p-6 transition-all hover:bg-slate-900/80"
       style={{
         borderBottomColor: rankDisplay?.includes("Platinum")
           ? "#22d3ee"
@@ -348,9 +357,9 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
         </div>
       )}
 
-      <div className="relative z-10 mb-6 flex gap-4">
+      <div className="relative z-10 mb-6 flex items-start gap-4">
         {/* Player Card Thumbnail */}
-        <div className="relative shrink-0">
+        <div className="relative flex shrink-0 flex-col items-center">
           <div className="h-16 w-16 overflow-hidden rounded-xl border-2 border-slate-950 bg-slate-800 shadow-xl">
             {loading ? (
               <div className="flex h-full w-full items-center justify-center bg-slate-900">
@@ -368,16 +377,25 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
               </div>
             )}
           </div>
+
+          {/* Level Badge - Relocated here */}
+          {!loading && valData?.account?.account_level && (
+            <div className="mt-2 flex h-5.5 w-full items-center justify-center rounded border border-white/10 bg-rose-600 shadow-lg shadow-rose-600/20">
+              <span className="text-[9px] leading-none font-black tracking-widest text-white uppercase">
+                lvl {valData.account.account_level}
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden pt-0.5">
           <h3 className="truncate text-lg font-black tracking-tight text-white">
             {agent.tag ? agent.ingameName : agent.ingameName?.split("#")[0]}
             <span className="ml-1 text-sm text-slate-500 select-none">
               #{agent.tag || agent.ingameName?.split("#")[1]}
             </span>
           </h3>
-          <div className="mt-2 flex flex-col gap-1.5">
+          <div className="mt-2.5 flex flex-col gap-2">
             <div className="flex w-fit items-center gap-1.5 rounded border border-white/5 bg-black/40 px-2 py-0.5 backdrop-blur-md">
               {!loading && rankImage && (
                 <img
@@ -404,23 +422,25 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
             </div>
 
             {/* Preferred Role Badge */}
-            <div
-              className={`flex w-fit items-center gap-1.5 rounded border px-2 py-0.5 backdrop-blur-md ${
-                agent.role === "Duelist"
-                  ? "border-amber-500/20 bg-amber-500/10 text-amber-500"
-                  : agent.role === "Controller"
-                    ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-400"
-                    : agent.role === "Sentinel"
-                      ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-400"
-                      : agent.role === "Initiator"
-                        ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
-                        : "border-white/5 bg-slate-500/10 text-slate-400"
-              } `}
-            >
-              <RoleIcon role={agent.role} />
-              <span className="text-[9px] font-black tracking-widest uppercase">
-                {agent.role}
-              </span>
+            <div className="flex flex-wrap gap-2">
+              <div
+                className={`flex h-6 w-fit items-center gap-1.5 rounded border px-2 backdrop-blur-md ${
+                  agent.role === "Duelist"
+                    ? "border-amber-500/20 bg-amber-500/10 text-amber-500"
+                    : agent.role === "Controller"
+                      ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-400"
+                      : agent.role === "Sentinel"
+                        ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-400"
+                        : agent.role === "Initiator"
+                          ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
+                          : "border-white/5 bg-slate-500/10 text-slate-400"
+                } `}
+              >
+                <RoleIcon role={agent.role} />
+                <span className="text-[9px] leading-none font-black tracking-widest uppercase">
+                  {agent.role}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -532,8 +552,8 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
         </div>
       </div>
 
-      <div className="relative z-10 mt-4">
-        {discordProfile.tag && (
+      <div className="relative z-10 mt-auto pt-4">
+        {discordProfile.tag ? (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-3 py-2">
             <MessageCircle className="h-3.5 w-3.5 text-[#5865F2]" />
             <div className="flex flex-col">
@@ -541,7 +561,19 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
                 Discord
               </span>
               <span className="text-[11px] leading-none font-black tracking-tight text-white">
-                {discordProfile.tag}
+                {discordProfile.tag || "N/A"}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 py-2 opacity-50">
+            <MessageCircle className="h-3.5 w-3.5 text-slate-500" />
+            <div className="flex flex-col">
+              <span className="mb-0.5 text-[8px] font-black tracking-widest text-slate-500 uppercase">
+                Discord
+              </span>
+              <span className="text-[11px] leading-none font-bold tracking-tight text-slate-500">
+                Not Provided
               </span>
             </div>
           </div>

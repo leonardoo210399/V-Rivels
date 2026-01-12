@@ -9,7 +9,11 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="flex flex-col gap-6 lg:col-span-2 lg:flex-row lg:items-center">
             <Link href="/" className="inline-block flex-shrink-0">
-              <img src="/vrivals_logo_vertical.png" alt="VRivals Tournament" className="h-32 w-auto object-contain" />
+              <img
+                src="/vrivals_logo_vertical.png"
+                alt="VRivals Tournament"
+                className="h-32 w-auto object-contain"
+              />
             </Link>
             <p className="text-sm leading-relaxed text-slate-400">
               The premier destination for Valorant tournaments. Compete, win,
@@ -41,10 +45,10 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/teams"
+                  href="/player-finder"
                   className="transition-colors hover:text-rose-400"
                 >
-                  Find a Team
+                  Player Finder
                 </Link>
               </li>
             </ul>
