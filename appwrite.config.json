@@ -170,6 +170,33 @@
                     "min": 0,
                     "max": 10000,
                     "default": 0
+                },
+                {
+                    "key": "discordId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordTag",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordUsername",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -274,8 +301,26 @@
                 {
                     "key": "secondaryAgents",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": true,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordTag",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordUsername",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
                     "size": 50,
                     "default": null,
                     "encrypt": false

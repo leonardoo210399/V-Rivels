@@ -38,6 +38,31 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  async function loginWithDiscord() {
+    try {
+      account.createOAuth2Session(
+        OAuthProvider.Discord,
+        `${window.location.origin}/profile`,
+        `${window.location.origin}/login`,
+        ["identify", "email"],
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function unlinkDiscord(identityId) {
+    try {
+      if (!identityId) return;
+      await account.deleteIdentity(identityId);
+      await checkUserStatus(); // Refresh user state
+      return true;
+    } catch (error) {
+      console.error("Failed to unlink Discord:", error);
+      throw error;
+    }
+  }
+
   async function logout() {
     await account.deleteSession("current");
     setUser(null);
@@ -45,7 +70,15 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, loginWithGoogle, logout, loading, isAdmin }}
+      value={{
+        user,
+        loginWithGoogle,
+        loginWithDiscord,
+        unlinkDiscord,
+        logout,
+        loading,
+        isAdmin,
+      }}
     >
       {children}
     </AuthContext.Provider>
