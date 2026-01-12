@@ -113,7 +113,7 @@ export default function ProfilePage() {
   const [discordIdentity, setDiscordIdentity] = useState(null);
   const [discordProfile, setDiscordProfile] = useState(null);
 
-  // Team Finder State
+  // Player Finder State
   const [showForm, setShowForm] = useState(false);
   const [posting, setPosting] = useState(false);
   const [formData, setFormData] = useState({
@@ -187,7 +187,7 @@ export default function ProfilePage() {
 
               setPlatformProfile(updatedProfile);
 
-              // Also sync to Team Finder post if it exists
+              // Also sync to Player Finder post if it exists
               try {
                 const userPost = await getUserFreeAgentPost(user.$id);
                 if (userPost) {
@@ -195,11 +195,11 @@ export default function ProfilePage() {
                     discordTag: discordTag,
                     discordUsername: displayName,
                   });
-                  console.log("Synced Discord to Team Finder Post");
+                  console.log("Synced Discord to Player Finder Post");
                 }
               } catch (syncErr) {
                 console.error(
-                  "Failed to sync Discord to Team Finder:",
+                  "Failed to sync Discord to Player Finder:",
                   syncErr,
                 );
               }
@@ -284,7 +284,7 @@ export default function ProfilePage() {
                 .catch(() => setMatches([]))
                 .finally(() => setMatchesLoading(false));
 
-              // 3. Fetch Team Finder Post
+              // 3. Fetch Player Finder Post
               getUserFreeAgentPost(user.$id)
                 .then((post) => {
                   setUserPost(post);
@@ -540,7 +540,7 @@ export default function ProfilePage() {
           </div>
         </header>
 
-        {/* Team Finder Form Integration */}
+        {/* Player Finder Form Integration */}
         {showForm && valProfile && (
           <div className="animate-in fade-in slide-in-from-top-4 mb-12 rounded-2xl border border-white/10 bg-slate-900 p-8 shadow-2xl backdrop-blur-xl">
             <div className="mb-10 flex flex-col items-center gap-3 text-center">
@@ -549,7 +549,9 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h2 className="mb-1 text-2xl font-black tracking-tight text-white uppercase">
-                  {userPost ? "Update Scouting Report" : "List on Team Finder"}
+                  {userPost
+                    ? "Update Scouting Report"
+                    : "List on Player Finder"}
                 </h2>
                 <p className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase">
                   {userPost
@@ -1559,7 +1561,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Active Team Finder Ad - Relocated below Rank */}
+              {/* Active Player Finder Ad - Relocated below Rank */}
               {!showForm && userPost && (
                 <div className="animate-in fade-in slide-in-from-top-4 rounded-2xl border border-rose-500/10 bg-rose-600/5 p-5">
                   <div className="mb-4 flex items-center gap-3">
@@ -1569,7 +1571,7 @@ export default function ProfilePage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm leading-none font-bold text-white">
-                          Team Finder Ad
+                          Player Finder Ad
                         </h3>
                         <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[8px] font-black tracking-widest text-white uppercase">
                           LIVE
@@ -1632,8 +1634,8 @@ export default function ProfilePage() {
                   Are you sure?
                 </h3>
                 <p className="text-sm text-slate-400">
-                  This will permanently remove your Team Finder listing. You can
-                  always create a new one later.
+                  This will permanently remove your Player Finder listing. You
+                  can always create a new one later.
                 </p>
               </div>
               <div className="mt-4 flex w-full gap-3">
