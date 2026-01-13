@@ -305,7 +305,7 @@ export default function AboutPage() {
             Join the elite
           </div>
 
-          <h2 className="font-anton mb-6 text-6xl leading-none tracking-tighter text-white uppercase italic md:text-8xl">
+          <h2 className="font-anton mb-6 text-6xl leading-none tracking-tight text-white uppercase italic md:text-8xl">
             READY TO{" "}
             <span className="bg-gradient-to-r from-rose-500 to-amber-500 bg-clip-text text-transparent">
               COMPETE?
