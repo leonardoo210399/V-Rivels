@@ -86,6 +86,10 @@ input[type="datetime-local"] {
   @apply border-rose-500/50 bg-slate-900/60 shadow-[0_0_30px_-10px_rgba(244,63,94,0.3)];
 }
 
+.special-gradient {
+  @apply bg-gradient-to-r from-rose-500 to-amber-500 bg-clip-text text-transparent;
+}
+
 .text-gradient-rose {
   @apply bg-gradient-to-r from-rose-400 to-rose-600 bg-clip-text text-transparent;
 }
