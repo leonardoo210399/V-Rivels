@@ -2,6 +2,7 @@ import { Inter, Poppins, Anton } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import PageWrapper from "@/components/PageWrapper";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./app.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -24,13 +25,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body 
+      <body
         className={`${inter.variable} ${poppins.variable} ${anton.variable} bg-slate-950 font-sans text-slate-200 antialiased`}
         suppressHydrationWarning
       >
-        <AuthProvider>
-            {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
