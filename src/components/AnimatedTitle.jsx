@@ -27,7 +27,7 @@ export default function AnimatedTitle({ title, containerClass }) {
           ease: "power2.inOut",
           stagger: 0.05,
         },
-        0
+        0,
       );
     }, containerRef);
 
@@ -41,10 +41,10 @@ export default function AnimatedTitle({ title, containerClass }) {
           key={index}
           className="flex-center max-w-full flex-wrap gap-2 px-10 md:gap-3"
         >
-          {line.split(" ").map((word, idx) => (
+          {line.split(/\s+(?![^<>]*>)/).map((word, idx) => (
             <span
               key={idx}
-              className="animated-word opacity-0 transform translate-y-10"
+              className="animated-word translate-y-10 transform opacity-0"
               dangerouslySetInnerHTML={{ __html: word }}
             />
           ))}
