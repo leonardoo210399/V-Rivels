@@ -122,7 +122,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="flex flex-col items-center justify-between border-t border-slate-800 pt-8 text-xs text-slate-500 md:flex-row">
+        <div className="flex flex-col items-center justify-between border-t border-slate-800 pt-8 text-xs text-slate-400 md:flex-row">
           <p>
             &copy; {new Date().getFullYear()} VRivals Tournament. All rights
             reserved.

@@ -1,19 +1,19 @@
 "use client";
-import Hero from "@/components/Hero";
-import About from "@/components/About";
-import BentoGrid from "@/components/BentoGrid";
-import Contact from "@/components/Contact";
+import { Hero, About, Features, Story, Contact } from "@/components/landing";
+import "../landing.css";
+import NavBar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export default function Home() {
-
   return (
-    <main className="relative min-h-screen w-screen overflow-x-hidden bg-slate-950">
+    <main className="landing-body relative min-h-screen w-screen overflow-x-hidden">
+      <NavBar />
       <Hero />
       <About />
-      <BentoGrid />
+      <Features />
+      <Story />
       <Contact />
-      
-
+      <Footer />
     </main>
   );
 }
