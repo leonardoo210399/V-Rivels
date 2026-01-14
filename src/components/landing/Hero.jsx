@@ -89,7 +89,7 @@ const Hero = () => {
     });
   });
 
-  const getVideoSrc = (index) => `/videos/hero-${index}.mp4`;
+  const getVideoSrc = (index) => `videos/hero-${index}.mp4`;
 
   return (
     <div className="relative h-dvh w-screen overflow-x-hidden">
@@ -109,7 +109,7 @@ const Hero = () => {
         className="bg-blue-75 relative z-10 h-dvh w-screen overflow-hidden rounded-lg"
       >
         <div>
-          <div className="mask-clip-path absolute-center absolute z-50 size-64 cursor-pointer overflow-hidden rounded-lg">
+          <div className="mask-clip-path absolute top-1/2 left-1/2 z-50 size-64 -translate-x-1/2 -translate-y-1/2 cursor-pointer overflow-hidden rounded-lg">
             <VideoPreview>
               <div
                 onClick={handleMiniVdClick}
@@ -134,7 +134,7 @@ const Hero = () => {
             loop
             muted
             id="next-video"
-            className="absolute-center invisible absolute z-20 size-64 object-cover object-center"
+            className="invisible absolute top-1/2 left-1/2 z-20 size-64 -translate-x-1/2 -translate-y-1/2 object-cover object-center"
             onLoadedData={handleVideoLoad}
           />
           <video
@@ -162,13 +162,6 @@ const Hero = () => {
             <p className="font-robert-regular mb-5 max-w-64 text-blue-100">
               Enter the Metagame Layer <br /> Unleash the Play Economy
             </p>
-
-            <Button
-              id="watch-trailer"
-              title="Watch trailer"
-              leftIcon={<TiLocationArrow />}
-              containerClass="bg-yellow-300 flex-center gap-1"
-            />
           </div>
         </div>
       </div>
