@@ -389,7 +389,6 @@ export async function finalizeDeathmatch(tournamentId, winnerRegId, runnerUpRegI
         
         // CRITICAL: If the tournament is already completed, do NOT award prizes again
         if (tournament.status === 'completed') {
-            // console.log("Tournament already completed. Skipping prize award to prevent duplication.");
             return false;
         }
 
@@ -447,8 +446,6 @@ export async function revertTournamentStats(tournamentId) {
         
         // If not completed or no winner, nothing to revert
         if (tournament.status !== 'completed' || !tournament.winnerRegId) return false;
-
-        // console.log(`Reverting stats for tournament ${tournamentId}. Winner: ${tournament.winnerRegId}`);
 
         // 1. Revert Winner
         try {
