@@ -1,6 +1,7 @@
 "use client";
 import AnimatedTitle from "./AnimatedTitle";
 import Button from "./Button";
+import { useAuth } from "@/context/AuthContext";
 
 const ImageClipBox = ({ src, clipClass }) => (
   <div className={clipClass}>
@@ -9,6 +10,8 @@ const ImageClipBox = ({ src, clipClass }) => (
 );
 
 const Contact = () => {
+  const { user, loading } = useAuth();
+
   return (
     <div id="contact" className="my-20 min-h-96 w-full px-10">
       <div className="relative rounded-lg bg-black py-24 text-blue-50 sm:overflow-hidden">
@@ -44,7 +47,11 @@ const Contact = () => {
             containerClass="special-font !md:text-[6.2rem] w-full font-zentry !text-5xl !font-black !leading-[.9]"
           />
 
-          <Button title="Sign Up Now" containerClass="mt-10 cursor-pointer" />
+          <Button
+            title={user ? "Go to Profile" : "Sign Up Now"}
+            containerClass="mt-10 cursor-pointer"
+            href={user ? "/profile" : "/login"}
+          />
         </div>
       </div>
     </div>

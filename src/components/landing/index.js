@@ -3,8 +3,6 @@ export { default as About } from './About';
 export { default as Features } from './Features';
 export { default as Story } from './Story';
 export { default as Contact } from './Contact';
-export { default as Footer } from './Footer';
-export { default as NavBar } from './Navbar';
 export { default as Button } from './Button';
 export { default as AnimatedTitle } from './AnimatedTitle';
 export { default as VideoPreview } from './VideoPreview';
