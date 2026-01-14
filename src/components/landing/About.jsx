@@ -28,22 +28,22 @@ const About = () => {
   });
 
   return (
-    <div id="about" className="min-h-screen w-screen">
-      <div className="relative mt-36 mb-8 flex flex-col items-center gap-5">
+    <div id="about" className="min-h-screen w-full">
+      <div className="relative mt-36 mb-8 flex flex-col items-center gap-5 px-10">
         <p className="font-general text-sm uppercase md:text-[10px]">
-          Welcome to Zentry
+          Welcome to VRivals
         </p>
 
         <AnimatedTitle
-          title="Disc<b>o</b>ver the world's <br /> largest shared <b>a</b>dventure"
+          title="The Ultimate Competitive <br /> Valorant Exp<b>e</b>rience"
           containerClass="mt-5 !text-black text-center"
         />
 
         <div className="about-subtext">
-          <p>The Game of Games begins—your life, now an epic MMORPG</p>
+          <p>The Game of Games begins—your journey to the top starts here</p>
           <p className="text-gray-500">
-            Zentry unites every player from countless games and platforms, both
-            digital and physical, into a unified Play Economy
+            Join daily tournaments, find your dream team, and rise through the
+            ranks. VRivals is built for champions.
           </p>
         </div>
       </div>

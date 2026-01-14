@@ -47,15 +47,15 @@ const FloatingImage = () => {
   };
 
   return (
-    <div id="story" className="min-h-dvh w-screen bg-black text-blue-50">
+    <div id="story" className="min-h-dvh w-full bg-black px-20 text-blue-50">
       <div className="flex size-full flex-col items-center py-10 pb-24">
         <p className="font-general text-sm uppercase md:text-[10px]">
-          the multiversal ip world
+          The Road to Radiant
         </p>
 
         <div className="relative size-full">
           <AnimatedTitle
-            title="the st<b>o</b>ry of <br /> a hidden real<b>m</b>"
+            title="Your J<b>o</b>urney <br /> Starts H<b>e</b>re"
             containerClass="mt-5 pointer-events-none mix-blend-difference relative z-10"
           />
 
@@ -107,14 +107,13 @@ const FloatingImage = () => {
         <div className="-mt-80 flex w-full justify-center md:me-44 md:-mt-64 md:justify-end">
           <div className="flex h-full w-fit flex-col items-center md:items-start">
             <p className="font-circular-web mt-3 max-w-sm text-center text-violet-50 md:text-start">
-              Where realms converge, lies Zentry and the boundless pillar.
-              Discover its secrets and shape your fate amidst infinite
-              opportunities.
+              Every legend has a beginning. Prove your skills, climb the
+              leaderboards, and become a champion.
             </p>
 
             <Button
               id="realm-btn"
-              title="discover prologue"
+              title="Start Competing"
               containerClass="mt-5"
             />
           </div>

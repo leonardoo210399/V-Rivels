@@ -99,16 +99,14 @@ export const BentoCard = ({ src, title, description, isComingSoon }) => {
 };
 
 const Features = () => (
-  <section className="bg-black pb-52">
-    <div className="container mx-auto px-3 md:px-10">
+  <section className="bg-black pb-52 px-20">
+    <div className="container mx-auto px-10 md:px-10">
       <div className="px-5 py-32">
         <p className="font-circular-web text-lg text-blue-50">
-          Into the Metagame Layer
+          Why Choose VRivals?
         </p>
         <p className="font-circular-web max-w-md text-lg text-blue-50 opacity-50">
-          Immerse yourself in a rich and ever-expanding universe where a vibrant
-          array of products converge into an interconnected overlay experience
-          on your world.
+          Everything you need to take your Valorant journey to the next level.
         </p>
       </div>
 
@@ -117,10 +115,10 @@ const Features = () => (
           src="videos/feature-1.mp4"
           title={
             <>
-              radia<b>n</b>t
+              tourna<b>m</b>ents
             </>
           }
-          description="A cross-platform metagame app, turning your activities across Web2 and Web3 games into a rewarding adventure."
+          description="Daily tournaments with automated bracket systems and instant payouts."
           isComingSoon
         />
       </BentoTilt>
@@ -131,10 +129,10 @@ const Features = () => (
             src="videos/feature-2.mp4"
             title={
               <>
-                zig<b>m</b>a
+                team f<b>i</b>nder
               </>
             }
-            description="An anime and gaming-inspired NFT collection - the IP primed for expansion."
+            description="Connect with like-minded players and build your dream roster."
             isComingSoon
           />
         </BentoTilt>
@@ -144,10 +142,10 @@ const Features = () => (
             src="videos/feature-3.mp4"
             title={
               <>
-                n<b>e</b>xus
+                statisti<b>c</b>s
               </>
             }
-            description="A gamified social hub, adding a new dimension of play to social interaction for Web3 communities."
+            description="Track your performance with advanced analytics and leaderboards."
             isComingSoon
           />
         </BentoTilt>
@@ -157,10 +155,10 @@ const Features = () => (
             src="videos/feature-4.mp4"
             title={
               <>
-                az<b>u</b>l
+                anti-<b>c</b>heat
               </>
             }
-            description="A cross-world AI Agent - elevating your gameplay to be more fun and productive."
+            description="Riot-integrated verification ensures fair play for everyone."
             isComingSoon
           />
         </BentoTilt>

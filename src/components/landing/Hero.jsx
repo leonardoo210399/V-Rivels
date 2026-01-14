@@ -150,24 +150,25 @@ const Hero = () => {
         </div>
 
         <h1 className="special-font hero-heading text-blue-75 absolute right-5 bottom-5 z-40">
-          G<b>A</b>MING
+          VR<b>I</b>VALS
         </h1>
 
         <div className="absolute top-0 left-0 z-40 size-full">
           <div className="mt-24 px-5 sm:px-10">
             <h1 className="special-font hero-heading text-blue-100">
-              redefi<b>n</b>e
+              asce<b>n</b>d
             </h1>
 
             <p className="font-robert-regular mb-5 max-w-64 text-blue-100">
-              Enter the Metagame Layer <br /> Unleash the Play Economy
+              Compete. Win. Earn. <br /> The Ultimate Valorant Tournament
+              Platform
             </p>
           </div>
         </div>
       </div>
 
       <h1 className="special-font hero-heading absolute right-5 bottom-5 text-black">
-        G<b>A</b>MING
+        VRIV<b>A</b>LS
       </h1>
     </div>
   );
