@@ -169,7 +169,7 @@ export default function ProfilePage() {
                 platformProfile.discordTag !== discordTag ||
                 platformProfile.discordUsername !== displayName)
             ) {
-              console.log("Saving Discord Profile:", discordTag, displayName);
+              // console.log("Saving Discord Profile:", discordTag, displayName);
 
               const updatedProfile = {
                 ...platformProfile,
@@ -195,7 +195,7 @@ export default function ProfilePage() {
                     discordTag: discordTag,
                     discordUsername: displayName,
                   });
-                  console.log("Synced Discord to Player Finder Post");
+                  // console.log("Synced Discord to Player Finder Post");
                 }
               } catch (syncErr) {
                 console.error(

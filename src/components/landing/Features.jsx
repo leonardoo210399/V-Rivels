@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { TiLocationArrow } from "react-icons/ti";
+import Link from "next/link"; // [NEW]
 
 export const BentoTilt = ({ children, className = "" }) => {
   const [transformStyle, setTransformStyle] = useState("");
@@ -38,7 +39,7 @@ export const BentoTilt = ({ children, className = "" }) => {
   );
 };
 
-export const BentoCard = ({ src, title, description, isComingSoon }) => {
+export const BentoCard = ({ src, title, description, isComingSoon, href }) => {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const [hoverOpacity, setHoverOpacity] = useState(0);
   const hoverButtonRef = useRef(null);
@@ -56,7 +57,7 @@ export const BentoCard = ({ src, title, description, isComingSoon }) => {
   const handleMouseEnter = () => setHoverOpacity(1);
   const handleMouseLeave = () => setHoverOpacity(0);
 
-  return (
+  const Content = () => (
     <div className="relative size-full">
       <video
         src={src}
@@ -96,10 +97,18 @@ export const BentoCard = ({ src, title, description, isComingSoon }) => {
       </div>
     </div>
   );
+
+  return href ? (
+    <Link href={href} className="block size-full">
+      <Content />
+    </Link>
+  ) : (
+    <Content />
+  );
 };
 
 const Features = () => (
-  <section className="bg-black pb-52 px-20">
+  <section className="bg-black px-20 pb-52">
     <div className="container mx-auto px-10 md:px-10">
       <div className="px-5 py-32">
         <p className="font-circular-web text-lg text-blue-50">
@@ -119,7 +128,7 @@ const Features = () => (
             </>
           }
           description="Daily tournaments with automated bracket systems and instant payouts."
-          isComingSoon
+          href="/tournaments"
         />
       </BentoTilt>
 
@@ -133,7 +142,7 @@ const Features = () => (
               </>
             }
             description="Connect with like-minded players and build your dream roster."
-            isComingSoon
+            href="/player-finder"
           />
         </BentoTilt>
 
@@ -146,7 +155,7 @@ const Features = () => (
               </>
             }
             description="Track your performance with advanced analytics and leaderboards."
-            isComingSoon
+            href="/leaderboard"
           />
         </BentoTilt>
 
