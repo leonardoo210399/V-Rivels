@@ -90,9 +90,9 @@ const Hero = () => {
   const getVideoSrc = (index) => `videos/hero-${index}.mp4`;
 
   return (
-    <div className="relative h-dvh w-screen overflow-x-hidden">
+    <div className="relative h-dvh w-full overflow-x-hidden">
       {loading && (
-        <div className="flex-center absolute z-[100] h-dvh w-screen overflow-hidden bg-rose-50">
+        <div className="flex-center absolute z-[100] h-dvh w-full overflow-hidden bg-rose-50">
           {/* https://uiverse.io/G4b413l/tidy-walrus-92 */}
           <div className="three-body">
             <div className="three-body__dot"></div>
@@ -104,7 +104,7 @@ const Hero = () => {
 
       <div
         id="video-frame"
-        className="bg-blue-75 relative z-10 h-dvh w-screen overflow-hidden rounded-lg"
+        className="bg-blue-75 relative z-10 h-dvh w-full overflow-hidden rounded-lg"
       >
         <div>
           <div className="mask-clip-path absolute top-1/2 left-1/2 z-50 size-64 -translate-x-1/2 -translate-y-1/2 cursor-pointer overflow-hidden rounded-lg">

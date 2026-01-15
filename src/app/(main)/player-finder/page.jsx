@@ -20,6 +20,8 @@ import {
   RefreshCw,
   UserPlus,
   MessageCircle,
+  ChevronDown,
+  Activity,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import Link from "next/link";
@@ -110,9 +112,12 @@ export default function PlayerFinderPage() {
     return matchesSearch && matchesRole && matchesRegion;
   });
 
+  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
+  const [isRegionFilterOpen, setIsRegionFilterOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-slate-950 px-6 pt-24 pb-12">
-      <div className="mx-auto max-w-6xl">
+    <div className="min-h-screen bg-slate-950 pt-24 pb-12">
+      <div className="mx-auto max-w-6xl px-4 md:px-6">
         {/* Header */}
         <div className="mb-8 flex flex-col justify-between gap-6 border-b border-white/5 pb-8 md:flex-row md:items-end">
           <div>
@@ -122,7 +127,7 @@ export default function PlayerFinderPage() {
                 Operations Center
               </h2>
             </div>
-            <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">
+            <h1 className="text-3xl font-black tracking-tighter text-white uppercase italic md:text-4xl">
               <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-8">
                 Player
               </span>{" "}
@@ -134,7 +139,7 @@ export default function PlayerFinderPage() {
           </div>
           <Link
             href="/profile"
-            className="group flex items-center gap-4 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-8 py-4 text-[11px] font-black tracking-[0.2em] text-white uppercase shadow-2xl shadow-rose-600/30 transition-all hover:scale-[1.02] hover:from-rose-500 hover:to-rose-600 active:scale-95"
+            className="group flex w-full items-center justify-center gap-4 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-8 py-4 text-[11px] font-black tracking-[0.2em] text-white uppercase shadow-2xl shadow-rose-600/30 transition-all hover:scale-[1.02] hover:from-rose-500 hover:to-rose-600 active:scale-95 md:w-auto"
           >
             <UserPlus className="h-5 w-5" />
             Post Your Listing
@@ -142,7 +147,9 @@ export default function PlayerFinderPage() {
         </div>
 
         {/* Search & Filters */}
-        <div className="mb-8 grid grid-cols-1 gap-4 rounded-2xl border border-white/5 bg-slate-900/50 p-4 backdrop-blur-sm md:grid-cols-4">
+        <div
+          className={`relative mb-8 grid grid-cols-1 gap-4 rounded-2xl border border-white/5 bg-slate-900/50 p-4 backdrop-blur-sm md:grid-cols-4 ${isRoleFilterOpen || isRegionFilterOpen ? "z-[100]" : "z-10"}`}
+        >
           <div className="relative md:col-span-2">
             <input
               type="text"
@@ -153,34 +160,133 @@ export default function PlayerFinderPage() {
             />
             <Crosshair className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
           </div>
-          <div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none focus:border-rose-500"
+
+          {/* Custom Role Filter */}
+          <div className={`relative ${isRoleFilterOpen ? "z-50" : "z-20"}`}>
+            <button
+              onClick={() => {
+                setIsRoleFilterOpen(!isRoleFilterOpen);
+                setIsRegionFilterOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none hover:bg-white/5 focus:border-rose-500"
             >
-              <option>All Roles</option>
-              {Object.keys(ROLE_ICONS).map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
+              <span className="truncate">{roleFilter}</span>
+              <ChevronDown
+                className={`h-4 w-4 text-slate-400 transition-transform ${isRoleFilterOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isRoleFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsRoleFilterOpen(false)}
+                />
+                <div className="absolute top-full right-0 left-0 z-30 mt-2 max-h-[300px] overflow-y-auto rounded-xl border border-white/10 bg-slate-900 p-1 shadow-2xl backdrop-blur-xl">
+                  <button
+                    onClick={() => {
+                      setRoleFilter("All Roles");
+                      setIsRoleFilterOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all ${
+                      roleFilter === "All Roles"
+                        ? "bg-rose-500/10 text-rose-500"
+                        : "text-slate-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <Crosshair className="h-4 w-4" />
+                    All Roles
+                  </button>
+                  {Object.keys(ROLE_ICONS).map((role) => {
+                    const Icon = ROLE_ICONS[role];
+                    return (
+                      <button
+                        key={role}
+                        onClick={() => {
+                          setRoleFilter(role);
+                          setIsRoleFilterOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all ${
+                          roleFilter === role
+                            ? "bg-rose-500/10 text-rose-500"
+                            : "text-slate-400 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {role}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
-          <div>
-            <select
-              value={regionFilter}
-              onChange={(e) => setRegionFilter(e.target.value)}
-              className="w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none focus:border-rose-500"
+
+          {/* Custom Region Filter */}
+          <div className={`relative ${isRegionFilterOpen ? "z-50" : "z-20"}`}>
+            <button
+              onClick={() => {
+                setIsRegionFilterOpen(!isRegionFilterOpen);
+                setIsRoleFilterOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none hover:bg-white/5 focus:border-rose-500"
             >
-              <option>All Regions</option>
-              <option value="ap">Asia Pacific</option>
-              <option value="eu">Europe</option>
-              <option value="na">North America</option>
-              <option value="kr">Korea</option>
-              <option value="latam">LATAM</option>
-              <option value="br">Brazil</option>
-            </select>
+              <span className="truncate">
+                {regionFilter === "All Regions"
+                  ? "All Regions"
+                  : regionFilter === "ap"
+                    ? "Asia Pacific"
+                    : regionFilter === "eu"
+                      ? "Europe"
+                      : regionFilter === "na"
+                        ? "North America"
+                        : regionFilter === "kr"
+                          ? "Korea"
+                          : regionFilter === "latam"
+                            ? "LATAM"
+                            : regionFilter === "br"
+                              ? "Brazil"
+                              : regionFilter}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-slate-400 transition-transform ${isRegionFilterOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isRegionFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsRegionFilterOpen(false)}
+                />
+                <div className="absolute top-full right-0 left-0 z-30 mt-2 max-h-[300px] overflow-y-auto rounded-xl border border-white/10 bg-slate-900 p-1 shadow-2xl backdrop-blur-xl">
+                  {[
+                    { value: "All Regions", label: "All Regions" },
+                    { value: "ap", label: "Asia Pacific" },
+                    { value: "eu", label: "Europe" },
+                    { value: "na", label: "North America" },
+                    { value: "kr", label: "Korea" },
+                    { value: "latam", label: "LATAM" },
+                    { value: "br", label: "Brazil" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setRegionFilter(option.value);
+                        setIsRegionFilterOpen(false);
+                      }}
+                      className={`flex w-full items-center rounded-lg px-4 py-3 text-left text-sm transition-all hover:bg-white/5 ${
+                        regionFilter === option.value
+                          ? "bg-rose-500/10 text-rose-500"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -208,7 +314,7 @@ export default function PlayerFinderPage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="relative z-0 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredAgents.map((agent) => (
               <AgentCard
                 key={agent.$id}
@@ -553,31 +659,59 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
       </div>
 
       <div className="relative z-10 mt-auto pt-4">
-        {discordProfile.tag ? (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-3 py-2">
-            <MessageCircle className="h-3.5 w-3.5 text-[#5865F2]" />
-            <div className="flex flex-col">
-              <span className="mb-0.5 text-[8px] font-black tracking-widest text-[#5865F2]/70 uppercase">
-                Discord
-              </span>
-              <span className="text-[11px] leading-none font-black tracking-tight text-white">
-                {discordProfile.tag || "N/A"}
-              </span>
+        {/* Stats Grid */}
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          {/* ELO Intelligence Score */}
+          {!loading && valData?.mmr?.current_data?.elo ? (
+            <div className="group/elo relative overflow-hidden rounded-xl border border-white/5 bg-slate-950/30 px-3 py-2 transition-colors hover:bg-slate-950/50">
+              <div className="pointer-events-none absolute -top-4 -right-4 text-slate-800 transition-colors group-hover/elo:text-slate-700">
+                <Activity className="h-12 w-12 opacity-20" strokeWidth={1} />
+              </div>
+              <div className="relative z-10 flex h-full flex-col justify-center">
+                <h4 className="mb-0.5 text-[7px] font-black tracking-widest text-slate-500 uppercase">
+                  Intelligence
+                </h4>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-black tracking-tighter text-white transition-all group-hover/elo:text-rose-500">
+                    {valData.mmr.current_data.elo}
+                  </span>
+                  <span className="text-[8px] font-bold tracking-widest text-slate-600 uppercase">
+                    ELO
+                  </span>
+                </div>
+              </div>
             </div>
+          ) : null}
+
+          {/* Discord - Spans 2 cols if no ELO */}
+          <div
+            className={`${!loading && valData?.mmr?.current_data?.elo ? "" : "col-span-2"}`}
+          >
+            {discordProfile.tag ? (
+              <div className="flex h-full items-center gap-2 rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-3 py-2">
+                <div className="flex flex-col">
+                  <span className="mb-0.5 text-[7px] font-black tracking-widest text-[#5865F2]/70 uppercase">
+                    Discord
+                  </span>
+                  <span className="truncate text-[10px] leading-none font-black tracking-tight text-white">
+                    {discordProfile.tag || "N/A"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 py-2 opacity-50">
+                <div className="flex flex-col">
+                  <span className="mb-0.5 text-[7px] font-black tracking-widest text-slate-500 uppercase">
+                    Discord
+                  </span>
+                  <span className="text-[10px] leading-none font-bold tracking-tight text-slate-500">
+                    Not Provided
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 py-2 opacity-50">
-            <MessageCircle className="h-3.5 w-3.5 text-slate-500" />
-            <div className="flex flex-col">
-              <span className="mb-0.5 text-[8px] font-black tracking-widest text-slate-500 uppercase">
-                Discord
-              </span>
-              <span className="text-[11px] leading-none font-bold tracking-tight text-slate-500">
-                Not Provided
-              </span>
-            </div>
-          </div>
-        )}
+        </div>
 
         <div className="mb-2 flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
           <Brain className="h-3 w-3" />
