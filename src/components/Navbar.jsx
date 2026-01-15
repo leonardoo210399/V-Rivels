@@ -247,7 +247,7 @@ export default function Navbar() {
                         className="flex items-center gap-4 rounded-2xl px-6 py-4 text-slate-300 hover:bg-white/5"
                       >
                         <User className="h-5 w-5" />
-                        Management Profile
+                        Profile
                       </Link>
                       <button
                         onClick={() => {

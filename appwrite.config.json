@@ -203,8 +203,12 @@
                 {
                     "key": "leaderboard_idx",
                     "type": "key",
-                    "attributes": ["totalEarnings"],
-                    "orders": ["DESC"]
+                    "attributes": [
+                        "totalEarnings"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
                 }
             ]
         },
