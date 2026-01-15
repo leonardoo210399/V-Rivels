@@ -21,6 +21,7 @@ import {
   UserPlus,
   MessageCircle,
   ChevronDown,
+  Activity,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import Link from "next/link";
@@ -658,31 +659,59 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
       </div>
 
       <div className="relative z-10 mt-auto pt-4">
-        {discordProfile.tag ? (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-3 py-2">
-            <MessageCircle className="h-3.5 w-3.5 text-[#5865F2]" />
-            <div className="flex flex-col">
-              <span className="mb-0.5 text-[8px] font-black tracking-widest text-[#5865F2]/70 uppercase">
-                Discord
-              </span>
-              <span className="text-[11px] leading-none font-black tracking-tight text-white">
-                {discordProfile.tag || "N/A"}
-              </span>
+        {/* Stats Grid */}
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          {/* ELO Intelligence Score */}
+          {!loading && valData?.mmr?.current_data?.elo ? (
+            <div className="group/elo relative overflow-hidden rounded-xl border border-white/5 bg-slate-950/30 px-3 py-2 transition-colors hover:bg-slate-950/50">
+              <div className="pointer-events-none absolute -top-4 -right-4 text-slate-800 transition-colors group-hover/elo:text-slate-700">
+                <Activity className="h-12 w-12 opacity-20" strokeWidth={1} />
+              </div>
+              <div className="relative z-10 flex h-full flex-col justify-center">
+                <h4 className="mb-0.5 text-[7px] font-black tracking-widest text-slate-500 uppercase">
+                  Intelligence
+                </h4>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-black tracking-tighter text-white transition-all group-hover/elo:text-rose-500">
+                    {valData.mmr.current_data.elo}
+                  </span>
+                  <span className="text-[8px] font-bold tracking-widest text-slate-600 uppercase">
+                    ELO
+                  </span>
+                </div>
+              </div>
             </div>
+          ) : null}
+
+          {/* Discord - Spans 2 cols if no ELO */}
+          <div
+            className={`${!loading && valData?.mmr?.current_data?.elo ? "" : "col-span-2"}`}
+          >
+            {discordProfile.tag ? (
+              <div className="flex h-full items-center gap-2 rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-3 py-2">
+                <div className="flex flex-col">
+                  <span className="mb-0.5 text-[7px] font-black tracking-widest text-[#5865F2]/70 uppercase">
+                    Discord
+                  </span>
+                  <span className="truncate text-[10px] leading-none font-black tracking-tight text-white">
+                    {discordProfile.tag || "N/A"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 py-2 opacity-50">
+                <div className="flex flex-col">
+                  <span className="mb-0.5 text-[7px] font-black tracking-widest text-slate-500 uppercase">
+                    Discord
+                  </span>
+                  <span className="text-[10px] leading-none font-bold tracking-tight text-slate-500">
+                    Not Provided
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 py-2 opacity-50">
-            <MessageCircle className="h-3.5 w-3.5 text-slate-500" />
-            <div className="flex flex-col">
-              <span className="mb-0.5 text-[8px] font-black tracking-widest text-slate-500 uppercase">
-                Discord
-              </span>
-              <span className="text-[11px] leading-none font-bold tracking-tight text-slate-500">
-                Not Provided
-              </span>
-            </div>
-          </div>
-        )}
+        </div>
 
         <div className="mb-2 flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
           <Brain className="h-3 w-3" />
