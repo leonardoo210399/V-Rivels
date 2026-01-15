@@ -108,7 +108,7 @@ export const BentoCard = ({ src, title, description, isComingSoon, href }) => {
 };
 
 const Features = () => (
-  <section id="features" className="bg-black px-20 pb-52">
+  <section id="features" className="bg-black pb-52 lg:px-20">
     <div className="container mx-auto px-10 md:px-10">
       <div className="px-5 py-32">
         <p className="font-circular-web text-lg text-blue-50">
@@ -132,8 +132,8 @@ const Features = () => (
         />
       </BentoTilt>
 
-      <div className="grid h-[135vh] w-full grid-cols-2 grid-rows-3 gap-7">
-        <BentoTilt className="bento-tilt_1 col-span-2 row-span-1 md:col-span-1 md:row-span-2">
+      <div className="grid h-auto w-full grid-cols-1 gap-7 md:h-[135vh] md:grid-cols-2 md:grid-rows-3">
+        <BentoTilt className="bento-tilt_1 row-span-1 md:col-span-1 md:row-span-2">
           <BentoCard
             src="videos/feature-2.mp4"
             title={
@@ -146,7 +146,7 @@ const Features = () => (
           />
         </BentoTilt>
 
-        <BentoTilt className="bento-tilt_1 col-span-2 row-span-1 ms-32 md:col-span-1 md:ms-0">
+        <BentoTilt className="bento-tilt_1 row-span-1 ms-0 md:col-span-1 md:ms-0">
           <BentoCard
             src="videos/feature-3.mp4"
             title={
@@ -159,7 +159,7 @@ const Features = () => (
           />
         </BentoTilt>
 
-        <BentoTilt className="bento-tilt_1 col-span-2 me-14 md:col-span-1 md:me-0">
+        <BentoTilt className="bento-tilt_1 me-0 md:col-span-1 md:me-0">
           <BentoCard
             src="videos/feature-4.mp4"
             title={

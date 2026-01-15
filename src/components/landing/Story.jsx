@@ -104,7 +104,7 @@ const FloatingImage = () => {
           </div>
         </div>
 
-        <div className="-mt-80 flex w-full justify-center md:me-44 md:-mt-64 md:justify-end">
+        <div className="-mt-40 flex w-full justify-center md:me-44 md:-mt-64 md:justify-end">
           <div className="flex h-full w-fit flex-col items-center md:items-start">
             <p className="font-circular-web mt-3 max-w-sm text-center text-blue-50 md:text-start">
               Every legend has a beginning. Prove your skills, climb the

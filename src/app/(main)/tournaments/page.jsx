@@ -13,6 +13,7 @@ import {
   Shield,
   LayoutGrid,
   List,
+  ChevronDown,
 } from "lucide-react";
 import { BentoTilt } from "@/components/BentoGrid";
 import Image from "next/image";
@@ -26,6 +27,7 @@ export default function TournamentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [activeTab, setActiveTab] = useState("UPCOMING");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
     async function loadTournaments() {
@@ -81,7 +83,7 @@ export default function TournamentsPage() {
         </div>
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
 
-        <div className="relative z-20 mx-auto flex h-full max-w-7xl flex-col justify-end px-6 pb-12">
+        <div className="relative z-20 mx-auto flex h-full max-w-7xl flex-col justify-end px-4 pb-12 md:px-6">
           {/* Header */}
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
@@ -91,7 +93,7 @@ export default function TournamentsPage() {
                   Operations Center
                 </h2>
               </div>
-              <h1 className="text-4xl font-black tracking-tight text-white uppercase italic md:text-5xl">
+              <h1 className="text-3xl font-black tracking-tight text-white uppercase italic md:text-5xl">
                 <span className="text-rose-500 underline decoration-rose-500/30 underline-offset-8">
                   Competitive
                 </span>{" "}
@@ -119,7 +121,7 @@ export default function TournamentsPage() {
 
       <div className="mx-auto max-w-7xl px-6 py-12">
         {/* Controls - Redesigned to match Player Finder */}
-        <div className="mb-12 flex flex-col gap-4 rounded-2xl border border-white/5 bg-slate-900/50 p-2 backdrop-blur-sm md:flex-row md:items-center">
+        <div className="relative z-30 mb-8 flex flex-col gap-4 rounded-2xl border border-white/5 bg-slate-900/50 p-2 backdrop-blur-sm md:mb-12 md:flex-row md:items-center">
           {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -132,7 +134,7 @@ export default function TournamentsPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 md:w-auto">
             {/* View Toggle */}
             <div className="flex items-center rounded-xl border border-white/5 bg-slate-950 p-1">
               <button
@@ -151,21 +153,57 @@ export default function TournamentsPage() {
               </button>
             </div>
 
-            {/* Filter */}
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="h-full cursor-pointer appearance-none rounded-xl border border-white/5 bg-slate-950 px-6 py-3 text-sm text-slate-300 transition-all outline-none hover:border-white/10 focus:border-rose-500/50"
-            >
-              <option value="All">All Modes</option>
-              <option value="5v5">5v5 Plant/Defuse</option>
-              <option value="Deathmatch">Deathmatch Arena</option>
-            </select>
+            {/* Premium Custom Filter */}
+            <div className="relative h-full flex-1 md:flex-none">
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-950 px-6 py-3 text-sm text-slate-300 transition-all hover:border-white/10 focus:border-rose-500/50"
+              >
+                <span className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-rose-500" />
+                  {filter === "All" ? "All Modes" : filter}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-300 ${isFilterOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isFilterOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsFilterOpen(false)}
+                  />
+                  <div className="absolute top-full left-0 z-50 mt-2 w-full min-w-[200px] overflow-hidden rounded-xl border border-white/10 bg-slate-900 p-1 shadow-2xl backdrop-blur-xl md:right-0 md:left-auto">
+                    {[
+                      { value: "All", label: "All Modes" },
+                      { value: "5v5", label: "5v5 Plant/Defuse" },
+                      { value: "Deathmatch", label: "Deathmatch Arena" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setFilter(option.value);
+                          setIsFilterOpen(false);
+                        }}
+                        className={`flex w-full items-center rounded-lg px-4 py-3 text-left text-sm transition-all hover:bg-white/5 ${
+                          filter === option.value
+                            ? "bg-rose-500/10 text-rose-500"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Tournament Segments */}
-        <div className="mb-8 flex flex-wrap items-center gap-8 border-b border-white/5">
+        <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-white/5 pb-0.5 [-ms-overflow-style:'none'] [scrollbar-width:'none'] md:gap-8 md:overflow-visible [&::-webkit-scrollbar]:hidden">
           {[
             { id: "UPCOMING", label: "SCHEDULED / UPCOMING" },
             { id: "LIVE", label: "ONGOING (LIVE)" },
@@ -198,7 +236,7 @@ export default function TournamentsPage() {
                   key={tournament["$id"]}
                 >
                   <BentoTilt className="h-full">
-                    <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-slate-900 via-slate-900 to-[#0a0c10] p-6 transition-all group-hover:scale-[1.02] hover:border-rose-500/50 hover:shadow-2xl hover:shadow-rose-900/20">
+                    <div className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-slate-900 via-slate-900 to-[#0a0c10] p-4 transition-all group-hover:scale-[1.02] hover:border-rose-500/50 hover:shadow-2xl hover:shadow-rose-900/20 md:p-6">
                       {/* Decorative Glow Blob */}
                       <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-rose-500/5 blur-[100px] transition-colors group-hover:bg-rose-500/10" />
 
@@ -216,7 +254,7 @@ export default function TournamentsPage() {
                               {tournament.gameType}
                             </span>
                           </div>
-                          <h3 className="py-1 text-2xl leading-[0.9] font-black tracking-tight text-white uppercase italic transition-all group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-400 group-hover:bg-clip-text group-hover:text-transparent md:text-3xl">
+                          <h3 className="py-1 text-xl leading-[0.9] font-black tracking-tight text-white uppercase italic transition-all group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-slate-400 group-hover:bg-clip-text group-hover:text-transparent md:text-3xl">
                             {tournament.name}
                           </h3>
                         </div>
@@ -226,7 +264,7 @@ export default function TournamentsPage() {
                       </div>
 
                       {/* Prize Pool Box */}
-                      <div className="relative z-10 mb-8 overflow-hidden rounded-2xl border border-white/5 bg-slate-950/50 p-6 transition-all duration-500 group-hover:border-rose-500/30">
+                      <div className="relative z-10 mb-8 overflow-hidden rounded-2xl border border-white/5 bg-slate-950/50 p-4 transition-all duration-500 group-hover:border-rose-500/30 md:p-6">
                         <div className="absolute inset-0 bg-gradient-to-r from-rose-500/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 
                         <div className="relative z-10 flex flex-col gap-4">
@@ -324,7 +362,7 @@ export default function TournamentsPage() {
                   <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0c10] p-5 transition-all hover:border-rose-500/30 hover:bg-slate-900/50">
                     <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       {/* Left Section: Game Type & Name */}
-                      <div className="flex items-center gap-6 md:w-[30%]">
+                      <div className="flex items-center gap-4 md:w-[30%] md:gap-6">
                         <div
                           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${
                             tournament.gameType === "Deathmatch"
