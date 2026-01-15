@@ -146,7 +146,7 @@ export default function Navbar() {
           </nav>
 
           {/* User Actions */}
-          <div className="flex flex-1 items-center justify-end gap-4">
+          <div className="hidden flex-1 items-center justify-end gap-4 lg:flex">
             {!loading && (
               <>
                 {user ? (
@@ -200,10 +200,12 @@ export default function Navbar() {
                 )}
               </>
             )}
+          </div>
 
-            {/* Mobile Menu Toggle */}
+          {/* Mobile Menu Toggle - Independent of User Actions */}
+          <div className="flex flex-1 justify-end lg:hidden">
             <button
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-slate-300 transition-colors hover:bg-white/10 lg:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-slate-300 transition-colors hover:bg-white/10"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? (
