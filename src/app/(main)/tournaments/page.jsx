@@ -71,7 +71,7 @@ export default function TournamentsPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
       {/* Hero Section */}
-      <section className="relative h-[40vh] w-full overflow-hidden border-b border-white/10">
+      <section className="relative h-[30vh] w-full overflow-hidden border-b border-white/10 md:h-[40vh]">
         <div className="absolute inset-0 z-0 opacity-40">
           <img
             src="/hero-bg.png"
@@ -83,7 +83,7 @@ export default function TournamentsPage() {
         </div>
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
 
-        <div className="relative z-20 mx-auto flex h-full max-w-7xl flex-col justify-end px-4 pb-12 md:px-6">
+        <div className="relative z-20 mx-auto flex h-full max-w-7xl flex-col justify-end px-4 pb-6 md:px-6 md:pb-12">
           {/* Header */}
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
@@ -99,7 +99,7 @@ export default function TournamentsPage() {
                 </span>{" "}
                 Tournaments
               </h1>
-              <p className="mt-4 text-xs font-bold tracking-widest text-slate-500 uppercase">
+              <p className="mt-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase md:mt-4 md:text-xs">
                 Competitive Hub • Active Brackets
               </p>
             </div>
@@ -108,10 +108,11 @@ export default function TournamentsPage() {
               {isAdmin && (
                 <Link
                   href="/tournaments/create"
-                  className="group flex items-center gap-4 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-8 py-4 text-[11px] font-black tracking-[0.2em] text-white uppercase shadow-2xl shadow-rose-600/30 transition-all hover:scale-[1.02] hover:from-rose-500 hover:to-rose-600 active:scale-95"
+                  className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 px-4 py-3 text-[10px] font-black tracking-[0.15em] text-white uppercase shadow-2xl shadow-rose-600/30 transition-all hover:scale-[1.02] hover:from-rose-500 hover:to-rose-600 active:scale-95 md:gap-4 md:rounded-2xl md:px-8 md:py-4 md:text-[11px] md:tracking-[0.2em]"
                 >
-                  <Trophy className="h-5 w-5" />
-                  Create Tournament
+                  <Trophy className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden sm:inline">Create Tournament</span>
+                  <span className="sm:hidden">Create</span>
                 </Link>
               )}
             </div>
@@ -119,7 +120,7 @@ export default function TournamentsPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-12">
         {/* Controls - Redesigned to match Player Finder */}
         <div className="relative z-30 mb-8 flex flex-col gap-4 rounded-2xl border border-white/5 bg-slate-900/50 p-2 backdrop-blur-sm md:mb-12 md:flex-row md:items-center">
           {/* Search */}
@@ -205,9 +206,17 @@ export default function TournamentsPage() {
         {/* Tournament Segments */}
         <div className="mb-8 flex items-center gap-6 overflow-x-auto border-b border-white/5 pb-0.5 [-ms-overflow-style:'none'] [scrollbar-width:'none'] md:gap-8 md:overflow-visible [&::-webkit-scrollbar]:hidden">
           {[
-            { id: "UPCOMING", label: "SCHEDULED / UPCOMING" },
-            { id: "LIVE", label: "ONGOING (LIVE)" },
-            { id: "COMPLETED", label: "COMPLETED / PAST" },
+            {
+              id: "UPCOMING",
+              label: "UPCOMING",
+              fullLabel: "SCHEDULED / UPCOMING",
+            },
+            { id: "LIVE", label: "LIVE", fullLabel: "ONGOING (LIVE)" },
+            {
+              id: "COMPLETED",
+              label: "COMPLETED",
+              fullLabel: "COMPLETED / PAST",
+            },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -218,12 +227,36 @@ export default function TournamentsPage() {
                   : "text-slate-500 hover:text-slate-300"
               }`}
             >
-              {tab.label}
+              <span className="md:hidden">{tab.label}</span>
+              <span className="hidden md:inline">{tab.fullLabel}</span>
               {activeTab === tab.id && (
                 <div className="absolute bottom-0 left-0 h-0.5 w-full bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)]" />
               )}
             </button>
           ))}
+        </div>
+
+        {/* Results Count */}
+        <div className="mb-8 flex items-baseline gap-2 pb-2">
+          <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+            Showing
+          </span>
+          <span className="text-xl font-black text-white italic">
+            {filteredTournaments.length}
+          </span>
+          <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+            Tournament{filteredTournaments.length !== 1 ? "s" : ""}
+          </span>
+          {searchQuery && (
+            <>
+              <span className="ml-2 text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                for
+              </span>
+              <span className="text-sm font-bold text-rose-500">
+                &quot;{searchQuery}&quot;
+              </span>
+            </>
+          )}
         </div>
 
         {/* Tournament Content */}
@@ -387,56 +420,55 @@ export default function TournamentsPage() {
                       </div>
 
                       {/* Center: Prize Information */}
-                      <div className="flex flex-1 items-center justify-between border-y border-white/5 py-4 md:border-none md:px-12 md:py-0">
+                      <div className="grid grid-cols-3 gap-2 border-y border-white/5 py-3 md:flex md:flex-1 md:items-center md:justify-between md:border-none md:px-12 md:py-0">
                         <div className="group/prize flex flex-col">
-                          <span className="mb-1 text-[9px] font-black tracking-[0.2em] text-slate-600 uppercase transition-colors group-hover:text-rose-500">
-                            Total Prize Pool
+                          <span className="mb-1 text-[8px] font-black tracking-widest text-slate-600 uppercase transition-colors group-hover:text-rose-500 md:text-[9px] md:tracking-[0.2em]">
+                            Prize Pool
                           </span>
-                          <span className="origin-left text-3xl leading-none font-black tracking-tight text-white italic transition-all group-hover:scale-110 group-hover:bg-gradient-to-r group-hover:from-rose-400 group-hover:to-amber-300 group-hover:bg-clip-text group-hover:text-transparent">
+                          <span className="origin-left text-xl leading-none font-black tracking-tight text-white italic transition-all group-hover:bg-gradient-to-r group-hover:from-rose-400 group-hover:to-amber-300 group-hover:bg-clip-text group-hover:text-transparent md:text-3xl md:group-hover:scale-110">
                             ₹{tournament.prizePool}
                           </span>
                         </div>
                         <div className="hidden h-10 w-[1px] bg-white/10 md:block" />
-                        <div className="flex flex-col">
-                          <span className="mb-1 text-[9px] font-black tracking-[0.2em] text-emerald-500 uppercase">
+                        <div className="flex flex-col text-center md:text-left">
+                          <span className="mb-1 text-[8px] font-black tracking-widest text-emerald-500 uppercase md:text-[9px] md:tracking-[0.2em]">
                             Winner
                           </span>
-                          <span className="text-xl leading-none font-black tracking-tight text-slate-200 transition-colors group-hover:text-white">
+                          <span className="text-base leading-none font-black tracking-tight text-slate-200 transition-colors group-hover:text-white md:text-xl">
                             ₹{tournament.firstPrize || "TBD"}
                           </span>
                         </div>
                         <div className="hidden h-10 w-[1px] bg-white/10 md:block" />
-                        <div className="flex flex-col">
-                          <span className="mb-1 text-[9px] font-black tracking-[0.2em] text-slate-600 uppercase">
+                        <div className="flex flex-col text-right md:text-left">
+                          <span className="mb-1 text-[8px] font-black tracking-widest text-slate-600 uppercase md:text-[9px] md:tracking-[0.2em]">
                             Runner Up
                           </span>
-                          <span className="text-xl leading-none font-black tracking-tight text-slate-400 transition-colors group-hover:text-slate-200">
+                          <span className="text-base leading-none font-black tracking-tight text-slate-400 transition-colors group-hover:text-slate-200 md:text-xl">
                             ₹{tournament.secondPrize || "TBD"}
                           </span>
                         </div>
                       </div>
 
                       {/* Right Section: Date & Slots */}
-                      <div className="flex items-center justify-between gap-8 md:w-[30%] md:justify-end">
-                        <div className="flex flex-col items-end">
-                          <span className="text-[9px] font-black tracking-widest text-slate-600 uppercase">
+                      <div className="flex items-center justify-between gap-4 md:w-[30%] md:justify-end md:gap-8">
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black tracking-widest text-slate-600 uppercase md:text-[9px]">
                             Start Date
                           </span>
-                          <span className="text-sm font-black tracking-tight text-slate-300 uppercase">
+                          <span className="text-xs font-black tracking-tight text-slate-300 uppercase md:text-sm">
                             {new Date(tournament.date).toLocaleDateString(
                               undefined,
                               {
                                 month: "short",
                                 day: "numeric",
-                                year: "numeric",
                               },
                             )}
                           </span>
                         </div>
-                        <div className="flex h-10 items-center gap-3 rounded-xl border border-white/5 bg-slate-950/50 px-4">
-                          <Users className="h-4 w-4 text-slate-500" />
+                        <div className="flex h-8 items-center gap-2 rounded-lg border border-white/5 bg-slate-950/50 px-3 md:h-10 md:gap-3 md:rounded-xl md:px-4">
+                          <Users className="h-3 w-3 text-slate-500 md:h-4 md:w-4" />
                           <span
-                            className={`text-[10px] font-black tracking-widest uppercase ${
+                            className={`text-[9px] font-black tracking-widest uppercase md:text-[10px] ${
                               tournament.maxTeams -
                                 (tournament.registeredTeams || 0) <=
                               2
@@ -446,7 +478,7 @@ export default function TournamentsPage() {
                           >
                             {tournament.maxTeams -
                               (tournament.registeredTeams || 0)}{" "}
-                            OPEN
+                            <span className="hidden sm:inline">OPEN</span>
                           </span>
                         </div>
                         <div className="hidden transition-transform group-hover:translate-x-1 md:block">
