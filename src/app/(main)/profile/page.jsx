@@ -18,11 +18,12 @@ import {
   ChevronDown,
   CheckCircle,
   XCircle,
+  AlertCircle,
   Info,
 } from "lucide-react";
 import MatchDetailsModal from "@/components/MatchDetailsModal";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { getUserFreeAgentPost, updateFreeAgentPost } from "@/lib/players";
 import Loader from "@/components/Loader";
 import ProfileSkeleton from "@/components/ProfileSkeleton";
 import { useProfileData, useScoutingReport } from "./hooks";
@@ -331,15 +332,15 @@ export default function ProfilePage() {
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden px-4 py-4 pt-24 text-slate-200 md:px-12 md:py-12 md:pt-28">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-12 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col">
+        <header className="mb-8 flex flex-wrap items-end justify-between gap-4 px-1">
+          <div className="flex min-w-0 flex-col">
             <div className="mb-2 flex items-center gap-3">
               <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
               <span className="text-[10px] font-black tracking-[0.4em] text-rose-500 uppercase">
                 Operations Center
               </span>
             </div>
-            <h1 className="group relative cursor-default text-3xl font-black tracking-tight text-white uppercase selection:bg-rose-500 selection:text-white">
+            <h1 className="group relative cursor-default text-3xl font-black tracking-tight whitespace-nowrap text-white uppercase selection:bg-rose-500 selection:text-white">
               My Profile
               <div className="mt-1.5 flex items-center gap-1.5">
                 <div className="h-0.5 w-8 rounded-full bg-rose-600" />
@@ -347,18 +348,19 @@ export default function ProfilePage() {
               </div>
             </h1>
           </div>
-          <div className="flex w-full items-center gap-4 md:w-auto md:justify-end">
+          <div className="flex items-center justify-end gap-4 md:w-auto">
             {valProfile && (!userPost || showForm) && (
               <button
                 onClick={() => setShowForm(!showForm)}
-                className={`flex items-center gap-2 rounded-xl px-6 py-2.5 font-bold shadow-lg transition-all ${showForm ? "border border-white/5 bg-slate-800 text-white" : "bg-rose-600 text-white shadow-rose-600/20 hover:bg-rose-700"}`}
+                className={`flex w-auto items-center gap-1.5 rounded-lg px-3 py-1.5 text-[9px] font-black tracking-widest uppercase shadow-lg transition-all md:gap-2 md:rounded-xl md:px-6 md:py-2.5 md:text-xs ${showForm ? "border border-white/5 bg-slate-800 text-white" : "bg-rose-600 text-white shadow-rose-600/20 hover:bg-rose-700"}`}
               >
                 {showForm ? (
                   "Cancel"
                 ) : (
                   <>
-                    <UserPlus className="h-4 w-4" />
-                    <span>Post Ad</span>
+                    <UserPlus className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Looking for Team</span>
+                    <span className="inline sm:hidden">Find Team</span>
                   </>
                 )}
               </button>
@@ -454,7 +456,7 @@ export default function ProfilePage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm leading-none font-bold text-white">
-                          Player Finder Ad
+                          Scouting Report
                         </h3>
                         <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[8px] font-black tracking-widest text-white uppercase">
                           LIVE

@@ -33,12 +33,12 @@ export default function ScoutingReportModal({
           </div>
           <div>
             <h2 className="mb-1 text-2xl font-black tracking-tight text-white uppercase">
-              {userPost ? "Update Scouting Report" : "List on Player Finder"}
+              {userPost ? "Update Scouting Report" : "Create Scouting Report"}
             </h2>
             <p className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase">
               {userPost
-                ? "Keep your profile fresh and active"
-                : "Find teams or recruit players"}
+                ? "Keep your recruitment profile fresh and active"
+                : "List yourself as a available talent for teams"}
             </p>
           </div>
         </div>

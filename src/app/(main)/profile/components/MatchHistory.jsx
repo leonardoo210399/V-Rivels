@@ -99,59 +99,66 @@ export default function MatchHistory({
                     }`}
                   />
 
-                  {/* Agent Section */}
-                  <div className="relative shrink-0">
-                    <div
-                      className={`h-16 w-16 overflow-hidden rounded-2xl border border-white/10 transition-colors group-hover:border-white/20 md:h-24 md:w-24 ${
-                        hasWon
-                          ? "bg-emerald-950/20"
-                          : isDraw
-                            ? "bg-slate-900/40"
-                            : "bg-rose-950/20"
-                      }`}
-                    >
-                      <img
-                        src={
-                          typeof agentIcons[me.character] === "object"
-                            ? agentIcons[me.character]?.src
-                            : agentIcons[me.character] || me.assets.agent.small
-                        }
-                        alt={me.character}
-                        className="h-full w-full object-cover p-1 transition-transform duration-500 group-hover:scale-110"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Match Details */}
-                  <div className="flex flex-1 flex-col justify-center">
-                    <div className="mb-2 flex items-center gap-3">
-                      <h4 className="text-base font-black tracking-tight text-white uppercase transition-colors group-hover:text-rose-500 md:text-xl">
-                        {match.metadata.map}
-                      </h4>
-                      <span className="rounded-md border border-white/5 bg-white/5 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-                        {match.metadata.mode}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                          KDA
-                        </span>
-                        <p className="font-mono text-sm font-black text-white">
-                          {me.stats.kills}{" "}
-                          <span className="font-normal text-slate-600">/</span>{" "}
-                          {me.stats.deaths}{" "}
-                          <span className="font-normal text-slate-600">/</span>{" "}
-                          {me.stats.assists}
-                        </p>
+                  <div className="flex w-full flex-1 items-center justify-between gap-4 sm:w-auto sm:justify-start sm:gap-6">
+                    {/* Agent Section */}
+                    <div className="relative order-last shrink-0 sm:order-first">
+                      <div
+                        className={`h-16 w-16 overflow-hidden rounded-2xl border border-white/10 transition-colors group-hover:border-white/20 md:h-24 md:w-24 ${
+                          hasWon
+                            ? "bg-emerald-950/20"
+                            : isDraw
+                              ? "bg-slate-900/40"
+                              : "bg-rose-950/20"
+                        }`}
+                      >
+                        <img
+                          src={
+                            typeof agentIcons[me.character] === "object"
+                              ? agentIcons[me.character]?.src
+                              : agentIcons[me.character] ||
+                                me.assets.agent.small
+                          }
+                          alt={me.character}
+                          className="h-full w-full object-cover p-1 transition-transform duration-500 group-hover:scale-110"
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                          ACS
+                    </div>
+
+                    {/* Match Details */}
+                    <div className="flex flex-1 flex-col justify-center">
+                      <div className="mb-2 flex items-center gap-3">
+                        <h4 className="text-base font-black tracking-tight text-white uppercase transition-colors group-hover:text-rose-500 md:text-xl">
+                          {match.metadata.map}
+                        </h4>
+                        <span className="rounded-md border border-white/5 bg-white/5 px-2 py-0.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+                          {match.metadata.mode}
                         </span>
-                        <p className="font-mono text-sm font-black text-white">
-                          {acs}
-                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                            KDA
+                          </span>
+                          <p className="font-mono text-sm font-black text-white">
+                            {me.stats.kills}{" "}
+                            <span className="font-normal text-slate-600">
+                              /
+                            </span>{" "}
+                            {me.stats.deaths}{" "}
+                            <span className="font-normal text-slate-600">
+                              /
+                            </span>{" "}
+                            {me.stats.assists}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                            ACS
+                          </span>
+                          <p className="font-mono text-sm font-black text-white">
+                            {acs}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
