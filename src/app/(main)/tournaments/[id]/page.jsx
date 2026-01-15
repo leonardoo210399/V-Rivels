@@ -342,7 +342,7 @@ export default function TournamentDetailPage({ params }) {
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Hero Header - Responsive */}
-      <section className="relative h-[35vh] min-h-[280px] w-full overflow-hidden border-b border-white/5 pt-16 md:h-[45vh] md:min-h-[400px]">
+      <section className="relative h-[32vh] min-h-[240px] w-full overflow-hidden border-b border-white/5 pt-14 md:h-[45vh] md:min-h-[400px] md:pt-16">
         <div className="absolute inset-0 z-0">
           <img
             src="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=2000&auto=format&fit=crop"
@@ -361,7 +361,7 @@ export default function TournamentDetailPage({ params }) {
               <p className="pl-1 text-[10px] font-black tracking-[0.3em] text-rose-500/80 uppercase md:text-xs md:tracking-[0.4em]">
                 Tournament Entry
               </p>
-              <h1 className="special-font text-3xl leading-[0.9] font-black tracking-tight text-white uppercase drop-shadow-2xl filter sm:text-4xl md:text-6xl lg:text-8xl">
+              <h1 className="special-font text-2xl leading-[0.9] font-black tracking-tight text-white uppercase drop-shadow-2xl filter sm:text-3xl md:text-6xl lg:text-8xl">
                 {tournament.name}
               </h1>
             </div>
@@ -450,8 +450,8 @@ export default function TournamentDetailPage({ params }) {
           <div className="order-2 space-y-6 md:space-y-8 lg:order-1 lg:col-span-2">
             <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:p-8">
               {/* Tab Navigation - Scrollable */}
-              <div className="mb-6 flex items-center justify-between overflow-x-auto border-b border-white/10 md:mb-8">
-                <div className="flex gap-4 md:gap-4">
+              <div className="mb-6 flex items-center justify-between gap-2 overflow-x-auto border-b border-white/10 [-ms-overflow-style:'none'] [scrollbar-width:'none'] md:mb-8 [&::-webkit-scrollbar]:hidden">
+                <div className="flex shrink-0 gap-3 md:gap-4">
                   <button
                     onClick={() => setActiveTab("overview")}
                     className={`pb-3 text-[10px] font-black tracking-[0.15em] whitespace-nowrap uppercase transition-all md:pb-4 md:text-xs md:tracking-[0.2em] ${activeTab === "overview" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
@@ -599,7 +599,7 @@ export default function TournamentDetailPage({ params }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 md:gap-4">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:grid-cols-1 md:gap-4">
                   <div className="flex items-center gap-3 md:gap-4">
                     <div className="rounded-lg border border-white/5 bg-slate-950 p-2.5 text-rose-500 shadow-lg shadow-rose-500/5 md:rounded-xl md:p-3">
                       <Calendar className="h-4 w-4 md:h-5 md:w-5" />
