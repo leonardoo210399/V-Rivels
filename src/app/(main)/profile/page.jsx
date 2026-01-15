@@ -307,16 +307,24 @@ export default function ProfilePage() {
           ingameName: accountData.data.name,
           tag: accountData.data.tag,
           region: region, // Save the manually selected region
-          card: accountData.data.card, // Save card ID for leaderboard
-          level: accountData.data.account_level, // Save level for leaderboard
+          card: accountData.data.card || null, // Save card ID for leaderboard
           createdTimestamp: new Date().toISOString(),
           totalEarnings: 0,
           tournamentsWon: 0,
           matchesWon: 0,
           runnerUp: 0,
         };
-        await saveUserProfile(user.$id, profileData);
-        setPlatformProfile(profileData);
+
+        try {
+          console.log("Saving profile to Appwrite:", profileData);
+          const savedProfile = await saveUserProfile(user.$id, profileData);
+          console.log("Profile saved successfully:", savedProfile);
+          setPlatformProfile(profileData);
+        } catch (saveError) {
+          console.error("Failed to save profile to Appwrite:", saveError);
+          setError("Failed to save profile. Please try again.");
+          return;
+        }
       }
     } catch (err) {
       setError(err.message);
