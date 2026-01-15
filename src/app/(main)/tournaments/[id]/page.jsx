@@ -748,7 +748,7 @@ export default function TournamentDetailPage({ params }) {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })
-                      : "Check-in time TBD"}
+                      : "Check-in time 15 min before match"}
                   </p>
                 </div>
               )}
