@@ -64,9 +64,12 @@ const RichText = ({ text }) => {
 
         if (isBullet) {
           return (
-            <div key={i} className="group flex items-start gap-4 pl-4">
+            <div
+              key={i}
+              className="group flex items-start gap-3 pl-2 md:gap-4 md:pl-4"
+            >
               <div className="mt-2 h-1 w-1 shrink-0 rounded-full bg-rose-500 transition-transform group-hover:scale-150" />
-              <p className="text-sm leading-relaxed opacity-80 transition-opacity group-hover:opacity-100">
+              <p className="text-xs leading-relaxed opacity-80 transition-opacity group-hover:opacity-100 md:text-sm">
                 {formattedContent}
               </p>
             </div>
@@ -82,7 +85,7 @@ const RichText = ({ text }) => {
         return (
           <p
             key={i}
-            className={`text-sm leading-relaxed transition-all ${
+            className={`text-xs leading-relaxed transition-all md:text-sm ${
               isHeader
                 ? "mb-1 inline-block border-b border-white/5 pt-4 pb-2 text-[10px] font-black tracking-[0.15em] text-white uppercase"
                 : "opacity-70 hover:opacity-100"
@@ -338,8 +341,8 @@ export default function TournamentDetailPage({ params }) {
 
   return (
     <div className="min-h-screen bg-slate-950">
-      {/* Hero Header */}
-      <section className="relative h-[45vh] min-h-[400px] w-full overflow-hidden border-b border-white/5 pt-16">
+      {/* Hero Header - Responsive */}
+      <section className="relative h-[35vh] min-h-[280px] w-full overflow-hidden border-b border-white/5 pt-16 md:h-[45vh] md:min-h-[400px]">
         <div className="absolute inset-0 z-0">
           <img
             src="https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=2000&auto=format&fit=crop"
@@ -352,20 +355,21 @@ export default function TournamentDetailPage({ params }) {
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-20 container mx-auto flex h-full flex-col justify-end px-6 pb-12 sm:pb-16">
-          <div className="max-w-5xl space-y-8">
-            <div className="space-y-4">
-              <p className="pl-1 text-xs font-black tracking-[0.4em] text-rose-500/80 uppercase">
+        <div className="relative z-20 container mx-auto flex h-full flex-col justify-end px-4 pb-8 md:px-6 md:pb-16">
+          <div className="max-w-5xl space-y-4 md:space-y-8">
+            <div className="space-y-2 md:space-y-4">
+              <p className="pl-1 text-[10px] font-black tracking-[0.3em] text-rose-500/80 uppercase md:text-xs md:tracking-[0.4em]">
                 Tournament Entry
               </p>
-              <h1 className="special-font text-6xl leading-[0.85] font-black tracking-tight text-white uppercase drop-shadow-2xl filter md:text-8xl lg:text-9xl">
+              <h1 className="special-font text-3xl leading-[0.9] font-black tracking-tight text-white uppercase drop-shadow-2xl filter sm:text-4xl md:text-6xl lg:text-8xl">
                 {tournament.name}
               </h1>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Status Badges - Scrollable on mobile */}
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <div
-                className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] font-black tracking-[0.2em] uppercase shadow-lg backdrop-blur-md ${
+                className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[8px] font-black tracking-[0.15em] uppercase shadow-lg backdrop-blur-md md:gap-2 md:px-4 md:py-1.5 md:text-[10px] md:tracking-[0.2em] ${
                   tournament.status === "scheduled" || !tournament.status
                     ? "border border-cyan-500/30 bg-cyan-500/20 text-cyan-400 shadow-cyan-500/10"
                     : tournament.status === "ongoing"
@@ -376,7 +380,7 @@ export default function TournamentDetailPage({ params }) {
                 }`}
               >
                 <div
-                  className={`h-1.5 w-1.5 rounded-full ${
+                  className={`h-1 w-1 rounded-full md:h-1.5 md:w-1.5 ${
                     tournament.status === "scheduled" || !tournament.status
                       ? "bg-cyan-400"
                       : tournament.status === "ongoing"
@@ -386,21 +390,30 @@ export default function TournamentDetailPage({ params }) {
                           : "bg-slate-400"
                   }`}
                 />
-                {tournament.status === "scheduled" || !tournament.status
-                  ? "SCHEDULED / UPCOMING"
-                  : tournament.status === "ongoing"
-                    ? "ONGOING (LIVE)"
-                    : "COMPLETED / PAST"}
+                <span className="hidden sm:inline">
+                  {tournament.status === "scheduled" || !tournament.status
+                    ? "SCHEDULED / UPCOMING"
+                    : tournament.status === "ongoing"
+                      ? "ONGOING (LIVE)"
+                      : "COMPLETED / PAST"}
+                </span>
+                <span className="sm:hidden">
+                  {tournament.status === "scheduled" || !tournament.status
+                    ? "UPCOMING"
+                    : tournament.status === "ongoing"
+                      ? "LIVE"
+                      : "COMPLETED"}
+                </span>
               </div>
 
-              <div className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/20 px-4 py-1.5 text-[10px] font-black tracking-[0.2em] text-rose-400 uppercase shadow-lg backdrop-blur-md">
-                <Trophy className="h-3 w-3" />
+              <div className="flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/20 px-2.5 py-1 text-[8px] font-black tracking-[0.15em] text-rose-400 uppercase shadow-lg backdrop-blur-md md:gap-2 md:px-4 md:py-1.5 md:text-[10px] md:tracking-[0.2em]">
+                <Trophy className="h-2.5 w-2.5 md:h-3 md:w-3" />
                 {tournament.gameType}
               </div>
 
               {tournament.bracketGenerated && (
-                <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-4 py-1.5 text-[10px] font-black tracking-[0.2em] text-emerald-400 uppercase shadow-lg backdrop-blur-md">
-                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-[8px] font-black tracking-[0.15em] text-emerald-400 uppercase shadow-lg backdrop-blur-md md:gap-2 md:px-4 md:py-1.5 md:text-[10px] md:tracking-[0.2em]">
+                  <div className="h-1 w-1 animate-pulse rounded-full bg-emerald-400 md:h-1.5 md:w-1.5" />
                   {tournament.gameType === "Deathmatch"
                     ? "Standings Live"
                     : "Bracket Live"}
@@ -409,8 +422,8 @@ export default function TournamentDetailPage({ params }) {
             </div>
           </div>
 
-          {/* Scroll Indicator */}
-          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 animate-bounce flex-col items-center gap-2 opacity-30">
+          {/* Scroll Indicator - Hidden on mobile */}
+          <div className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 animate-bounce flex-col items-center gap-2 opacity-30 md:flex">
             <div className="flex h-8 w-5 justify-center rounded-full border-2 border-white pt-2">
               <div className="h-2 w-1 rounded-full bg-white" />
             </div>
@@ -421,29 +434,33 @@ export default function TournamentDetailPage({ params }) {
         </div>
       </section>
 
-      <div className="relative z-30 mx-auto -mt-10 max-w-6xl px-6 py-12">
+      <div className="relative z-30 mx-auto -mt-6 max-w-6xl px-4 py-6 md:-mt-10 md:px-6 md:py-12">
         <button
           onClick={() => router.back()}
-          className="group mt-5 mb-5 flex items-center gap-2 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all hover:text-white"
+          className="group mt-2 mb-4 flex items-center gap-2 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all hover:text-white md:mt-5 md:mb-5"
         >
           <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-          Back to Tournaments
+          <span className="hidden sm:inline">Back to Tournaments</span>
+          <span className="sm:hidden">Back</span>
         </button>
-        <div className="grid gap-12 lg:grid-cols-3">
+
+        {/* Main Grid - Stack on mobile */}
+        <div className="grid gap-6 md:gap-12 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="space-y-8 lg:col-span-2">
-            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-8 backdrop-blur-xl">
-              <div className="mb-8 flex items-center justify-between border-b border-white/10">
-                <div className="flex gap-4">
+          <div className="order-2 space-y-6 md:space-y-8 lg:order-1 lg:col-span-2">
+            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:p-8">
+              {/* Tab Navigation - Scrollable */}
+              <div className="mb-6 flex items-center justify-between overflow-x-auto border-b border-white/10 md:mb-8">
+                <div className="flex gap-4 md:gap-4">
                   <button
                     onClick={() => setActiveTab("overview")}
-                    className={`pb-4 text-xs font-black tracking-[0.2em] uppercase transition-all ${activeTab === "overview" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                    className={`pb-3 text-[10px] font-black tracking-[0.15em] whitespace-nowrap uppercase transition-all md:pb-4 md:text-xs md:tracking-[0.2em] ${activeTab === "overview" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
                   >
                     Overview
                   </button>
                   <button
                     onClick={() => setActiveTab("participants")}
-                    className={`pb-4 text-xs font-black tracking-[0.2em] uppercase transition-all ${activeTab === "participants" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                    className={`pb-3 text-[10px] font-black tracking-[0.15em] whitespace-nowrap uppercase transition-all md:pb-4 md:text-xs md:tracking-[0.2em] ${activeTab === "participants" ? "border-b-2 border-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
                   >
                     Participants
                   </button>
@@ -452,12 +469,17 @@ export default function TournamentDetailPage({ params }) {
                 {tournament.bracketGenerated && (
                   <button
                     onClick={scrollToBracket}
-                    className="group mb-4 flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-black tracking-widest text-rose-500 uppercase shadow-lg shadow-rose-500/5 transition-all hover:bg-rose-500 hover:text-white"
+                    className="group mb-3 flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1.5 text-[8px] font-black tracking-widest whitespace-nowrap text-rose-500 uppercase shadow-lg shadow-rose-500/5 transition-all hover:bg-rose-500 hover:text-white md:mb-4 md:gap-2 md:rounded-xl md:px-4 md:py-2 md:text-[10px]"
                   >
-                    <span>
+                    <span className="hidden sm:inline">
                       {tournament.gameType === "Deathmatch"
                         ? "View Standings"
                         : "View Tournament Map"}
+                    </span>
+                    <span className="sm:hidden">
+                      {tournament.gameType === "Deathmatch"
+                        ? "Standings"
+                        : "Bracket"}
                     </span>
                     <ChevronLeft className="h-3 w-3 -rotate-90 transition-transform group-hover:translate-y-0.5" />
                   </button>
@@ -465,35 +487,35 @@ export default function TournamentDetailPage({ params }) {
               </div>
 
               {activeTab === "overview" && (
-                <div className="space-y-12 text-slate-300">
-                  <div className="space-y-6">
-                    <h2 className="flex items-center gap-2 text-xl font-bold text-white">
-                      <div className="h-2 w-2 rounded-full bg-rose-500" />
+                <div className="space-y-8 text-slate-300 md:space-y-12">
+                  <div className="space-y-4 md:space-y-6">
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-white md:text-xl">
+                      <div className="h-1.5 w-1.5 rounded-full bg-rose-500 md:h-2 md:w-2" />
                       Tournament Brief
                     </h2>
                     <div className="mt-2">
                       <RichText text={tournament.description} />
                       {!tournament.description && (
-                        <p className="text-sm italic opacity-50">
+                        <p className="text-xs italic opacity-50 md:text-sm">
                           No description provided for this tournament.
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="grid gap-8 border-t border-white/5 pt-8 sm:grid-cols-2">
-                    <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-6 border-t border-white/5 pt-6 sm:grid-cols-2 md:gap-8 md:pt-8">
+                    <div className="space-y-3 md:space-y-4">
                       <h3 className="text-[10px] font-black tracking-[0.2em] text-rose-500 uppercase">
                         Event Format
                       </h3>
-                      <ul className="space-y-3">
-                        <li className="flex items-center gap-3 text-sm opacity-70 transition-opacity hover:opacity-100">
+                      <ul className="space-y-2 md:space-y-3">
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           {tournament.gameType === "Deathmatch"
                             ? "Free-for-all (FFA)"
                             : "Single Elimination"}
                         </li>
-                        <li className="flex items-center gap-3 text-sm opacity-70 transition-opacity hover:opacity-100">
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           {tournament.gameType === "Deathmatch"
                             ? "Score limit: 40 kills"
@@ -501,16 +523,16 @@ export default function TournamentDetailPage({ params }) {
                         </li>
                       </ul>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3 md:space-y-4">
                       <h3 className="text-[10px] font-black tracking-[0.2em] text-rose-500 uppercase">
                         Quick Rules
                       </h3>
-                      <ul className="space-y-3">
-                        <li className="flex items-center gap-3 text-sm opacity-70 transition-opacity hover:opacity-100">
+                      <ul className="space-y-2 md:space-y-3">
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           Be present 15m before start
                         </li>
-                        <li className="flex items-center gap-3 text-sm opacity-70 transition-opacity hover:opacity-100">
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           Good sportsmanship is required
                         </li>
@@ -522,24 +544,24 @@ export default function TournamentDetailPage({ params }) {
 
               {activeTab === "participants" && (
                 <div className="animate-in fade-in space-y-4 duration-500">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:gap-3">
                     {registrations.length > 0 ? (
                       registrations.map((reg) => (
                         <div
                           key={reg.$id}
-                          className="rounded-2xl border border-white/5 bg-slate-950/50 p-4 transition-all hover:border-rose-500/20"
+                          className="rounded-xl border border-white/5 bg-slate-950/50 p-3 transition-all hover:border-rose-500/20 md:rounded-2xl md:p-4"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="rounded-lg bg-rose-500/10 p-2">
-                              <Users className="h-4 w-4 text-rose-500" />
+                            <div className="rounded-lg bg-rose-500/10 p-1.5 md:p-2">
+                              <Users className="h-3.5 w-3.5 text-rose-500 md:h-4 md:w-4" />
                             </div>
-                            <div>
-                              <p className="text-sm font-bold tracking-tight text-white uppercase">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-bold tracking-tight text-white uppercase md:text-sm">
                                 {reg.teamName ||
                                   parseMetadata(reg.metadata)?.playerName ||
                                   "Unknown"}
                               </p>
-                              <p className="text-[10px] font-medium tracking-[0.1em] text-slate-500 uppercase">
+                              <p className="text-[9px] font-medium tracking-[0.1em] text-slate-500 uppercase md:text-[10px]">
                                 Registered{" "}
                                 {new Date(reg.$createdAt).toLocaleDateString()}
                               </p>
@@ -548,7 +570,7 @@ export default function TournamentDetailPage({ params }) {
                         </div>
                       ))
                     ) : (
-                      <div className="col-span-2 py-12 text-center text-[10px] font-black tracking-widest text-slate-600 uppercase">
+                      <div className="col-span-full py-8 text-center text-[10px] font-black tracking-widest text-slate-600 uppercase md:py-12">
                         No participants yet
                       </div>
                     )}
@@ -558,36 +580,36 @@ export default function TournamentDetailPage({ params }) {
             </div>
           </div>
 
-          {/* Sidebar Info & Registration */}
-          <div className="space-y-6">
+          {/* Sidebar Info & Registration - First on mobile */}
+          <div className="order-1 space-y-4 md:space-y-6 lg:order-2">
             {/* Quick Stats */}
-            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 backdrop-blur-xl">
-              <div className="space-y-6">
+            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:p-6">
+              <div className="space-y-4 md:space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex w-full flex-col gap-3">
-                    <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#11141a] p-6">
+                    <div className="group relative overflow-hidden rounded-xl border border-white/5 bg-[#11141a] p-4 md:rounded-2xl md:p-6">
                       <div className="absolute top-0 left-0 h-full w-1 bg-rose-500" />
-                      <p className="mb-2 text-[10px] font-black tracking-[0.2em] text-rose-500/60 uppercase">
+                      <p className="mb-1 text-[9px] font-black tracking-[0.2em] text-rose-500/60 uppercase md:mb-2 md:text-[10px]">
                         Prize Pool
                       </p>
-                      <p className="text-4xl leading-none font-black tracking-tight text-white italic">
+                      <p className="text-2xl leading-none font-black tracking-tight text-white italic md:text-4xl">
                         ₹{tournament.prizePool}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-xl border border-white/5 bg-slate-950 p-3 text-rose-500 shadow-lg shadow-rose-500/5">
-                      <Calendar className="h-5 w-5" />
+                <div className="grid grid-cols-1 gap-3 md:gap-4">
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="rounded-lg border border-white/5 bg-slate-950 p-2.5 text-rose-500 shadow-lg shadow-rose-500/5 md:rounded-xl md:p-3">
+                      <Calendar className="h-4 w-4 md:h-5 md:w-5" />
                     </div>
-                    <div>
-                      <p className="mb-0.5 text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
                         Schedule
                       </p>
                       <p
-                        className="text-sm font-bold tracking-tight text-white uppercase"
+                        className="truncate text-xs font-bold tracking-tight text-white uppercase md:text-sm"
                         suppressHydrationWarning
                       >
                         {new Date(tournament.date).toLocaleDateString()} @{" "}
@@ -598,20 +620,20 @@ export default function TournamentDetailPage({ params }) {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-xl border border-white/5 bg-slate-950 p-3 text-rose-500 shadow-lg shadow-rose-500/5">
-                      <Users className="h-5 w-5" />
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="rounded-lg border border-white/5 bg-slate-950 p-2.5 text-rose-500 shadow-lg shadow-rose-500/5 md:rounded-xl md:p-3">
+                      <Users className="h-4 w-4 md:h-5 md:w-5" />
                     </div>
                     <div>
-                      <p className="mb-0.5 text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                      <p className="mb-0.5 text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
                         Participants
                       </p>
                       <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-bold text-white">
+                        <p className="text-xs font-bold text-white md:text-sm">
                           {registrations.length} / {tournament.maxTeams}
                         </p>
                         <span
-                          className={`text-[10px] font-black tracking-widest uppercase ${
+                          className={`text-[9px] font-black tracking-widest uppercase md:text-[10px] ${
                             tournament.maxTeams - registrations.length <= 2
                               ? "text-rose-500"
                               : "text-emerald-500"
@@ -622,15 +644,15 @@ export default function TournamentDetailPage({ params }) {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-xl border border-white/5 bg-slate-950 p-3 text-rose-500 shadow-lg shadow-rose-500/5">
-                      <ShieldCheck className="h-5 w-5" />
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="rounded-lg border border-white/5 bg-slate-950 p-2.5 text-rose-500 shadow-lg shadow-rose-500/5 md:rounded-xl md:p-3">
+                      <ShieldCheck className="h-4 w-4 md:h-5 md:w-5" />
                     </div>
                     <div>
-                      <p className="mb-0.5 text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                      <p className="mb-0.5 text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
                         Location
                       </p>
-                      <p className="text-sm font-bold tracking-tight text-white uppercase">
+                      <p className="text-xs font-bold tracking-tight text-white uppercase md:text-sm">
                         {tournament.location || "Online"}
                       </p>
                     </div>
@@ -640,50 +662,50 @@ export default function TournamentDetailPage({ params }) {
             </div>
 
             {/* Prize Breakdown Card */}
-            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 backdrop-blur-xl">
-              <h3 className="mb-6 flex items-center gap-2 text-sm font-black tracking-[0.2em] text-white uppercase">
-                <Trophy className="h-4 w-4 text-amber-500" />
+            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:p-6">
+              <h3 className="mb-4 flex items-center gap-2 text-xs font-black tracking-[0.2em] text-white uppercase md:mb-6 md:text-sm">
+                <Trophy className="h-3.5 w-3.5 text-amber-500 md:h-4 md:w-4" />
                 Prizes
               </h3>
-              <div className="space-y-4">
-                <div className="group flex items-center justify-between rounded-xl border border-emerald-500/10 bg-gradient-to-r from-emerald-500/10 to-transparent p-4 transition-transform hover:scale-[1.02]">
+              <div className="space-y-3 md:space-y-4">
+                <div className="group flex items-center justify-between rounded-lg border border-emerald-500/10 bg-gradient-to-r from-emerald-500/10 to-transparent p-3 transition-transform hover:scale-[1.02] md:rounded-xl md:p-4">
                   <div>
-                    <p className="text-[9px] font-black tracking-widest text-emerald-500 uppercase">
+                    <p className="text-[8px] font-black tracking-widest text-emerald-500 uppercase md:text-[9px]">
                       1st Place
                     </p>
-                    <p className="text-xl font-black text-white italic">
+                    <p className="text-lg font-black text-white italic md:text-xl">
                       ₹{tournament.firstPrize}
                     </p>
                   </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10">
-                    <Trophy className="h-4 w-4 text-emerald-500" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 md:h-8 md:w-8">
+                    <Trophy className="h-3.5 w-3.5 text-emerald-500 md:h-4 md:w-4" />
                   </div>
                 </div>
 
-                <div className="group flex items-center justify-between rounded-xl border border-amber-500/10 bg-gradient-to-r from-amber-500/10 to-transparent p-4 transition-transform hover:scale-[1.02]">
+                <div className="group flex items-center justify-between rounded-lg border border-amber-500/10 bg-gradient-to-r from-amber-500/10 to-transparent p-3 transition-transform hover:scale-[1.02] md:rounded-xl md:p-4">
                   <div>
-                    <p className="text-[9px] font-black tracking-widest text-amber-500 uppercase">
+                    <p className="text-[8px] font-black tracking-widest text-amber-500 uppercase md:text-[9px]">
                       2nd Place
                     </p>
-                    <p className="text-xl font-black text-white italic">
+                    <p className="text-lg font-black text-white italic md:text-xl">
                       ₹{tournament.secondPrize}
                     </p>
                   </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10">
-                    <Trophy className="h-4 w-4 text-amber-500" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 md:h-8 md:w-8">
+                    <Trophy className="h-3.5 w-3.5 text-amber-500 md:h-4 md:w-4" />
                   </div>
                 </div>
 
                 {parsePrizes(tournament.additionalPrizes).map((prize, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-950/50 p-4 transition-all hover:border-rose-500/20"
+                    className="flex items-center justify-between rounded-lg border border-white/5 bg-slate-950/50 p-3 transition-all hover:border-rose-500/20 md:rounded-xl md:p-4"
                   >
-                    <div>
-                      <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[8px] font-black tracking-widest text-slate-500 uppercase md:text-[9px]">
                         {prize.label || "Special"}
                       </p>
-                      <p className="max-w-[140px] truncate text-lg font-black text-white italic">
+                      <p className="truncate text-base font-black text-white italic md:text-lg">
                         ₹{prize.value}
                       </p>
                     </div>
@@ -693,34 +715,34 @@ export default function TournamentDetailPage({ params }) {
             </div>
 
             {/* Registration Card */}
-            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.02] p-6 backdrop-blur-xl">
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-black tracking-[0.2em] text-white uppercase">
-                <ShieldCheck className="h-4 w-4 text-rose-500" />
+            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.02] p-4 backdrop-blur-xl md:p-6">
+              <h3 className="mb-3 flex items-center gap-2 text-xs font-black tracking-[0.2em] text-white uppercase md:mb-4 md:text-sm">
+                <ShieldCheck className="h-3.5 w-3.5 text-rose-500 md:h-4 md:w-4" />
                 Entry Details
               </h3>
 
-              <div className="group relative mb-6 overflow-hidden rounded-2xl border border-white/5 bg-slate-950 p-5">
+              <div className="group relative mb-4 overflow-hidden rounded-xl border border-white/5 bg-slate-950 p-4 md:mb-6 md:rounded-2xl md:p-5">
                 <div className="absolute top-0 right-0 h-32 w-32 translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500/5 blur-3xl" />
-                <p className="mb-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                <p className="mb-1 text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
                   {tournament.gameType === "Deathmatch"
                     ? "Individual Fee"
                     : "Team Entry Fee"}
                 </p>
-                <p className="text-3xl font-black tracking-tight text-white italic">
+                <p className="text-2xl font-black tracking-tight text-white italic md:text-3xl">
                   ₹{tournament.entryFee}
                 </p>
-                <div className="mt-4 flex items-center gap-2 text-[9px] font-bold tracking-widest text-rose-500/60 uppercase">
+                <div className="mt-3 flex items-center gap-2 text-[8px] font-bold tracking-widest text-rose-500/60 uppercase md:mt-4 md:text-[9px]">
                   <Info className="h-3 w-3" />
                   One-time registration payment
                 </div>
               </div>
               {tournament.checkInEnabled && (
-                <div className="mb-6 space-y-2 rounded-xl border border-amber-500/10 bg-amber-500/5 p-4">
-                  <p className="flex items-center gap-2 text-[10px] font-black tracking-widest text-amber-500/80 uppercase">
+                <div className="mb-4 space-y-2 rounded-lg border border-amber-500/10 bg-amber-500/5 p-3 md:mb-6 md:rounded-xl md:p-4">
+                  <p className="flex items-center gap-2 text-[9px] font-black tracking-widest text-amber-500/80 uppercase md:text-[10px]">
                     <AlertCircle className="h-3 w-3" />
                     Pre-Match Check-in Required
                   </p>
-                  <p className="text-xs font-bold text-white">
+                  <p className="text-[10px] font-bold text-white md:text-xs">
                     {tournament.checkInStart
                       ? new Date(tournament.checkInStart).toLocaleString([], {
                           dateStyle: "medium",
@@ -731,28 +753,28 @@ export default function TournamentDetailPage({ params }) {
                 </div>
               )}
               {!user ? (
-                <div className="py-4 text-center">
-                  <p className="mb-4 text-sm text-slate-400">
+                <div className="py-3 text-center md:py-4">
+                  <p className="mb-3 text-xs text-slate-400 md:mb-4 md:text-sm">
                     Please sign in to register for this tournament.
                   </p>
                   <button
                     onClick={() => router.push("/login")}
-                    className="font-anton w-full rounded-xl bg-white px-6 py-3 text-xs font-black tracking-widest text-slate-950 uppercase transition-all hover:bg-slate-200"
+                    className="font-anton w-full rounded-lg bg-white px-4 py-2.5 text-[10px] font-black tracking-widest text-slate-950 uppercase transition-all hover:bg-slate-200 md:rounded-xl md:px-6 md:py-3 md:text-xs"
                   >
                     Log In
                   </button>
                 </div>
               ) : isRegistered ? (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 md:gap-4">
                   <div
-                    className={`flex items-center gap-2 rounded-xl border p-4 ${isCheckedIn ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : "border-amber-500/20 bg-amber-500/10 text-amber-500"}`}
+                    className={`flex items-center gap-2 rounded-lg border p-3 md:rounded-xl md:p-4 ${isCheckedIn ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : "border-amber-500/20 bg-amber-500/10 text-amber-500"}`}
                   >
                     {isCheckedIn ? (
-                      <CheckCircle className="h-5 w-5" />
+                      <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
                     ) : (
-                      <AlertCircle className="h-5 w-5" />
+                      <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
                     )}
-                    <span className="text-xs font-bold tracking-wide uppercase">
+                    <span className="text-[10px] font-bold tracking-wide uppercase md:text-xs">
                       {isCheckedIn ? "Checked In!" : "Registered"}
                     </span>
                   </div>
@@ -761,7 +783,7 @@ export default function TournamentDetailPage({ params }) {
                     <button
                       onClick={handleCheckIn}
                       disabled={checkingIn}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-4 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-50"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-50 md:rounded-xl md:py-4 md:text-xs"
                     >
                       {checkingIn ? (
                         <Loader fullScreen={false} />
@@ -772,52 +794,58 @@ export default function TournamentDetailPage({ params }) {
                   )}
                 </div>
               ) : isFull ? (
-                <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-rose-500">
-                  <AlertCircle className="h-5 w-5" />
-                  <span className="text-[10px] font-black tracking-widest uppercase">
+                <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
+                  <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="text-[9px] font-black tracking-widest uppercase md:text-[10px]">
                     Entry Limit Reached
                   </span>
                 </div>
               ) : tournament.status && tournament.status !== "scheduled" ? (
-                <div className="flex items-center gap-2 rounded-xl border border-white/5 bg-slate-900 p-4 text-slate-500">
-                  <AlertCircle className="h-5 w-5" />
-                  <span className="text-[10px] font-black tracking-widest uppercase">
+                <div className="flex items-center gap-2 rounded-lg border border-white/5 bg-slate-900 p-3 text-slate-500 md:rounded-xl md:p-4">
+                  <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="text-[9px] font-black tracking-widest uppercase md:text-[10px]">
                     Live / Completed
                   </span>
                 </div>
               ) : (
-                <form onSubmit={handleRegister} className="space-y-6">
+                <form
+                  onSubmit={handleRegister}
+                  className="space-y-4 md:space-y-6"
+                >
                   {success ? (
-                    <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 font-bold text-emerald-500">
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="text-[10px] font-black tracking-widest uppercase">
+                    <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 font-bold text-emerald-500 md:rounded-xl md:p-4">
+                      <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
+                      <span className="text-[9px] font-black tracking-widest uppercase md:text-[10px]">
                         Success!
                       </span>
                     </div>
                   ) : (
                     <>
                       {tournament.gameType === "5v5" ? (
-                        <div className="space-y-6">
+                        <div className="space-y-4 md:space-y-6">
                           <div>
-                            <label className="mb-2 block text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                            <label className="mb-2 block text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
                               Team Name
                             </label>
                             <input
                               type="text"
                               value={teamName}
                               onChange={(e) => setTeamName(e.target.value)}
-                              className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white transition-all focus:border-rose-500 focus:outline-none"
+                              className="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2.5 text-xs text-white transition-all focus:border-rose-500 focus:outline-none md:rounded-xl md:px-4 md:py-3 md:text-sm"
                               placeholder="Enter team name"
                               required
                             />
                           </div>
 
-                          <div className="space-y-3">
-                            <label className="block text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          <div className="space-y-2 md:space-y-3">
+                            <label className="block text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
                               Roster (5)
                             </label>
                             {members.map((member, index) => (
-                              <div key={index} className="flex gap-2">
+                              <div
+                                key={index}
+                                className="flex gap-1.5 md:gap-2"
+                              >
                                 <input
                                   type="text"
                                   placeholder="Name"
@@ -828,7 +856,7 @@ export default function TournamentDetailPage({ params }) {
                                     n[index].verified = false;
                                     setMembers(n);
                                   }}
-                                  className="flex-1 rounded-lg border border-white/5 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-800 focus:border-rose-500 focus:outline-none"
+                                  className="min-w-0 flex-1 rounded-lg border border-white/5 bg-slate-950 px-2.5 py-2 text-[11px] text-white placeholder:text-slate-800 focus:border-rose-500 focus:outline-none md:px-3 md:text-xs"
                                   required
                                 />
                                 <input
@@ -841,7 +869,7 @@ export default function TournamentDetailPage({ params }) {
                                     n[index].verified = false;
                                     setMembers(n);
                                   }}
-                                  className="w-16 rounded-lg border border-white/5 bg-slate-950 px-3 py-2 text-center text-xs text-white placeholder:text-slate-800 focus:border-rose-500 focus:outline-none"
+                                  className="w-14 rounded-lg border border-white/5 bg-slate-950 px-2 py-2 text-center text-[11px] text-white placeholder:text-slate-800 focus:border-rose-500 focus:outline-none md:w-16 md:px-3 md:text-xs"
                                   required
                                 />
                                 <button
@@ -852,7 +880,7 @@ export default function TournamentDetailPage({ params }) {
                                     !member.name ||
                                     !member.tag
                                   }
-                                  className={`flex items-center justify-center rounded-lg px-2 py-2 transition-all ${
+                                  className={`flex shrink-0 items-center justify-center rounded-lg px-2 py-2 transition-all ${
                                     member.verified
                                       ? "bg-emerald-500/20 text-emerald-500"
                                       : "border border-white/5 bg-slate-900 text-slate-600 hover:text-white"
@@ -861,9 +889,9 @@ export default function TournamentDetailPage({ params }) {
                                   {member.loading ? (
                                     <Loader fullScreen={false} size="sm" />
                                   ) : member.verified ? (
-                                    <ShieldCheck className="h-4 w-4" />
+                                    <ShieldCheck className="h-3.5 w-3.5 md:h-4 md:w-4" />
                                   ) : (
-                                    <UserCheck className="h-4 w-4" />
+                                    <UserCheck className="h-3.5 w-3.5 md:h-4 md:w-4" />
                                   )}
                                 </button>
                               </div>
@@ -871,14 +899,14 @@ export default function TournamentDetailPage({ params }) {
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-3 rounded-xl border border-white/5 bg-slate-950/50 p-4 text-center">
-                          <p className="text-xs text-slate-500">
+                        <div className="space-y-3 rounded-lg border border-white/5 bg-slate-950/50 p-3 text-center md:rounded-xl md:p-4">
+                          <p className="text-[10px] text-slate-500 md:text-xs">
                             Solo registration for:
                           </p>
                           {userProfile ? (
-                            <div className="inline-flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-4 py-1.5">
-                              <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                              <span className="text-xs font-bold text-white">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 md:px-4 md:py-1.5">
+                              <div className="h-1 w-1 rounded-full bg-rose-500 md:h-1.5 md:w-1.5" />
+                              <span className="text-[10px] font-bold text-white md:text-xs">
                                 {userProfile.ingameName}{" "}
                                 <span className="text-slate-500">
                                   #{userProfile.tag}
@@ -886,14 +914,14 @@ export default function TournamentDetailPage({ params }) {
                               </span>
                             </div>
                           ) : (
-                            <p className="text-[10px] font-black tracking-widest text-rose-400 uppercase">
+                            <p className="text-[9px] font-black tracking-widest text-rose-400 uppercase md:text-[10px]">
                               Link account in profile
                             </p>
                           )}
                         </div>
                       )}
                       {error && (
-                        <p className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-[10px] text-rose-500">
+                        <p className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-2.5 text-[9px] text-rose-500 md:p-3 md:text-[10px]">
                           {error}
                         </p>
                       )}
@@ -904,7 +932,7 @@ export default function TournamentDetailPage({ params }) {
                           (tournament.gameType === "5v5" &&
                             members.some((m) => !m.verified))
                         }
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 py-4 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-rose-900/20 transition-all hover:bg-rose-700 disabled:opacity-50"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-rose-900/20 transition-all hover:bg-rose-700 disabled:opacity-50 md:rounded-xl md:py-4 md:text-xs"
                       >
                         {registering ? (
                           <Loader fullScreen={false} size="sm" />
@@ -923,7 +951,7 @@ export default function TournamentDetailPage({ params }) {
 
       {/* Complete Bracket / Standings Section */}
       {tournament.bracketGenerated && (
-        <div className="scroll-mt-24 pb-20">
+        <div className="scroll-mt-24 pb-12 md:pb-20">
           {tournament.gameType === "Deathmatch" ? (
             <CompleteStandings
               registrations={registrations}
@@ -931,7 +959,10 @@ export default function TournamentDetailPage({ params }) {
               matches={matches}
             />
           ) : (
-            <div id="tournament-map" className="container mx-auto mt-12 px-6">
+            <div
+              id="tournament-map"
+              className="container mx-auto mt-8 px-4 md:mt-12 md:px-6"
+            >
               <CompleteBracket
                 matches={matches}
                 participants={participantMap}

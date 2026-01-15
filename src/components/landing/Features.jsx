@@ -138,7 +138,7 @@ const Features = () => (
             src="videos/feature-2.mp4"
             title={
               <>
-                team f<b>i</b>nder
+                player f<b>i</b>nder
               </>
             }
             description="Connect with like-minded players and build your dream roster."
