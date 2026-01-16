@@ -688,23 +688,37 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
             className={`${!loading && valData?.mmr?.current_data?.elo ? "" : "col-span-2"}`}
           >
             {discordProfile.tag ? (
-              <div className="flex h-full items-center gap-2 rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-3 py-2">
-                <div className="flex flex-col">
-                  <span className="mb-0.5 text-[7px] font-black tracking-widest text-[#5865F2]/70 uppercase">
+              <div className="group/discord relative overflow-hidden rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-3 py-2 transition-colors hover:bg-[#5865F2]/20">
+                <div className="pointer-events-none absolute -top-4 -right-4 text-slate-800 transition-colors group-hover/discord:text-slate-700">
+                  <MessageCircle
+                    className="h-12 w-12 opacity-20"
+                    strokeWidth={1}
+                  />
+                </div>
+                <div className="relative z-10 flex h-full flex-col justify-center">
+                  <h4 className="mb-0.5 text-[7px] font-black tracking-widest text-slate-500 uppercase">
                     Discord
-                  </span>
-                  <span className="truncate text-[10px] leading-none font-black tracking-tight text-white">
-                    {discordProfile.tag || "N/A"}
-                  </span>
+                  </h4>
+                  <div className="flex items-baseline gap-1">
+                    <span className="truncate text-lg font-black tracking-tighter text-white transition-all group-hover/discord:text-[#5865F2]">
+                      {discordProfile.tag || "N/A"}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="flex h-full items-center gap-2 rounded-xl border border-white/5 bg-white/5 px-3 py-2 opacity-50">
-                <div className="flex flex-col">
-                  <span className="mb-0.5 text-[7px] font-black tracking-widest text-slate-500 uppercase">
+              <div className="group/discord relative overflow-hidden rounded-xl border border-white/5 bg-slate-950/30 px-3 py-2 opacity-50">
+                <div className="pointer-events-none absolute -top-4 -right-4 text-slate-800">
+                  <MessageCircle
+                    className="h-12 w-12 opacity-20"
+                    strokeWidth={1}
+                  />
+                </div>
+                <div className="relative z-10 flex h-full flex-col justify-center">
+                  <h4 className="mb-0.5 text-[7px] font-black tracking-widest text-slate-500 uppercase">
                     Discord
-                  </span>
-                  <span className="text-[10px] leading-none font-bold tracking-tight text-slate-500">
+                  </h4>
+                  <span className="text-sm font-bold tracking-tight text-slate-500">
                     Not Provided
                   </span>
                 </div>
