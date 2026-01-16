@@ -519,12 +519,12 @@ export default function PublicProfilePage({ params }) {
                 {/* Stats Grid - Right Side */}
                 <div className="space-y-4 md:col-span-2">
                   {/* Top Stats Row */}
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3">
                     {/* ELO */}
                     <div className="group/stat relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:border-white/10 hover:bg-white/[0.04]">
                       <Activity className="absolute -top-2 -right-2 h-12 w-12 text-rose-500/10" />
                       <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
-                        ELO
+                        ELO Rating
                       </p>
                       <p className="mt-1 font-mono text-2xl font-black text-white">
                         {valorantStats.mmr.current_data.elo}
@@ -535,75 +535,15 @@ export default function PublicProfilePage({ params }) {
                     <div className="group/stat relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:border-white/10 hover:bg-white/[0.04]">
                       <Target className="absolute -top-2 -right-2 h-12 w-12 text-emerald-500/10" />
                       <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
-                        Rating
+                        Current RR
                       </p>
                       <p className="mt-1 font-mono text-2xl font-black text-white">
                         {valorantStats.mmr.current_data.ranking_in_tier}
                         <span className="ml-1 text-sm font-bold text-slate-600">
-                          RR
+                          / 100
                         </span>
                       </p>
                     </div>
-
-                    {/* Win Rate */}
-                    {(() => {
-                      const seasons = Object.keys(
-                        valorantStats.mmr.by_season || {},
-                      );
-                      const currentSeason = seasons[0];
-                      const stats =
-                        valorantStats.mmr.by_season?.[currentSeason];
-                      if (stats && !stats.error && stats.number_of_games > 0) {
-                        const wr = Math.round(
-                          (stats.wins / stats.number_of_games) * 100,
-                        );
-                        return (
-                          <div className="group/stat relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:border-white/10 hover:bg-white/[0.04]">
-                            <Trophy className="absolute -top-2 -right-2 h-12 w-12 text-amber-500/10" />
-                            <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
-                              Win Rate
-                            </p>
-                            <p
-                              className={`mt-1 font-mono text-2xl font-black ${wr >= 50 ? "text-emerald-400" : "text-white"}`}
-                            >
-                              {wr}%
-                            </p>
-                          </div>
-                        );
-                      }
-                      return (
-                        <div className="group/stat relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:border-white/10 hover:bg-white/[0.04]">
-                          <Trophy className="absolute -top-2 -right-2 h-12 w-12 text-amber-500/10" />
-                          <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
-                            Win Rate
-                          </p>
-                          <p className="mt-1 text-lg font-black text-slate-600">
-                            N/A
-                          </p>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Games Played */}
-                    {(() => {
-                      const seasons = Object.keys(
-                        valorantStats.mmr.by_season || {},
-                      );
-                      const currentSeason = seasons[0];
-                      const stats =
-                        valorantStats.mmr.by_season?.[currentSeason];
-                      return (
-                        <div className="group/stat relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:border-white/10 hover:bg-white/[0.04]">
-                          <Swords className="absolute -top-2 -right-2 h-12 w-12 text-purple-500/10" />
-                          <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
-                            Games
-                          </p>
-                          <p className="mt-1 font-mono text-2xl font-black text-white">
-                            {stats?.number_of_games || 0}
-                          </p>
-                        </div>
-                      );
-                    })()}
                   </div>
 
                   {/* Progress to Next Rank */}
