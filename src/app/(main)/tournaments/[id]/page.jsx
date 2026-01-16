@@ -157,18 +157,39 @@ export default function TournamentDetailPage({ params }) {
   useEffect(() => {
     async function loadData() {
       try {
-        const [tData, regs, matchData] = await Promise.all([
-          getTournament(id),
-          getRegistrations(id),
-          getMatches(id),
-        ]);
+        // 1. Fetch Tournament details first (usually public)
+        const tData = await getTournament(id);
+
+        // 2. Fetch Registrations and Matches (might be restricted)
+        let regs = { documents: [] };
+        let matchData = [];
+
+        try {
+          const [r, m] = await Promise.all([
+            getRegistrations(id),
+            getMatches(id),
+          ]);
+          regs = r;
+          matchData = m;
+        } catch (secondaryError) {
+          console.warn(
+            "Failed to load registrations/matches (likely permission denied):",
+            secondaryError,
+          );
+          // We continue with empty regs/matches to at least show the tournament page
+        }
+
         setTournament(tData);
         setRegistrations(regs.documents);
         setMatches(matchData);
 
         if (user) {
-          const profile = await getUserProfile(user.$id);
-          setUserProfile(profile);
+          try {
+            const profile = await getUserProfile(user.$id);
+            setUserProfile(profile);
+          } catch (profileError) {
+            console.warn("Failed to load user profile:", profileError);
+          }
         }
       } catch (error) {
         console.error("Failed to load tournament", error);

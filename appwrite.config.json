@@ -52,7 +52,8 @@
             "$permissions": [
                 "create(\"users\")",
                 "read(\"users\")",
-                "update(\"users\")"
+                "update(\"users\")",
+                "read(\"any\")"
             ],
             "databaseId": "valo-website-database",
             "name": "users",
@@ -203,7 +204,8 @@
                 {
                     "key": "leaderboard_idx",
                     "type": "key",
-                    "attributes": [
+                    "status": "available",
+                    "columns": [
                         "totalEarnings"
                     ],
                     "orders": [
@@ -336,9 +338,10 @@
             "$id": "matches",
             "$permissions": [
                 "create(\"users\")",
-                "read(\"any\")",
+                "read(\"users\")",
                 "update(\"users\")",
-                "delete(\"users\")"
+                "delete(\"users\")",
+                "read(\"any\")"
             ],
             "databaseId": "valo-website-database",
             "name": "matches",
@@ -672,7 +675,8 @@
                 "create(\"users\")",
                 "read(\"users\")",
                 "update(\"users\")",
-                "delete(\"users\")"
+                "delete(\"users\")",
+                "read(\"any\")"
             ],
             "databaseId": "valo-website-database",
             "name": "registrations",
