@@ -16,6 +16,9 @@ import {
 import Loader from "@/components/Loader";
 import { mapImages } from "@/assets/images/maps";
 import Link from "next/link";
+import PlayerRoster from "@/components/match/PlayerRoster";
+import MatchInfo from "@/components/match/MatchInfo";
+import CountdownTimer from "@/components/match/CountdownTimer";
 
 const MAP_POOL = [
   { name: "Ascent", image: mapImages["Ascent"] },
@@ -235,6 +238,11 @@ export default function MatchLobbyPage({ params }) {
           <span className="sm:hidden">Back</span>
         </Link>
 
+        {/* Countdown Timer */}
+        <div className="mb-8 md:mb-12">
+          <CountdownTimer startTime={scheduledTime} status={match.status} />
+        </div>
+
         {/* VS Scoreboard */}
         <div className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:mb-12 md:rounded-3xl md:p-8">
           {/* Background Gradient */}
@@ -293,6 +301,16 @@ export default function MatchLobbyPage({ params }) {
               </h2>
             </div>
           </div>
+        </div>
+
+        {/* Player Rosters Section */}
+        <div className="mb-8 md:mb-12">
+          <PlayerRoster teamA={teamA} teamB={teamB} loading={loading} />
+        </div>
+
+        {/* Match Info Section */}
+        <div className="mb-8 md:mb-12">
+          <MatchInfo tournament={tournament} match={match} />
         </div>
 
         {/* Controls Grid */}
