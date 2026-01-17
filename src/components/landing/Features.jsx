@@ -112,7 +112,7 @@ const Features = () => (
     <div className="container mx-auto px-10 md:px-10">
       <div className="px-5 py-32">
         <p className="font-circular-web text-lg text-blue-50">
-          Why Choose VRivals?
+          Why Choose VRivals Arena?
         </p>
         <p className="font-circular-web max-w-md text-lg text-blue-50 opacity-50">
           Everything you need to take your Valorant journey to the next level.

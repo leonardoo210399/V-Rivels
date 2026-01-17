@@ -153,9 +153,9 @@ export default function AboutPage() {
     },
     {
       icon: <Globe className="h-8 w-8 text-cyan-500" />,
-      title: "VRivals Leaderboard",
+      title: "VRivals Arena Leaderboard",
       description:
-        "Climb the dedicated platform leaderboards and track your progress against other competitors on VRivals.",
+        "Climb the dedicated platform leaderboards and track your progress against other competitors on VRivals Arena.",
     },
   ];
 
@@ -181,9 +181,9 @@ export default function AboutPage() {
             containerClass="!text-white !text-5xl md:!text-7xl lg:!text-8xl leading-[0.9]"
           />
           <p className="mt-6 max-w-2xl text-lg font-medium text-slate-300 md:text-xl">
-            VRivals is the premier destination for India&apos;s competitive
-            gamers. We bridge the gap between casual play and professional
-            esports across the subcontinent.
+            VRivals Arena is the premier destination for India&apos;s
+            competitive gamers. We bridge the gap between casual play and
+            professional esports across the subcontinent.
           </p>
         </div>
 
@@ -201,10 +201,10 @@ export default function AboutPage() {
               </h2>
               <div className="mt-6 space-y-6 text-lg text-slate-400">
                 <p>
-                  At VRivals, we believe that every gamer deserves to experience
-                  the thrill of professional competition. Whether you are an
-                  aspiring pro or a weekend warrior, our platform provides the
-                  infrastructure you need to shine.
+                  At VRivals Arena, we believe that every gamer deserves to
+                  experience the thrill of professional competition. Whether you
+                  are an aspiring pro or a weekend warrior, our platform
+                  provides the infrastructure you need to shine.
                 </p>
                 <p>
                   We are building more than just a tournament site; we are
@@ -260,7 +260,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
             <h2 className="font-anton text-4xl text-white uppercase md:text-6xl">
-              Why Choose VRivals
+              Why Choose VRivals Arena
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-slate-400">
               Experience the next generation of competitive gaming features

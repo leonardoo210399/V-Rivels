@@ -32,7 +32,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 animate-pulse rounded-full bg-rose-500/10 blur-2xl group-hover:bg-rose-500/20" />
             <img
               src="/vrivals_logo_vertical.png"
-              alt="VRivals Logo"
+              alt="VRivals Arena Logo"
               className="relative h-32 w-auto object-contain drop-shadow-[0_0_20px_rgba(244,63,94,0.3)] transition-transform duration-500 group-hover:scale-105"
             />
           </div>
@@ -105,7 +105,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-10 px-10 text-center text-xs leading-relaxed text-slate-500">
-          By continuing, you agree to VRivals'{" "}
+          By continuing, you agree to VRivals Arena's{" "}
           <a
             href="/terms"
             className="border-b border-slate-800 font-medium text-slate-300 transition-colors hover:text-rose-400"

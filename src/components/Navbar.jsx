@@ -80,7 +80,7 @@ export default function Navbar() {
             >
               <img
                 src="/vrivals_logo_horizontal.png"
-                alt="VRivals Logo"
+                alt="VRivals Arena Logo"
                 className="h-10 w-auto object-contain drop-shadow-[0_0_15px_rgba(244,63,94,0.3)]"
               />
             </Link>
