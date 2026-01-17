@@ -257,7 +257,7 @@ export default function MatchLobbyPage({ params }) {
 
       {/* Top Navigation Bar */}
       <div className="border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-[1920px] items-center justify-between px-4 md:px-6">
+        <div className="mx-auto flex h-20 max-w-[1920px] items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-4">
             <Link
               href={`/tournaments/${id}`}
@@ -301,7 +301,7 @@ export default function MatchLobbyPage({ params }) {
       </div>
 
       {/* Main Arena Content */}
-      <div className="relative mx-auto max-w-[1920px] p-4 md:p-6 lg:p-8">
+      <div className="relative mx-auto max-w-[1920px] px-4 pt-8 pb-4 md:px-6 md:pt-10 md:pb-6 lg:px-8 lg:pt-12 lg:pb-8">
         {/* Cinematic Header */}
         <div className="mb-8">
           <TeamFaceOff
