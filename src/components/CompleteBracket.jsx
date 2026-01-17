@@ -27,11 +27,15 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
     displayTime = startDate.toISOString();
   }
 
+  const dateOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+
   const formattedTime = displayTime
-    ? new Date(displayTime).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+    ? new Date(displayTime).toLocaleString([], dateOptions)
     : null;
 
   return (

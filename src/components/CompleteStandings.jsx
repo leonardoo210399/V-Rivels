@@ -83,7 +83,9 @@ export default function CompleteStandings({
                   <span className="text-xs font-black tracking-widest text-slate-400 uppercase">
                     {new Date(
                       lobbyMatch?.scheduledTime || tournament?.date,
-                    ).toLocaleTimeString([], {
+                    ).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
                       hour: "2-digit",
                       minute: "2-digit",
                     })}

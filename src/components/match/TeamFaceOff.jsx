@@ -1,11 +1,20 @@
 "use client";
-import { Trophy, Swords, Crown } from "lucide-react";
+import { Trophy, Swords, Crown, Clock } from "lucide-react";
 
 export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
   const scoreA = match?.scoreA || 0;
   const scoreB = match?.scoreB || 0;
   const isTeamAWinner = isCompleted && scoreA > scoreB;
   const isTeamBWinner = isCompleted && scoreB > scoreA;
+  const scheduledTime = match?.scheduledTime;
+  const formattedTime = scheduledTime
+    ? new Date(scheduledTime).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   return (
     <div className="glass-heavy relative overflow-hidden rounded-3xl border border-white/10">
@@ -125,6 +134,16 @@ export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
                     </p>
                   </div>
                 )}
+
+                {/* Match Time */}
+                {formattedTime && (
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-[10px] font-black tracking-[0.2em] uppercase">
+                      Match Time: {formattedTime}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -137,9 +156,19 @@ export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
                   <div className="absolute inset-0 animate-ping rounded-full border-2 border-rose-500/20 opacity-75" />
                 </div>
 
-                <p className="text-center text-sm font-bold tracking-wider text-slate-400 uppercase">
-                  Match Pending
-                </p>
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-center text-sm font-bold tracking-wider text-slate-400 uppercase">
+                    Match Pending
+                  </p>
+                  {formattedTime && (
+                    <div className="flex items-center gap-1.5 rounded-full border border-white/5 bg-slate-900/50 px-3 py-1 opacity-60">
+                      <Clock className="h-3 w-3 text-rose-500" />
+                      <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                        {formattedTime}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
