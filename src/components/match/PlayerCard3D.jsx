@@ -6,6 +6,7 @@ export default function PlayerCard3D({
   player,
   teamColor = "rose",
   isCaptain = false,
+  mirrored = false,
 }) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
@@ -67,7 +68,9 @@ export default function PlayerCard3D({
 
         {/* Captain Crown */}
         {isCaptain && (
-          <div className="absolute top-2 right-2 z-10">
+          <div
+            className={`absolute top-2 z-10 ${mirrored ? "left-2" : "right-2"}`}
+          >
             <div
               className={`rounded-full border ${colors.border} bg-slate-900/80 p-1.5 backdrop-blur-md ${colors.glow}`}
             >
@@ -78,7 +81,9 @@ export default function PlayerCard3D({
 
         {/* Card Content */}
         <div className="relative z-10 p-4">
-          <div className="mb-3 flex items-start gap-3">
+          <div
+            className={`mb-3 flex items-start gap-3 ${mirrored ? "flex-row-reverse" : ""}`}
+          >
             {/* Player Avatar */}
             <div
               className={`shrink-0 rounded-xl border ${colors.border} bg-slate-900/50 p-3 backdrop-blur-sm`}
@@ -87,10 +92,15 @@ export default function PlayerCard3D({
             </div>
 
             {/* Player Info */}
-            <div className="min-w-0 flex-1">
-              <div className="mb-1 flex items-center gap-1.5">
+            <div className={`min-w-0 flex-1 ${mirrored ? "text-right" : ""}`}>
+              <div
+                className={`mb-1 flex items-center gap-1.5 ${mirrored ? "flex-row-reverse justify-end" : ""}`}
+              >
                 <h3 className="truncate text-base font-black text-white uppercase md:text-lg">
-                  {player?.ign || player?.name || "Player"}
+                  {player?.ign ||
+                    player?.ingameName ||
+                    player?.name ||
+                    "Player"}
                 </h3>
                 {player?.verified && (
                   <Star className={`h-3.5 w-3.5 ${colors.text} fill-current`} />
@@ -99,14 +109,16 @@ export default function PlayerCard3D({
               <p
                 className={`text-xs font-bold ${colors.text} tracking-wider uppercase`}
               >
-                {player?.teamTag || "TAG"}
+                {player?.tag || player?.teamTag || "TAG"}
               </p>
             </div>
           </div>
 
           {/* Player Stats/Role */}
           {player?.role && (
-            <div className="mt-3 flex items-center justify-between rounded-lg border border-white/5 bg-slate-950/50 px-3 py-2">
+            <div
+              className={`mt-3 flex items-center justify-between rounded-lg border border-white/5 bg-slate-950/50 px-3 py-2 ${mirrored ? "flex-row-reverse" : ""}`}
+            >
               <span className="text-xs font-bold text-slate-400 uppercase">
                 {player.role}
               </span>
@@ -120,7 +132,9 @@ export default function PlayerCard3D({
 
           {/* Agent Preferences */}
           {player?.agents && player.agents.length > 0 && (
-            <div className="mt-2 flex gap-1">
+            <div
+              className={`mt-2 flex gap-1 ${mirrored ? "flex-row-reverse" : ""}`}
+            >
               {player.agents.slice(0, 3).map((agent, index) => (
                 <div
                   key={index}

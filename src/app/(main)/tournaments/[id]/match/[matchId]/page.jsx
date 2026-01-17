@@ -323,8 +323,13 @@ export default function MatchLobbyPage({ params }) {
                   Team A Roster
                 </h3>
               </div>
-              <div className="rounded-2xl border border-rose-500/10 bg-gradient-to-b from-rose-500/5 to-transparent p-2 md:p-4">
-                <PlayerRoster teamA={teamA} teamB={null} loading={loading} />
+              <div className="rounded-2xl border border-l-4 border-rose-500/10 border-rose-500/30 bg-gradient-to-b from-rose-500/5 to-transparent p-2 md:p-4">
+                <PlayerRoster
+                  teamA={teamA}
+                  teamB={null}
+                  loading={loading}
+                  mirrored={false}
+                />
               </div>
             </div>
           </div>
@@ -444,7 +449,7 @@ export default function MatchLobbyPage({ params }) {
 
                     {/* Maps Grid */}
                     <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                      {MAP_POOL.map((map) => {
+                      {MAP_POOL.slice(0, 12).map((map) => {
                         const isBanned = vetoState.bannedMaps.includes(
                           map.name,
                         );
@@ -571,8 +576,13 @@ export default function MatchLobbyPage({ params }) {
                 </h3>
                 <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
               </div>
-              <div className="rounded-2xl border border-cyan-500/10 bg-gradient-to-b from-cyan-500/5 to-transparent p-2 md:p-4">
-                <PlayerRoster teamA={null} teamB={teamB} loading={loading} />
+              <div className="rounded-2xl border border-r-4 border-cyan-400/30 border-cyan-500/10 bg-gradient-to-b from-cyan-500/5 to-transparent p-2 md:p-4">
+                <PlayerRoster
+                  teamA={null}
+                  teamB={teamB}
+                  loading={loading}
+                  mirrored={true}
+                />
               </div>
             </div>
           </div>

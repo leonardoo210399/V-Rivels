@@ -12,11 +12,20 @@ import { getUserProfile } from "@/lib/users";
  * @param {Object} props.teamA - Team A registration object
  * @param {Object} props.teamB - Team B registration object
  * @param {boolean} props.loading - Loading state
+ * @param {boolean} props.mirrored - If true, content is right-aligned (for Team B in sidebar)
  */
-export default function PlayerRoster({ teamA, teamB, loading = false }) {
+export default function PlayerRoster({
+  teamA,
+  teamB,
+  loading = false,
+  mirrored = false,
+}) {
   const [teamAPlayers, setTeamAPlayers] = useState([]);
   const [teamBPlayers, setTeamBPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
+
+  // Check if this is a single-team sidebar mode
+  const isSidebarMode = (teamA && !teamB) || (!teamA && teamB);
 
   useEffect(() => {
     const fetchTeamPlayers = async () => {
@@ -170,6 +179,43 @@ export default function PlayerRoster({ teamA, teamB, loading = false }) {
     }
   }, [teamA, teamB]);
 
+  // Loading skeleton for sidebar mode
+  if ((loading || loadingPlayers) && isSidebarMode) {
+    return (
+      <div className="space-y-3">
+        <div
+          className={`flex items-center gap-2 ${mirrored ? "flex-row-reverse justify-end" : ""}`}
+        >
+          <div
+            className={`h-1 w-1 rounded-full ${mirrored ? "bg-cyan-400" : "bg-rose-500"}`}
+          />
+          <div className="h-4 w-20 animate-pulse rounded bg-slate-800" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <PlayerCard3D
+              key={i}
+              player={null}
+              teamColor={mirrored ? "cyan" : "rose"}
+              mirrored={mirrored}
+            />
+          ))}
+        </div>
+        <div
+          className={`mt-4 rounded-xl border border-white/5 bg-slate-950/50 p-3`}
+        >
+          <p
+            className={`text-[9px] font-bold text-slate-600 md:text-[10px] ${mirrored ? "text-right" : "text-left"}`}
+          >
+            Player roles and agents are based on their registered profile
+            preferences
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Full loading state for both teams mode
   if (loading || loadingPlayers) {
     return (
       <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:rounded-3xl md:p-6">
@@ -217,6 +263,60 @@ export default function PlayerRoster({ teamA, teamB, loading = false }) {
     return null;
   }
 
+  // Sidebar mode - simplified layout without header
+  if (isSidebarMode) {
+    const team = teamA || teamB;
+    const players = teamA ? teamAPlayers : teamBPlayers;
+    const teamColor = teamA ? "rose" : "cyan";
+    const colorClass = teamA ? "bg-rose-500" : "bg-cyan-400";
+    const textColorClass = teamA ? "text-rose-500" : "text-cyan-400";
+
+    return (
+      <div className="space-y-3">
+        {/* Team Name */}
+        <div
+          className={`flex items-center gap-2 ${mirrored ? "flex-row-reverse justify-end" : ""}`}
+        >
+          <div className={`h-1 w-1 rounded-full ${colorClass}`} />
+          <h4
+            className={`text-sm font-black tracking-tight uppercase ${textColorClass}`}
+          >
+            {team.teamName || "TBD"}
+          </h4>
+        </div>
+
+        {/* Player Cards */}
+        <div className="space-y-2">
+          {players.length > 0 ? (
+            players.map((player, idx) => (
+              <PlayerCard3D
+                key={idx}
+                player={player}
+                teamColor={teamColor}
+                mirrored={mirrored}
+              />
+            ))
+          ) : (
+            <div className="rounded-xl border border-white/5 bg-slate-900/20 p-4 text-center">
+              <p className="text-xs text-slate-600">No player data available</p>
+            </div>
+          )}
+        </div>
+
+        {/* Info Note */}
+        <div className="mt-4 rounded-xl border border-white/5 bg-slate-950/50 p-3">
+          <p
+            className={`text-[9px] font-bold text-slate-600 md:text-[10px] ${mirrored ? "text-right" : "text-left"}`}
+          >
+            Player roles and agents are based on their registered profile
+            preferences
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Full layout with both teams
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:rounded-3xl md:p-6">
       {/* Header */}
@@ -267,7 +367,7 @@ export default function PlayerRoster({ teamA, teamB, loading = false }) {
         {/* Team B */}
         {teamB && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-row-reverse items-center justify-end gap-2">
               <div className="h-1 w-1 rounded-full bg-cyan-400" />
               <h4 className="text-sm font-black tracking-tight text-cyan-400 uppercase">
                 {teamB.teamName || "TBD"}
@@ -277,7 +377,12 @@ export default function PlayerRoster({ teamA, teamB, loading = false }) {
             <div className="space-y-2">
               {teamBPlayers.length > 0 ? (
                 teamBPlayers.map((player, idx) => (
-                  <PlayerCard3D key={idx} player={player} teamColor="cyan" />
+                  <PlayerCard3D
+                    key={idx}
+                    player={player}
+                    teamColor="cyan"
+                    mirrored
+                  />
                 ))
               ) : (
                 <div className="rounded-xl border border-white/5 bg-slate-900/20 p-4 text-center">
