@@ -51,6 +51,14 @@ export default function Footer() {
                   Player Finder
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/#about"
+                  className="transition-colors hover:text-rose-400"
+                >
+                  About
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -82,6 +90,14 @@ export default function Footer() {
                   className="transition-colors hover:text-rose-400"
                 >
                   FAQ
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/refund-policy"
+                  className="transition-colors hover:text-rose-400"
+                >
+                  Refund Policy
                 </Link>
               </li>
             </ul>
