@@ -80,90 +80,99 @@ export default function CountdownTimer({ startTime, status }) {
   const isUrgent = timeLeft.total > 0 && timeLeft.total <= 60000; // 1 minute
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:rounded-3xl md:p-6">
-      {/* Header */}
-      <div className="mb-4 flex items-center gap-3 md:mb-6">
-        <div
-          className={`rounded-xl border p-2.5 transition-all md:p-3 ${
-            isUrgent
-              ? "animate-pulse border-rose-500/30 bg-rose-500/20 text-rose-500"
-              : isStartingSoon
-                ? "border-amber-500/20 bg-amber-500/10 text-amber-500"
-                : "border-cyan-500/20 bg-cyan-500/10 text-cyan-500"
-          }`}
-        >
-          <Clock className="h-4 w-4 md:h-5 md:w-5" />
-        </div>
-        <div>
-          <h3 className="text-base font-black tracking-tight text-white uppercase md:text-lg">
-            {isStarted ? "Match Started" : "Match Countdown"}
-          </h3>
-          <p className="text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
-            {isStarted
-              ? "Battle in progress"
-              : isStartingSoon
-                ? "Get ready - starting soon!"
-                : "Time until match begins"}
-          </p>
-        </div>
-      </div>
-
+    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-3 backdrop-blur-xl md:rounded-3xl md:p-4">
       {isStarted ? (
-        // Match Started State
-        <div className="flex flex-col items-center justify-center py-8 md:py-12">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/20 md:h-20 md:w-20">
-            <Zap className="h-8 w-8 text-emerald-500 md:h-10 md:w-10" />
+        // Match Started State - Compact
+        <div className="flex items-center justify-center gap-3 py-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/20">
+            <Zap className="h-5 w-5 text-emerald-500" />
           </div>
-          <p className="mb-2 text-2xl font-black tracking-tight text-white uppercase italic md:text-3xl">
-            Match Live!
-          </p>
-          <p className="text-xs text-slate-500 md:text-sm">
-            Good luck and have fun!
-          </p>
+          <div>
+            <p className="text-lg font-black tracking-tight text-white uppercase italic">
+              Match Live!
+            </p>
+            <p className="text-[10px] text-slate-500">Good luck!</p>
+          </div>
         </div>
       ) : (
-        <>
-          {/* Countdown Display */}
-          <div className="grid grid-cols-4 gap-2 md:gap-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+          {/* Header + Countdown Row */}
+          <div className="flex flex-1 items-center gap-3">
+            {/* Icon */}
+            <div
+              className={`shrink-0 rounded-lg border p-2 transition-all ${
+                isUrgent
+                  ? "animate-pulse border-rose-500/30 bg-rose-500/20 text-rose-500"
+                  : isStartingSoon
+                    ? "border-amber-500/20 bg-amber-500/10 text-amber-500"
+                    : "border-cyan-500/20 bg-cyan-500/10 text-cyan-500"
+              }`}
+            >
+              <Clock className="h-4 w-4" />
+            </div>
+
+            {/* Title */}
+            <div className="min-w-0">
+              <h3 className="text-sm font-black tracking-tight text-white uppercase md:text-base">
+                {isUrgent
+                  ? "Final Call!"
+                  : isStartingSoon
+                    ? "Starting Soon"
+                    : "Match Countdown"}
+              </h3>
+              <p className="truncate text-[9px] font-medium text-slate-500">
+                {new Date(startTime).toLocaleString([], {
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}
+              </p>
+            </div>
+          </div>
+
+          {/* Compact Countdown Display */}
+          <div className="flex items-center justify-center gap-1 md:gap-2">
             {/* Days */}
-            <div className="group relative overflow-hidden rounded-xl border border-white/5 bg-slate-950/50 p-3 text-center transition-all hover:border-cyan-500/20 md:rounded-2xl md:p-4">
-              <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div
+              className={`rounded-lg border border-white/5 bg-slate-950/50 px-2 py-1.5 text-center md:px-3 md:py-2 ${timeLeft.days === 0 ? "opacity-50" : ""}`}
+            >
               <p
-                className={`relative mb-1 text-2xl font-black italic tabular-nums md:text-4xl lg:text-5xl ${
-                  timeLeft.days > 0 ? "text-cyan-400" : "text-slate-700"
+                className={`text-lg font-black italic tabular-nums md:text-xl ${
+                  timeLeft.days > 0 ? "text-cyan-400" : "text-slate-600"
                 }`}
               >
                 {String(timeLeft.days).padStart(2, "0")}
               </p>
-              <p className="relative text-[8px] font-black tracking-[0.2em] text-slate-600 uppercase md:text-[9px]">
-                Days
+              <p className="text-[7px] font-bold tracking-wider text-slate-600 uppercase">
+                D
               </p>
             </div>
 
+            <span className="font-black text-slate-600">:</span>
+
             {/* Hours */}
-            <div className="group relative overflow-hidden rounded-xl border border-white/5 bg-slate-950/50 p-3 text-center transition-all hover:border-amber-500/20 md:rounded-2xl md:p-4">
-              <div className="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="rounded-lg border border-white/5 bg-slate-950/50 px-2 py-1.5 text-center md:px-3 md:py-2">
               <p
-                className={`relative mb-1 text-2xl font-black italic tabular-nums md:text-4xl lg:text-5xl ${
+                className={`text-lg font-black italic tabular-nums md:text-xl ${
                   isStartingSoon
                     ? "text-amber-400"
                     : timeLeft.hours > 0 || timeLeft.days > 0
                       ? "text-white"
-                      : "text-slate-700"
+                      : "text-slate-600"
                 }`}
               >
                 {String(timeLeft.hours).padStart(2, "0")}
               </p>
-              <p className="relative text-[8px] font-black tracking-[0.2em] text-slate-600 uppercase md:text-[9px]">
-                Hours
+              <p className="text-[7px] font-bold tracking-wider text-slate-600 uppercase">
+                H
               </p>
             </div>
 
+            <span className="font-black text-slate-600">:</span>
+
             {/* Minutes */}
-            <div className="group relative overflow-hidden rounded-xl border border-white/5 bg-slate-950/50 p-3 text-center transition-all hover:border-rose-500/20 md:rounded-2xl md:p-4">
-              <div className="absolute inset-0 bg-gradient-to-t from-rose-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="rounded-lg border border-white/5 bg-slate-950/50 px-2 py-1.5 text-center md:px-3 md:py-2">
               <p
-                className={`relative mb-1 text-2xl font-black italic tabular-nums md:text-4xl lg:text-5xl ${
+                className={`text-lg font-black italic tabular-nums md:text-xl ${
                   isUrgent
                     ? "animate-pulse text-rose-500"
                     : isStartingSoon
@@ -173,16 +182,17 @@ export default function CountdownTimer({ startTime, status }) {
               >
                 {String(timeLeft.minutes).padStart(2, "0")}
               </p>
-              <p className="relative text-[8px] font-black tracking-[0.2em] text-slate-600 uppercase md:text-[9px]">
-                Minutes
+              <p className="text-[7px] font-bold tracking-wider text-slate-600 uppercase">
+                M
               </p>
             </div>
 
+            <span className="font-black text-slate-600">:</span>
+
             {/* Seconds */}
-            <div className="group relative overflow-hidden rounded-xl border border-white/5 bg-slate-950/50 p-3 text-center transition-all hover:border-emerald-500/20 md:rounded-2xl md:p-4">
-              <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="rounded-lg border border-white/5 bg-slate-950/50 px-2 py-1.5 text-center md:px-3 md:py-2">
               <p
-                className={`relative mb-1 text-2xl font-black italic tabular-nums transition-all md:text-4xl lg:text-5xl ${
+                className={`text-lg font-black italic tabular-nums md:text-xl ${
                   isUrgent
                     ? "animate-pulse text-rose-500"
                     : isStartingSoon
@@ -192,59 +202,12 @@ export default function CountdownTimer({ startTime, status }) {
               >
                 {String(timeLeft.seconds).padStart(2, "0")}
               </p>
-              <p className="relative text-[8px] font-black tracking-[0.2em] text-slate-600 uppercase md:text-[9px]">
-                Seconds
+              <p className="text-[7px] font-bold tracking-wider text-slate-600 uppercase">
+                S
               </p>
             </div>
           </div>
-
-          {/* Status Alert */}
-          <div className="mt-4 md:mt-6">
-            {isUrgent ? (
-              <div className="animate-in fade-in flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 duration-500 md:gap-3 md:p-4">
-                <AlertCircle className="h-5 w-5 shrink-0 animate-pulse text-rose-500 md:h-6 md:w-6" />
-                <div className="flex-1">
-                  <p className="mb-0.5 text-[10px] font-black tracking-widest text-rose-500 uppercase md:text-xs">
-                    Final Call - Less than 1 minute!
-                  </p>
-                  <p className="text-[9px] text-rose-400/80 md:text-[10px]">
-                    Ensure you&apos;re in the lobby and ready to play
-                  </p>
-                </div>
-              </div>
-            ) : isStartingSoon ? (
-              <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 md:gap-3 md:p-4">
-                <AlertCircle className="h-5 w-5 shrink-0 text-amber-500 md:h-6 md:w-6" />
-                <div className="flex-1">
-                  <p className="mb-0.5 text-[10px] font-black tracking-widest text-amber-500 uppercase md:text-xs">
-                    Starting Soon
-                  </p>
-                  <p className="text-[9px] text-amber-400/80 md:text-[10px]">
-                    Be prepared to join the match lobby
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 md:gap-3 md:p-4">
-                <CheckCircle className="h-5 w-5 shrink-0 text-cyan-500 md:h-6 md:w-6" />
-                <div className="flex-1">
-                  <p className="mb-0.5 text-[10px] font-black tracking-widest text-cyan-500 uppercase md:text-xs">
-                    Scheduled
-                  </p>
-                  <p className="text-[9px] text-cyan-400/80 md:text-[10px]">
-                    Match will begin at{" "}
-                    <span className="font-bold" suppressHydrationWarning>
-                      {new Date(startTime).toLocaleString([], {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
+        </div>
       )}
 
       {/* Notification Toast */}
