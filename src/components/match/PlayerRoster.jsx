@@ -1,6 +1,6 @@
 "use client";
 import { Users } from "lucide-react";
-import PlayerCard from "./PlayerCard";
+import PlayerCard3D from "./PlayerCard3D";
 import { useEffect, useState } from "react";
 import { getUserProfile } from "@/lib/users";
 
@@ -193,7 +193,7 @@ export default function PlayerRoster({ teamA, teamB, loading = false }) {
             <div className="h-6 w-24 animate-pulse rounded bg-slate-800" />
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <PlayerCard key={i} player={null} teamColor="rose" />
+                <PlayerCard3D key={i} player={null} teamColor="rose" />
               ))}
             </div>
           </div>
@@ -203,7 +203,7 @@ export default function PlayerRoster({ teamA, teamB, loading = false }) {
             <div className="h-6 w-24 animate-pulse rounded bg-slate-800" />
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <PlayerCard key={i} player={null} teamColor="cyan" />
+                <PlayerCard3D key={i} player={null} teamColor="cyan" />
               ))}
             </div>
           </div>
@@ -235,54 +235,60 @@ export default function PlayerRoster({ teamA, teamB, loading = false }) {
       </div>
 
       {/* Team Rosters Grid */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+      <div
+        className={`grid gap-4 md:gap-6 ${teamA && teamB ? "lg:grid-cols-2" : ""}`}
+      >
         {/* Team A */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="h-1 w-1 rounded-full bg-rose-500" />
-            <h4 className="text-sm font-black tracking-tight text-rose-500 uppercase">
-              Team A - {teamA?.teamName || "TBD"}
-            </h4>
-          </div>
+        {teamA && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-rose-500" />
+              <h4 className="text-sm font-black tracking-tight text-rose-500 uppercase">
+                {teamA.teamName || "TBD"}
+              </h4>
+            </div>
 
-          <div className="space-y-2">
-            {teamAPlayers.length > 0 ? (
-              teamAPlayers.map((player, idx) => (
-                <PlayerCard key={idx} player={player} teamColor="rose" />
-              ))
-            ) : (
-              <div className="rounded-xl border border-white/5 bg-slate-900/20 p-4 text-center">
-                <p className="text-xs text-slate-600">
-                  {teamA ? "No player data available" : "Team TBD"}
-                </p>
-              </div>
-            )}
+            <div className="space-y-2">
+              {teamAPlayers.length > 0 ? (
+                teamAPlayers.map((player, idx) => (
+                  <PlayerCard3D key={idx} player={player} teamColor="rose" />
+                ))
+              ) : (
+                <div className="rounded-xl border border-white/5 bg-slate-900/20 p-4 text-center">
+                  <p className="text-xs text-slate-600">
+                    No player data available
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Team B */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="h-1 w-1 rounded-full bg-cyan-400" />
-            <h4 className="text-sm font-black tracking-tight text-cyan-400 uppercase">
-              Team B - {teamB?.teamName || "TBD"}
-            </h4>
-          </div>
+        {teamB && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-cyan-400" />
+              <h4 className="text-sm font-black tracking-tight text-cyan-400 uppercase">
+                {teamB.teamName || "TBD"}
+              </h4>
+            </div>
 
-          <div className="space-y-2">
-            {teamBPlayers.length > 0 ? (
-              teamBPlayers.map((player, idx) => (
-                <PlayerCard key={idx} player={player} teamColor="cyan" />
-              ))
-            ) : (
-              <div className="rounded-xl border border-white/5 bg-slate-900/20 p-4 text-center">
-                <p className="text-xs text-slate-600">
-                  {teamB ? "No player data available" : "Team TBD"}
-                </p>
-              </div>
-            )}
+            <div className="space-y-2">
+              {teamBPlayers.length > 0 ? (
+                teamBPlayers.map((player, idx) => (
+                  <PlayerCard3D key={idx} player={player} teamColor="cyan" />
+                ))
+              ) : (
+                <div className="rounded-xl border border-white/5 bg-slate-900/20 p-4 text-center">
+                  <p className="text-xs text-slate-600">
+                    No player data available
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Info Note */}
