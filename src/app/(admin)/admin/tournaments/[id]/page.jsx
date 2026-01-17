@@ -19,6 +19,7 @@ import {
   revertTournamentStats,
   updateMatchDetails,
   parsePlayerStats,
+  resetMatch,
 } from "@/lib/brackets";
 import { getUserProfile } from "@/lib/users";
 import {
@@ -72,6 +73,7 @@ export default function TournamentControlPage({ params }) {
   const [startStep, setStartStep] = useState(0);
   const [startError, setStartError] = useState(null);
   const [matchScores, setMatchScores] = useState({}); // { [matchId]: { scoreA: 0, scoreB: 0 } }
+  const [matchResetSteps, setMatchResetSteps] = useState({}); // { [matchId]: 0 | 1 | 2 } for reset confirmation
 
   // Enhanced Match Editing State
   const [selectedMatch, setSelectedMatch] = useState(null);
@@ -153,29 +155,6 @@ export default function TournamentControlPage({ params }) {
       );
     } catch (e) {
       alert("Failed to update payment: " + e.message);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const handleSaveMatchScore = async (matchId) => {
-    const scores = matchScores[matchId];
-    if (!scores) {
-      alert("Please enter scores first.");
-      return;
-    }
-
-    setUpdating(true);
-    try {
-      await finalizeMatch(
-        matchId,
-        parseInt(scores.scoreA || 0),
-        parseInt(scores.scoreB || 0),
-      );
-      await loadData(); // Refresh everything
-      alert("Match result saved and winner advanced!");
-    } catch (e) {
-      alert("Failed to save score: " + e.message);
     } finally {
       setUpdating(false);
     }
@@ -367,6 +346,83 @@ export default function TournamentControlPage({ params }) {
       scoreA: 0,
       scoreB: 0,
     });
+  };
+
+  const handleResetIndividualMatch = async (matchId) => {
+    const currentStep = matchResetSteps[matchId] || 0;
+
+    if (currentStep === 0) {
+      // First click - show confirmation
+      setMatchResetSteps((prev) => ({ ...prev, [matchId]: 1 }));
+      // Auto-reset confirmation after 3 seconds
+      setTimeout(() => {
+        setMatchResetSteps((prev) => ({ ...prev, [matchId]: 0 }));
+      }, 3000);
+      return;
+    }
+
+    // Second click - perform reset
+    setMatchResetSteps((prev) => ({ ...prev, [matchId]: 2 }));
+    setUpdating(true);
+
+    try {
+      await resetMatch(matchId);
+      await loadData();
+      setMatchResetSteps((prev) => ({ ...prev, [matchId]: 0 }));
+    } catch (error) {
+      console.error("Failed to reset match:", error);
+      alert("Failed to reset match: " + error.message);
+      setMatchResetSteps((prev) => ({ ...prev, [matchId]: 0 }));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSaveMatchScore = async (matchId) => {
+    const scores = matchScores[matchId];
+    // If we haven't touched the inputs, use existing match scores or 0
+    const currentMatch = matches.find((m) => m.$id === matchId);
+    if (!currentMatch) return;
+
+    const scoreA =
+      scores?.scoreA !== undefined
+        ? parseInt(scores.scoreA)
+        : currentMatch.scoreA || 0;
+    const scoreB =
+      scores?.scoreB !== undefined
+        ? parseInt(scores.scoreB)
+        : currentMatch.scoreB || 0;
+
+    if (scoreA === scoreB) {
+      alert("Cannot finalize a match with a tie score!");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Finalize match with score ${scoreA} - ${scoreB}? This will advance the winner to the next round.`,
+      )
+    ) {
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await finalizeMatch(matchId, scoreA, scoreB);
+      await loadData();
+      // clear local state for this match
+      setMatchScores((prev) => {
+        const next = { ...prev };
+        delete next[matchId];
+        return next;
+      });
+      alert("Match finalized and winner advanced!");
+    } catch (error) {
+      console.error("Failed to finalize match:", error);
+      alert("Failed to finalize match: " + error.message);
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const startBulkEdit = () => {
@@ -1072,6 +1128,36 @@ export default function TournamentControlPage({ params }) {
                                   >
                                     <Edit2 className="h-3.5 w-3.5" />
                                     Edit Details
+                                  </button>
+                                )}
+
+                                {/* Reset Match Button */}
+                                {match.teamA !== "LOBBY" && (
+                                  <button
+                                    onClick={() =>
+                                      handleResetIndividualMatch(match.$id)
+                                    }
+                                    disabled={
+                                      updating ||
+                                      matchResetSteps[match.$id] === 2
+                                    }
+                                    className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-[10px] font-black uppercase transition-all ${
+                                      matchResetSteps[match.$id] === 1
+                                        ? "animate-pulse border border-amber-500/50 bg-amber-500/20 text-amber-400"
+                                        : matchResetSteps[match.$id] === 2
+                                          ? "border border-white/5 bg-slate-900 text-slate-600"
+                                          : "border border-white/10 bg-slate-900/50 text-slate-500 hover:border-amber-500/30 hover:text-amber-400"
+                                    }`}
+                                    title="Reset this match"
+                                  >
+                                    {matchResetSteps[match.$id] === 2 ? (
+                                      <LoaderIcon className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <RotateCcw className="h-3.5 w-3.5" />
+                                    )}
+                                    {matchResetSteps[match.$id] === 1
+                                      ? "Confirm?"
+                                      : "Reset"}
                                   </button>
                                 )}
                               </div>

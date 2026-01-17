@@ -367,7 +367,7 @@ export default function MatchLobbyPage({ params }) {
                   </div>
 
                   {/* Veto Progress Pill */}
-                  {!vetoState.selectedMap && (
+                  {!vetoState.selectedMap && !isCompleted && (
                     <div className="flex flex-col items-end gap-1.5">
                       <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">
                         Bans Remaining
@@ -386,6 +386,16 @@ export default function MatchLobbyPage({ params }) {
                           ),
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Completed Badge */}
+                  {isCompleted && (
+                    <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">
+                        Match Completed
+                      </span>
                     </div>
                   )}
                 </div>
@@ -416,6 +426,39 @@ export default function MatchLobbyPage({ params }) {
                       }}
                     />
                   </div>
+                ) : isCompleted ? (
+                  /* Match Completed - No Map Selected State */
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-slate-800/50">
+                      <MapIcon className="h-10 w-10 text-slate-600" />
+                    </div>
+                    <h3 className="mb-2 text-xl font-black tracking-tight text-slate-400 uppercase">
+                      Veto Not Completed
+                    </h3>
+                    <p className="max-w-sm text-sm text-slate-600">
+                      The map veto process was not completed for this match.
+                      Final map may have been decided by tournament admins.
+                    </p>
+
+                    {/* Show banned maps summary if any */}
+                    {vetoState.bannedMaps.length > 0 && (
+                      <div className="mt-8 w-full max-w-md">
+                        <p className="mb-3 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          Maps Banned ({vetoState.bannedMaps.length})
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {vetoState.bannedMaps.map((mapName) => (
+                            <span
+                              key={mapName}
+                              className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400"
+                            >
+                              {mapName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-8">
                     {/* Turn Indicator */}
@@ -433,8 +476,8 @@ export default function MatchLobbyPage({ params }) {
                               className={`text-sm font-black tracking-widest uppercase ${vetoState.currentTurn === "teamA" ? "text-rose-500" : "text-cyan-400"}`}
                             >
                               {vetoState.currentTurn === "teamA"
-                                ? "Team A"
-                                : "Team B"}
+                                ? teamA?.teamName || "Team A"
+                                : teamB?.teamName || "Team B"}
                             </p>
                           </div>
                           <div className={`h-8 w-[1px] bg-white/10`} />

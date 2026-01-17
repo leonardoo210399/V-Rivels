@@ -576,3 +576,29 @@ export function parsePlayerStats(match) {
         return {};
     }
 }
+
+/**
+ * Reset an individual match to its initial state
+ * Clears scores, winner, veto data, player stats, and sets status back to scheduled
+ */
+export async function resetMatch(matchId) {
+    try {
+        return await databases.updateDocument(
+            DATABASE_ID,
+            MATCHES_COLLECTION_ID,
+            matchId,
+            {
+                scoreA: 0,
+                scoreB: 0,
+                winner: null,
+                status: 'scheduled',
+                vetoData: null,
+                playerStats: null,
+                notes: null
+            }
+        );
+    } catch (error) {
+        console.error("Failed to reset match:", error);
+        throw error;
+    }
+}

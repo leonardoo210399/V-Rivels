@@ -63,14 +63,15 @@ export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
           {/* VS / Score Section */}
           <div className="flex shrink-0 flex-col items-center justify-center gap-4">
             {isCompleted ? (
-              <>
+              <div className="flex flex-col items-center gap-6">
                 {/* Match Score */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6 md:gap-8">
+                  {/* Team A Score */}
                   <div
-                    className={`relative transition-all duration-500 ${isTeamAWinner ? "scale-125" : "scale-100"}`}
+                    className={`relative flex flex-col items-center transition-all duration-500 ${isTeamAWinner ? "scale-110" : "scale-100"}`}
                   >
                     <span
-                      className={`text-5xl font-black italic md:text-6xl lg:text-7xl ${
+                      className={`text-6xl font-black italic md:text-7xl lg:text-8xl ${
                         isTeamAWinner
                           ? "text-glow-rose text-rose-500"
                           : "text-slate-600"
@@ -78,24 +79,23 @@ export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
                     >
                       {scoreA}
                     </span>
-                    {isTeamAWinner && (
-                      <div className="absolute -top-8 -right-8 md:-top-10 md:-right-10">
-                        <Trophy className="h-8 w-8 animate-bounce text-rose-500 md:h-10 md:w-10" />
-                      </div>
-                    )}
                   </div>
 
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-slate-900/50 md:h-16 md:w-16">
-                    <span className="text-sm font-black text-slate-500 md:text-base">
-                      VS
-                    </span>
+                  {/* VS Divider */}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-slate-800/50 md:h-14 md:w-14">
+                      <span className="text-sm font-black text-slate-400 md:text-base">
+                        VS
+                      </span>
+                    </div>
                   </div>
 
+                  {/* Team B Score */}
                   <div
-                    className={`relative transition-all duration-500 ${isTeamBWinner ? "scale-125" : "scale-100"}`}
+                    className={`relative flex flex-col items-center transition-all duration-500 ${isTeamBWinner ? "scale-110" : "scale-100"}`}
                   >
                     <span
-                      className={`text-5xl font-black italic md:text-6xl lg:text-7xl ${
+                      className={`text-6xl font-black italic md:text-7xl lg:text-8xl ${
                         isTeamBWinner
                           ? "text-glow-cyan text-cyan-400"
                           : "text-slate-600"
@@ -103,29 +103,29 @@ export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
                     >
                       {scoreB}
                     </span>
-                    {isTeamBWinner && (
-                      <div className="absolute -top-8 -right-8 md:-top-10 md:-right-10">
-                        <Trophy className="h-8 w-8 animate-bounce text-cyan-400 md:h-10 md:w-10" />
-                      </div>
-                    )}
                   </div>
                 </div>
 
                 {/* Winner Banner */}
                 {(isTeamAWinner || isTeamBWinner) && (
                   <div
-                    className={`rounded-full border px-6 py-2 text-center ${
+                    className={`flex items-center gap-2 rounded-full border px-6 py-2.5 ${
                       isTeamAWinner
-                        ? "glow-rose border-rose-500/30 bg-rose-500/20 text-rose-400"
-                        : "glow-cyan border-cyan-400/30 bg-cyan-400/20 text-cyan-400"
+                        ? "glow-rose border-rose-500/40 bg-gradient-to-r from-rose-500/20 to-rose-500/10"
+                        : "glow-cyan border-cyan-400/40 bg-gradient-to-r from-cyan-400/20 to-cyan-400/10"
                     }`}
                   >
-                    <p className="text-xs font-black tracking-widest uppercase">
+                    <Trophy
+                      className={`h-4 w-4 ${isTeamAWinner ? "text-rose-400" : "text-cyan-400"}`}
+                    />
+                    <p
+                      className={`text-sm font-black tracking-wider uppercase ${isTeamAWinner ? "text-rose-400" : "text-cyan-400"}`}
+                    >
                       {isTeamAWinner ? teamA?.teamName : teamB?.teamName} Wins!
                     </p>
                   </div>
                 )}
-              </>
+              </div>
             ) : (
               <>
                 {/* VS Badge */}
