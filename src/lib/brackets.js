@@ -507,3 +507,98 @@ export async function deleteMatches(tournamentId) {
         throw error;
     }
 }
+
+/**
+ * Update match scheduled time
+ */
+export async function updateMatchScheduledTime(matchId, scheduledTime) {
+    return await databases.updateDocument(
+        DATABASE_ID,
+        MATCHES_COLLECTION_ID,
+        matchId,
+        { scheduledTime }
+    );
+}
+
+/**
+ * Update match notes/admin comments
+ */
+export async function updateMatchNotes(matchId, notes) {
+    return await databases.updateDocument(
+        DATABASE_ID,
+        MATCHES_COLLECTION_ID,
+        matchId,
+        { notes }
+    );
+}
+
+/**
+ * Update complete match details (for admin panel)
+ */
+export async function updateMatchDetails(matchId, details) {
+    const updateData = {};
+    
+    if (details.scheduledTime !== undefined) {
+        updateData.scheduledTime = details.scheduledTime;
+    }
+    if (details.notes !== undefined) {
+        updateData.notes = details.notes;
+    }
+    if (details.playerStats !== undefined) {
+        updateData.playerStats = JSON.stringify(details.playerStats);
+    }
+    if (details.scoreA !== undefined) {
+        updateData.scoreA = details.scoreA;
+    }
+    if (details.scoreB !== undefined) {
+        updateData.scoreB = details.scoreB;
+    }
+    
+    return await databases.updateDocument(
+        DATABASE_ID,
+        MATCHES_COLLECTION_ID,
+        matchId,
+        updateData
+    );
+}
+
+/**
+ * Parse player stats from match document
+ */
+export function parsePlayerStats(match) {
+    if (!match.playerStats) return {};
+    try {
+        return typeof match.playerStats === 'string' 
+            ? JSON.parse(match.playerStats) 
+            : match.playerStats;
+    } catch (e) {
+        console.error("Failed to parse player stats:", e);
+        return {};
+    }
+}
+
+/**
+ * Reset an individual match to its initial state
+ * Clears scores, winner, veto data, player stats, and sets status back to scheduled
+ */
+export async function resetMatch(matchId) {
+    try {
+        return await databases.updateDocument(
+            DATABASE_ID,
+            MATCHES_COLLECTION_ID,
+            matchId,
+            {
+                scoreA: 0,
+                scoreB: 0,
+                winner: null,
+                status: 'scheduled',
+                vetoData: null,
+                playerStats: null,
+                notes: null
+            }
+        );
+    } catch (error) {
+        console.error("Failed to reset match:", error);
+        throw error;
+    }
+}

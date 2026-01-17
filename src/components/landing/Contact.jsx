@@ -43,7 +43,7 @@ const Contact = () => {
           </p>
 
           <AnimatedTitle
-            title="Ready to D<b>o</b>minate? <br /> Join VRivals T<b>o</b>day."
+            title="Ready to D<b>o</b>minate? <br /> Join VRivals Arena T<b>o</b>day."
             containerClass="special-font !md:text-[6.2rem] w-full font-zentry !text-5xl !font-black !leading-[.9]"
           />
 

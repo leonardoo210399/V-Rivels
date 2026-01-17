@@ -721,7 +721,7 @@ export default function MatchDetailsModal({ match, isOpen, onClose, puuid }) {
         {/* Footer */}
         <div className="border-t border-white/10 bg-slate-950/50 p-3 text-center md:p-4">
           <p className="text-[10px] tracking-widest text-slate-500 uppercase">
-            VRivals Match Intelligence
+            VRivals Arena Match Intelligence
           </p>
         </div>
       </div>

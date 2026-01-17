@@ -31,7 +31,7 @@ const About = () => {
     <div id="about" className="min-h-screen w-full">
       <div className="relative mt-36 mb-8 flex flex-col items-center gap-5 px-10">
         <p className="font-general text-sm uppercase md:text-[10px]">
-          Welcome to VRivals
+          Welcome to VRivals Arena
         </p>
 
         <AnimatedTitle
@@ -43,7 +43,7 @@ const About = () => {
           <p>The Game of Games begins—your journey to the top starts here</p>
           <p className="text-gray-500">
             Join daily tournaments, find your dream team, and rise through the
-            ranks. VRivals is built for champions.
+            ranks. VRivals Arena is built for champions.
           </p>
         </div>
       </div>

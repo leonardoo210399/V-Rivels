@@ -18,7 +18,7 @@ const anton = Anton({
 });
 
 export const metadata = {
-  title: "VRivals Tournament",
+  title: "VRivals Arena",
   description: "Compete in Valorant tournaments and track your stats.",
 };
 

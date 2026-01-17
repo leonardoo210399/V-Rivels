@@ -179,7 +179,7 @@ export default function LeaderboardPage() {
             TOURNAMENT <span className="text-rose-600">LEGENDS</span>
           </h1>
           <p className="mx-auto max-w-2xl text-lg font-medium text-slate-500">
-            The elite performers of VRivals. Witness the masters who have
+            The elite performers of VRivals Arena. Witness the masters who have
             dominated our brackets and claimed the ultimate rewards.
           </p>
         </div>

@@ -11,7 +11,7 @@ export default function Footer() {
             <Link href="/" className="inline-block flex-shrink-0">
               <img
                 src="/vrivals_logo_vertical.png"
-                alt="VRivals Tournament"
+                alt="VRivals Arena"
                 className="h-32 w-auto object-contain"
               />
             </Link>
@@ -51,6 +51,14 @@ export default function Footer() {
                   Player Finder
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/#about"
+                  className="transition-colors hover:text-rose-400"
+                >
+                  About
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -82,6 +90,14 @@ export default function Footer() {
                   className="transition-colors hover:text-rose-400"
                 >
                   FAQ
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/refund-policy"
+                  className="transition-colors hover:text-rose-400"
+                >
+                  Refund Policy
                 </Link>
               </li>
             </ul>
@@ -124,7 +140,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col items-center justify-between border-t border-slate-800 pt-8 text-xs text-slate-400 md:flex-row">
           <p>
-            &copy; {new Date().getFullYear()} VRivals Tournament. All rights
+            &copy; {new Date().getFullYear()} VRivals Arena. All rights
             reserved.
           </p>
           <div className="mt-4 flex space-x-6 md:mt-0">

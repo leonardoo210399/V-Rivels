@@ -12,10 +12,20 @@ import {
   ChevronLeft,
   Swords,
   AlertTriangle,
+  Share2,
+  CheckCircle2,
+  XCircle,
+  Zap,
+  Users,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import { mapImages } from "@/assets/images/maps";
 import Link from "next/link";
+import PlayerRoster from "@/components/match/PlayerRoster";
+import MatchInfo from "@/components/match/MatchInfo";
+import CountdownTimer from "@/components/match/CountdownTimer";
+import TeamFaceOff from "@/components/match/TeamFaceOff";
+import MapCard3D from "@/components/match/MapCard3D";
 
 const MAP_POOL = [
   { name: "Ascent", image: mapImages["Ascent"] },
@@ -54,6 +64,12 @@ export default function MatchLobbyPage({ params }) {
   const [scoreA, setScoreA] = useState(0);
   const [scoreB, setScoreB] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+
+  // UI State
+  const [showScoreModal, setShowScoreModal] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [banningMap, setBanningMap] = useState(null);
+  const [showShareToast, setShowShareToast] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -107,18 +123,24 @@ export default function MatchLobbyPage({ params }) {
     }
   };
 
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleBanMap = async (mapName) => {
     if (!isAdmin) {
       const isTeamATurn = vetoState.currentTurn === "teamA";
       const currentReg = isTeamATurn ? teamA : teamB;
       if (currentReg?.userId !== user?.$id) {
-        alert("It's not your turn to ban!");
+        showToast("It's not your turn to ban!", "error");
         return;
       }
     }
 
     if (vetoState.selectedMap) return;
 
+    setBanningMap(mapName);
     const newBanned = [...vetoState.bannedMaps, mapName];
     const newTurn = vetoState.currentTurn === "teamA" ? "teamB" : "teamA";
 
@@ -136,14 +158,20 @@ export default function MatchLobbyPage({ params }) {
     try {
       await updateMatchVeto(matchId, newState);
       setVetoState(newState);
+      showToast(
+        selected
+          ? `${selected} has been selected!`
+          : `${mapName} has been banned!`,
+        "success",
+      );
     } catch (e) {
-      alert("Failed to save veto: " + e.message);
+      showToast("Failed to save veto: " + e.message, "error");
+    } finally {
+      setTimeout(() => setBanningMap(null), 500);
     }
   };
 
   const handleReportScore = async () => {
-    if (!confirm(`Confirm Score: Team A ${scoreA} - ${scoreB} Team B?`)) return;
-
     setSubmitting(true);
     try {
       const winnerId = scoreA > scoreB ? match.teamA : match.teamB;
@@ -153,12 +181,36 @@ export default function MatchLobbyPage({ params }) {
         Number(scoreB),
         winnerId,
       );
-      alert("Match reported!");
+      showToast("Match reported successfully!", "success");
+      setShowScoreModal(false);
       loadData();
     } catch (e) {
-      alert("Error reporting score: " + e.message);
+      showToast("Error reporting score: " + e.message, "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleShareMatch = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    setShowShareToast(true);
+    setTimeout(() => setShowShareToast(false), 2000);
+  };
+
+  const incrementScore = (team) => {
+    if (team === "A") {
+      setScoreA((prev) => Math.min(13, parseInt(prev || 0) + 1));
+    } else {
+      setScoreB((prev) => Math.min(13, parseInt(prev || 0) + 1));
+    }
+  };
+
+  const decrementScore = (team) => {
+    if (team === "A") {
+      setScoreA((prev) => Math.max(0, parseInt(prev || 0) - 1));
+    } else {
+      setScoreB((prev) => Math.max(0, parseInt(prev || 0) - 1));
     }
   };
 
@@ -172,294 +224,382 @@ export default function MatchLobbyPage({ params }) {
 
   const isCompleted = match.status === "completed";
   const scheduledTime = match.scheduledTime || tournament?.date;
+  const vetoProgress =
+    (vetoState.bannedMaps.length / (MAP_POOL.length - 1)) * 100;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Hero Header */}
-      <section className="relative h-[25vh] min-h-[180px] w-full overflow-hidden border-b border-white/5 pt-14 md:h-[30vh] md:min-h-[220px] md:pt-16">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-slate-950 to-cyan-500/10" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-        </div>
-
-        <div className="relative z-20 mx-auto flex h-full max-w-6xl flex-col justify-end px-4 pb-6 md:px-6 md:pb-10">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between md:gap-6">
-            <div>
-              <p className="mb-1 text-[9px] font-black tracking-[0.3em] text-rose-500/80 uppercase md:mb-2 md:text-[10px]">
-                Match Lobby • Round {match.round}
-              </p>
-              <h1 className="text-xl font-black tracking-tight text-white uppercase italic md:text-3xl lg:text-4xl">
-                {tournament?.name || "Tournament Match"}
-              </h1>
-            </div>
-            <div className="flex items-center gap-2 md:gap-3">
-              <div
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-black tracking-[0.15em] uppercase shadow-lg backdrop-blur-md md:gap-2 md:px-4 md:py-2 md:text-[10px] ${
-                  isCompleted
-                    ? "border border-emerald-500/30 bg-emerald-500/20 text-emerald-400"
-                    : "animate-pulse border border-amber-500/30 bg-amber-500/20 text-amber-400"
-                }`}
-              >
-                <div
-                  className={`h-1.5 w-1.5 rounded-full ${isCompleted ? "bg-emerald-400" : "bg-amber-400"}`}
-                />
-                {isCompleted ? "Completed" : "In Progress"}
-              </div>
-              {scheduledTime && !isCompleted && (
-                <div
-                  className="flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/50 px-3 py-1.5 text-[9px] font-black tracking-widest text-slate-400 uppercase backdrop-blur-md md:gap-2 md:px-4 md:py-2 md:text-[10px]"
-                  suppressHydrationWarning
-                >
-                  <Clock className="h-3 w-3" />
-                  {new Date(scheduledTime).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <div className="relative z-30 mx-auto -mt-4 max-w-6xl px-4 py-6 md:-mt-6 md:px-6 md:py-10">
-        {/* Back Button */}
-        <Link
-          href={`/tournaments/${id}`}
-          className="group mb-6 inline-flex items-center gap-2 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all hover:text-white md:mb-8"
+    <div className="min-h-screen bg-slate-950 text-white selection:bg-rose-500/30">
+      {/* Toast Notifications */}
+      {toast && (
+        <div
+          className={`fixed top-20 right-4 z-50 flex items-center gap-2 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-xl transition-all duration-300 md:top-24 md:px-6 md:py-4 ${
+            toast.type === "success"
+              ? "border-emerald-500/30 bg-emerald-500/20 text-emerald-400"
+              : "border-red-500/30 bg-red-500/20 text-red-400"
+          }`}
         >
-          <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-          <span className="hidden sm:inline">Back to Tournament</span>
-          <span className="sm:hidden">Back</span>
-        </Link>
+          {toast.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5" />
+          ) : (
+            <XCircle className="h-5 w-5" />
+          )}
+          <span className="text-sm font-bold">{toast.message}</span>
+        </div>
+      )}
 
-        {/* VS Scoreboard */}
-        <div className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:mb-12 md:rounded-3xl md:p-8">
-          {/* Background Gradient */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-rose-500/5 via-transparent to-cyan-500/5" />
-          <div className="absolute top-0 left-0 h-1 w-1/2 bg-gradient-to-r from-rose-500/50 to-transparent" />
-          <div className="absolute top-0 right-0 h-1 w-1/2 bg-gradient-to-l from-cyan-500/50 to-transparent" />
+      {/* Share Toast */}
+      {showShareToast && (
+        <div className="fixed top-20 right-4 z-50 flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/20 px-4 py-3 text-cyan-400 shadow-2xl backdrop-blur-xl md:top-24 md:px-6 md:py-4">
+          <CheckCircle2 className="h-5 w-5" />
+          <span className="text-sm font-bold">Link copied to clipboard!</span>
+        </div>
+      )}
 
-          <div className="relative z-10 flex flex-col items-center gap-4 md:flex-row md:justify-between md:gap-8">
-            {/* Team A */}
-            <div className="flex w-full flex-col items-center text-center md:w-2/5 md:items-start md:text-left">
-              <span className="mb-1 text-[9px] font-black tracking-[0.3em] text-rose-500 uppercase md:text-[10px]">
-                Team A
+      {/* Top Navigation Bar */}
+      <div className="border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
+        <div className="mx-auto flex h-20 max-w-[1920px] items-center justify-between px-4 md:px-6">
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/tournaments/${id}`}
+              className="group flex items-center gap-2 rounded-lg border border-white/5 bg-slate-800/50 px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-400 uppercase transition-all hover:bg-slate-800 hover:text-white"
+            >
+              <ChevronLeft className="h-3 w-3 transition-transform group-hover:-translate-x-1" />
+              <span className="hidden sm:inline">Tournament</span>
+            </Link>
+            <div className="h-6 w-[1px] bg-white/5" />
+            <h1 className="text-sm font-black tracking-tight text-white uppercase italic md:text-base">
+              {tournament?.name}
+              <span className="ml-2 text-slate-500 not-italic">
+                Round {match.round}
               </span>
-              <h2 className="text-xl font-black tracking-tight text-white uppercase italic md:text-2xl lg:text-3xl">
-                {teamA?.teamName ||
-                  (match.teamA && match.teamA !== "LOBBY"
-                    ? "Loading..."
-                    : "TBD")}
-              </h2>
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[9px] font-black tracking-widest uppercase shadow-lg backdrop-blur-md ${
+                isCompleted
+                  ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  : "animate-pulse border border-amber-500/30 bg-amber-500/10 text-amber-400"
+              }`}
+            >
+              <div
+                className={`h-1.5 w-1.5 rounded-full ${isCompleted ? "bg-emerald-400" : "animate-ping bg-amber-400"}`}
+              />
+              {isCompleted ? "Completed" : "Live"}
             </div>
 
-            {/* VS / Score */}
-            <div className="flex shrink-0 flex-col items-center justify-center py-2 md:py-0">
-              {isCompleted ? (
-                <div className="flex items-center gap-3 md:gap-4">
-                  <span
-                    className={`text-4xl font-black italic md:text-5xl lg:text-6xl ${match.scoreA > match.scoreB ? "text-rose-500" : "text-slate-600"}`}
-                  >
-                    {match.scoreA}
-                  </span>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-slate-900 md:h-12 md:w-12">
-                    <span className="text-[10px] font-black text-slate-600 md:text-xs">
-                      VS
-                    </span>
+            <button
+              onClick={handleShareMatch}
+              className="flex items-center gap-2 rounded-lg border border-white/5 bg-slate-800/50 px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-400 uppercase transition-all hover:border-cyan-500/30 hover:text-cyan-400"
+            >
+              <Share2 className="h-3 w-3" />
+              <span className="hidden sm:inline">Share Lobby</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Arena Content */}
+      <div className="relative mx-auto max-w-[1920px] px-4 pt-8 pb-4 md:px-6 md:pt-10 md:pb-6 lg:px-8 lg:pt-12 lg:pb-8">
+        {/* Cinematic Header */}
+        <div className="mb-8">
+          <TeamFaceOff
+            teamA={teamA}
+            teamB={teamB}
+            match={match}
+            isCompleted={isCompleted}
+          />
+        </div>
+
+        {/* 3-Column Grid Layout */}
+        <div className="grid gap-8 lg:grid-cols-12 xl:gap-10">
+          {/* LEFT COLUMN: Team A Roster (Sticky) */}
+          <div className="order-2 space-y-6 lg:order-1 lg:col-span-3">
+            <div className="sticky top-6 space-y-4">
+              <div className="flex items-center justify-start gap-2 border-b border-rose-500/20 pb-2">
+                <div className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
+                <h3 className="text-xs font-black tracking-[0.2em] text-rose-500 uppercase">
+                  Team A Roster
+                </h3>
+              </div>
+              <div className="rounded-2xl border border-l-4 border-rose-500/10 border-rose-500/30 bg-gradient-to-b from-rose-500/5 to-transparent p-2 md:p-4">
+                <PlayerRoster
+                  teamA={teamA}
+                  teamB={null}
+                  loading={loading}
+                  mirrored={false}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CENTER COLUMN: Main Stage */}
+          <div className="order-1 space-y-8 lg:order-2 lg:col-span-6">
+            {/* Countdown Timer */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-2xl">
+                <CountdownTimer
+                  startTime={scheduledTime}
+                  status={match.status}
+                />
+              </div>
+            </div>
+
+            {/* Map Veto & Selection Stage */}
+            <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/60 p-1 shadow-2xl backdrop-blur-xl">
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent" />
+
+              <div className="relative rounded-[20px] border border-white/5 bg-slate-950/80 p-6 md:p-8">
+                <div className="mb-8 flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 shadow-inner">
+                      <MapIcon className="h-6 w-6 text-indigo-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black tracking-tight text-white uppercase italic md:text-2xl">
+                        Map Veto
+                      </h2>
+                      <p className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase">
+                        Pick & Ban Phase
+                      </p>
+                    </div>
                   </div>
-                  <span
-                    className={`text-4xl font-black italic md:text-5xl lg:text-6xl ${match.scoreB > match.scoreA ? "text-cyan-400" : "text-slate-600"}`}
-                  >
-                    {match.scoreB}
-                  </span>
+
+                  {/* Veto Progress Pill */}
+                  {!vetoState.selectedMap && !isCompleted && (
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">
+                        Bans Remaining
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: MAP_POOL.length - 1 }).map(
+                          (_, i) => (
+                            <div
+                              key={i}
+                              className={`h-1.5 w-1.5 rounded-full transition-all ${
+                                i < vetoState.bannedMaps.length
+                                  ? "bg-slate-700"
+                                  : "bg-indigo-500 shadow-[0_0_5px_rgba(99,102,241,0.5)]"
+                              }`}
+                            />
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Completed Badge */}
+                  {isCompleted && (
+                    <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">
+                        Match Completed
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-slate-900/80 shadow-2xl md:h-20 md:w-20">
-                  <Swords className="h-6 w-6 text-slate-500 md:h-8 md:w-8" />
-                </div>
-              )}
+
+                {/* Selected Map Hero */}
+                {vetoState.selectedMap ? (
+                  <div className="group relative overflow-hidden rounded-2xl border border-white/10">
+                    <div className="animate-fadeIn absolute inset-0 z-20 flex flex-col items-center justify-center p-8 text-center">
+                      <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/50 bg-slate-950/80 px-4 py-1.5 text-[10px] font-black tracking-[0.2em] text-emerald-400 uppercase shadow-xl backdrop-blur-md">
+                        <Zap className="h-3.5 w-3.5 animate-pulse" />
+                        Locked In
+                      </span>
+                      <h3 className="text-6xl font-black text-white uppercase italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] md:text-8xl">
+                        {vetoState.selectedMap}
+                      </h3>
+                    </div>
+
+                    <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/30" />
+                    <div
+                      className="h-[400px] w-full bg-cover bg-center transition-transform duration-[2s] ease-in-out group-hover:scale-110 md:h-[500px]"
+                      style={{
+                        backgroundImage: `url(${(() => {
+                          const img = MAP_POOL.find(
+                            (m) => m.name === vetoState.selectedMap,
+                          )?.image;
+                          return typeof img === "object" ? img?.src : img;
+                        })()})`,
+                      }}
+                    />
+                  </div>
+                ) : isCompleted ? (
+                  /* Match Completed - No Map Selected State */
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-slate-800/50">
+                      <MapIcon className="h-10 w-10 text-slate-600" />
+                    </div>
+                    <h3 className="mb-2 text-xl font-black tracking-tight text-slate-400 uppercase">
+                      Veto Not Completed
+                    </h3>
+                    <p className="max-w-sm text-sm text-slate-600">
+                      The map veto process was not completed for this match.
+                      Final map may have been decided by tournament admins.
+                    </p>
+
+                    {/* Show banned maps summary if any */}
+                    {vetoState.bannedMaps.length > 0 && (
+                      <div className="mt-8 w-full max-w-md">
+                        <p className="mb-3 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          Maps Banned ({vetoState.bannedMaps.length})
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {vetoState.bannedMaps.map((mapName) => (
+                            <span
+                              key={mapName}
+                              className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-400"
+                            >
+                              {mapName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Turn Indicator */}
+                    <div className="flex justify-center">
+                      <div className="relative inline-flex items-center justify-center">
+                        <div
+                          className={`animate-glow-pulse absolute inset-0 opacity-20 blur-xl ${vetoState.currentTurn === "teamA" ? "bg-rose-500" : "bg-cyan-400"}`}
+                        />
+                        <div className="relative flex items-center gap-4 rounded-full border border-white/10 bg-slate-900/90 px-8 py-3 backdrop-blur-xl">
+                          <div className="text-right">
+                            <p className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">
+                              Current Turn
+                            </p>
+                            <p
+                              className={`text-sm font-black tracking-widest uppercase ${vetoState.currentTurn === "teamA" ? "text-rose-500" : "text-cyan-400"}`}
+                            >
+                              {vetoState.currentTurn === "teamA"
+                                ? teamA?.teamName || "Team A"
+                                : teamB?.teamName || "Team B"}
+                            </p>
+                          </div>
+                          <div className={`h-8 w-[1px] bg-white/10`} />
+                          <div
+                            className={`text-xs font-black uppercase ${vetoState.currentTurn === "teamA" ? "text-rose-500" : "text-cyan-400"}`}
+                          >
+                            TO BAN
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Maps Grid */}
+                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                      {MAP_POOL.slice(0, 12).map((map) => {
+                        const isBanned = vetoState.bannedMaps.includes(
+                          map.name,
+                        );
+                        const isBanning = banningMap === map.name;
+
+                        return (
+                          <MapCard3D
+                            key={map.name}
+                            map={map}
+                            isBanned={isBanned}
+                            isSelected={false}
+                            isBanning={isBanning}
+                            onBan={handleBanMap}
+                            disabled={isCompleted}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Team B */}
-            <div className="flex w-full flex-col items-center text-center md:w-2/5 md:items-end md:text-right">
-              <span className="mb-1 text-[9px] font-black tracking-[0.3em] text-cyan-400 uppercase md:text-[10px]">
-                Team B
-              </span>
-              <h2 className="text-xl font-black tracking-tight text-white uppercase italic md:text-2xl lg:text-3xl">
-                {teamB?.teamName || (match.teamB ? "Loading..." : "TBD")}
-              </h2>
+            {/* Match Rules & Info */}
+            <div className="mt-8">
+              <MatchInfo tournament={tournament} match={match} />
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Team B Roster (Sticky) */}
+          <div className="order-3 space-y-6 lg:col-span-3">
+            <div className="sticky top-6 space-y-4">
+              <div className="flex items-center justify-end gap-2 border-b border-cyan-500/20 pb-2">
+                <h3 className="text-xs font-black tracking-[0.2em] text-cyan-400 uppercase">
+                  Team B Roster
+                </h3>
+                <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+              </div>
+              <div className="rounded-2xl border border-r-4 border-cyan-400/30 border-cyan-500/10 bg-gradient-to-b from-cyan-500/5 to-transparent p-2 md:p-4">
+                <PlayerRoster
+                  teamA={null}
+                  teamB={teamB}
+                  loading={loading}
+                  mirrored={true}
+                />
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Controls Grid */}
-        <div className="grid gap-6 md:gap-8 lg:grid-cols-2">
-          {/* Map Veto Section */}
-          <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-xl md:rounded-3xl md:p-6">
-            <div className="mb-4 flex items-center gap-3 md:mb-6">
-              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-2.5 text-rose-500 md:p-3">
-                <MapIcon className="h-4 w-4 md:h-5 md:w-5" />
+      {/* Score Modal */}
+      {showScoreModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md">
+          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl">
+            <div className="relative bg-gradient-to-b from-slate-800 to-slate-900 px-6 py-12 text-center md:px-8">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                <Trophy className="h-10 w-10 text-emerald-400" />
               </div>
-              <div>
-                <h3 className="text-base font-black tracking-tight text-white uppercase md:text-lg">
-                  Map Veto
-                </h3>
-                <p className="text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
-                  Ban maps to select battlefield
-                </p>
-              </div>
+              <h2 className="mb-2 text-2xl font-black tracking-tight text-white uppercase italic md:text-3xl">
+                Confirm Victory
+              </h2>
+              <p className="text-sm font-medium text-slate-400">
+                Please verify the final score before submitting.
+              </p>
             </div>
 
-            {vetoState.selectedMap ? (
-              <div className="relative overflow-hidden rounded-xl py-12 text-center md:rounded-2xl md:py-16">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-                  style={{
-                    backgroundImage: `url(${(() => {
-                      const img = MAP_POOL.find(
-                        (m) => m.name === vetoState.selectedMap,
-                      )?.image;
-                      return typeof img === "object" ? img?.src : img;
-                    })()})`,
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/30" />
-
-                <div className="relative z-10">
-                  <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-3 py-1 text-[9px] font-black tracking-widest text-emerald-400 uppercase backdrop-blur-md md:px-4 md:py-1.5 md:text-[10px]">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    Map Selected
-                  </div>
-                  <p className="text-3xl font-black tracking-tight text-white uppercase italic drop-shadow-2xl md:text-4xl lg:text-5xl">
-                    {vetoState.selectedMap}
+            <div className="border-t border-white/5 bg-slate-950/50 p-6 md:p-8">
+              <div className="mb-8 flex items-center justify-center gap-8">
+                <div className="text-center">
+                  <p className="mb-2 text-[10px] font-black tracking-widest text-rose-500 uppercase">
+                    Team A
                   </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-slate-950/50 py-3 md:py-4">
-                  <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase md:text-xs">
-                    Current Turn:
-                  </span>
-                  <span
-                    className={`text-[10px] font-black tracking-widest uppercase md:text-xs ${vetoState.currentTurn === "teamA" ? "text-rose-500" : "text-cyan-400"}`}
-                  >
-                    {vetoState.currentTurn === "teamA" ? "Team A" : "Team B"}
-                  </span>
-                  <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase md:text-xs">
-                    to ban
+                  <span className="text-5xl font-black text-white italic">
+                    {scoreA}
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-2 md:gap-3">
-                  {MAP_POOL.map((map) => {
-                    const isBanned = vetoState.bannedMaps.includes(map.name);
-                    return (
-                      <button
-                        key={map.name}
-                        onClick={() => handleBanMap(map.name)}
-                        disabled={isBanned || isCompleted}
-                        className={`group relative h-16 overflow-hidden rounded-xl border text-sm font-bold transition-all md:h-20 md:rounded-2xl ${
-                          isBanned
-                            ? "cursor-not-allowed border-transparent opacity-40 grayscale"
-                            : "border-white/10 shadow-lg hover:scale-[1.02] hover:border-rose-500/50"
-                        }`}
-                      >
-                        <div
-                          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                          style={{
-                            backgroundImage: `url(${typeof map.image === "object" ? map.image?.src : map.image})`,
-                          }}
-                        />
-                        <div
-                          className={`absolute inset-0 transition-colors ${isBanned ? "bg-slate-950/90" : "bg-slate-950/60 group-hover:bg-rose-950/60"}`}
-                        />
-
-                        <span
-                          className={`relative z-10 flex h-full items-center justify-center text-[10px] font-black tracking-[0.15em] uppercase md:text-xs md:tracking-[0.2em] ${isBanned ? "text-slate-600 line-through" : "text-white"}`}
-                        >
-                          {map.name}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Admin Score Controls */}
-          {isAdmin && !isCompleted && match.teamA && match.teamB && (
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.02] p-4 backdrop-blur-xl md:rounded-3xl md:p-6">
-              <div className="mb-4 flex items-center gap-3 md:mb-6">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-emerald-500 md:p-3">
-                  <Shield className="h-4 w-4 md:h-5 md:w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black tracking-tight text-white uppercase md:text-lg">
-                    Report Score
-                  </h3>
-                  <p className="text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
-                    Admin Controls
+                <div className="h-12 w-[1px] bg-white/10" />
+                <div className="text-center">
+                  <p className="mb-2 text-[10px] font-black tracking-widest text-cyan-400 uppercase">
+                    Team B
                   </p>
+                  <span className="text-5xl font-black text-white italic">
+                    {scoreB}
+                  </span>
                 </div>
               </div>
 
-              <div className="space-y-4 md:space-y-6">
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                  <div>
-                    <label className="mb-2 block text-[9px] font-black tracking-widest text-rose-500 uppercase md:text-[10px]">
-                      Team A Score
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={scoreA}
-                      onChange={(e) => setScoreA(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-center text-lg font-black text-white transition-all focus:border-rose-500 focus:outline-none md:py-4 md:text-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-[9px] font-black tracking-widest text-cyan-400 uppercase md:text-[10px]">
-                      Team B Score
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={scoreB}
-                      onChange={(e) => setScoreB(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-center text-lg font-black text-white transition-all focus:border-cyan-500 focus:outline-none md:py-4 md:text-xl"
-                    />
-                  </div>
-                </div>
-
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowScoreModal(false)}
+                  className="flex-1 rounded-xl border border-white/10 py-4 text-xs font-black tracking-widest text-slate-400 uppercase transition-all hover:bg-white/5 hover:text-white"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={handleReportScore}
                   disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-50 md:rounded-2xl md:py-4 md:text-xs"
+                  className="flex-[2] rounded-xl bg-emerald-500 py-4 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 disabled:opacity-50"
                 >
-                  {submitting ? (
-                    <Loader fullScreen={false} size="sm" />
-                  ) : (
-                    "Submit Final Score"
-                  )}
+                  {submitting ? "Processing..." : "Confirm Result"}
                 </button>
-
-                <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 md:p-4">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-                  <p className="text-[9px] font-bold text-amber-500/80 md:text-[10px]">
-                    Submitting will end the match and advance the winner. This
-                    action is irreversible.
-                  </p>
-                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
