@@ -15,7 +15,7 @@ import {
 // UPI Configuration
 const UPI_CONFIG = {
   vpa: "9028410543@okbizaxis",
-  payeeName: "V-rivals Arena",
+  payeeName: "Crypto news",
   currency: "INR",
 };
 
