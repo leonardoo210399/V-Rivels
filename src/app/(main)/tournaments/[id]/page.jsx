@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
+import UPIPaymentModal from "@/components/UPIPaymentModal";
 const RichText = ({ text }) => {
   if (!text) return null;
 
@@ -122,6 +123,8 @@ export default function TournamentDetailPage({ params }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState(null);
 
   const [matches, setMatches] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
@@ -268,29 +271,54 @@ export default function TournamentDetailPage({ params }) {
       return;
     }
 
-    setRegistering(true);
     setError(null);
-    try {
-      const metadata = {
-        members:
-          tournament.gameType === "5v5"
-            ? members.map((m) => ({ name: m.name, tag: m.tag }))
-            : null,
-        playerName:
-          tournament.gameType !== "5v5"
-            ? `${userProfile.ingameName}#${userProfile.tag}`
-            : null,
-        playerCard: userProfile?.card || null,
-        puuid: userProfile?.puuid || null,
-      };
 
-      await registerForTournament(
-        id,
-        user.$id,
-        tournament.gameType === "5v5" ? teamName : userProfile.ingameName,
-        { metadata: JSON.stringify(metadata) },
-      );
+    // Prepare metadata for registration
+    const metadata = {
+      members:
+        tournament.gameType === "5v5"
+          ? members.map((m) => ({ name: m.name, tag: m.tag }))
+          : null,
+      playerName:
+        tournament.gameType !== "5v5"
+          ? `${userProfile.ingameName}#${userProfile.tag}`
+          : null,
+      playerCard: userProfile?.card || null,
+      puuid: userProfile?.puuid || null,
+    };
+
+    const registrationData = {
+      name: tournament.gameType === "5v5" ? teamName : userProfile.ingameName,
+      metadata,
+    };
+
+    // Check if tournament has entry fee
+    const entryFee = parseFloat(tournament.entryFee) || 0;
+    if (entryFee > 0) {
+      // Show payment modal
+      setPendingPaymentData(registrationData);
+      setShowPaymentModal(true);
+    } else {
+      // Free tournament - register directly
+      await completeRegistration(registrationData, null, "free");
+    }
+  };
+
+  const completeRegistration = async (
+    registrationData,
+    transactionId,
+    paymentStatus = "pending",
+  ) => {
+    setRegistering(true);
+    try {
+      await registerForTournament(id, user.$id, registrationData.name, {
+        metadata: JSON.stringify(registrationData.metadata),
+        transactionId: transactionId || null,
+        paymentStatus: paymentStatus,
+      });
       setSuccess(true);
+      setShowPaymentModal(false);
+      setPendingPaymentData(null);
       // Refresh registrations
       const regs = await getRegistrations(id);
       setRegistrations(regs.documents);
@@ -299,6 +327,11 @@ export default function TournamentDetailPage({ params }) {
     } finally {
       setRegistering(false);
     }
+  };
+
+  const handlePaymentComplete = async (transactionId) => {
+    if (!pendingPaymentData) return;
+    await completeRegistration(pendingPaymentData, transactionId, "pending");
   };
 
   const handleDelete = async () => {
@@ -993,6 +1026,19 @@ export default function TournamentDetailPage({ params }) {
           )}
         </div>
       )}
+
+      {/* UPI Payment Modal */}
+      <UPIPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPendingPaymentData(null);
+        }}
+        tournamentName={tournament?.name || "Tournament"}
+        entryFee={parseFloat(tournament?.entryFee) || 0}
+        onPaymentComplete={handlePaymentComplete}
+        isProcessing={registering}
+      />
     </div>
   );
 }

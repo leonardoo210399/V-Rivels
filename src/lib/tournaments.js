@@ -73,7 +73,9 @@ export async function registerForTournament(tournamentId, userId, teamName, data
             teamName,
             metadata: data.metadata || null,
             registeredAt: new Date().toISOString(),
-            checkedIn: false
+            checkedIn: false,
+            transactionId: data.transactionId || null,
+            paymentStatus: data.paymentStatus || "free",
         }
     );
 

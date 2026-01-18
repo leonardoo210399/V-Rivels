@@ -144,13 +144,13 @@ export default function TournamentControlPage({ params }) {
     loadData();
   }, [id]);
 
-  const handleTogglePayment = async (regId, currentStatus) => {
+  const handleTogglePayment = async (regId, newStatus) => {
     try {
       setUpdating(true);
-      await updateRegistrationPaymentStatus(regId, !currentStatus);
+      await updateRegistrationPaymentStatus(regId, newStatus);
       setRegistrations((prev) =>
         prev.map((reg) =>
-          reg.$id === regId ? { ...reg, paymentStatus: !currentStatus } : reg,
+          reg.$id === regId ? { ...reg, paymentStatus: newStatus } : reg,
         ),
       );
     } catch (e) {
@@ -802,19 +802,65 @@ export default function TournamentControlPage({ params }) {
                               </div>
                             </div>
                           )}
-                          <button
-                            onClick={() =>
-                              handleTogglePayment(reg.$id, reg.paymentStatus)
-                            }
-                            disabled={updating}
-                            className={`rounded-xl border px-6 py-2.5 text-[10px] font-black tracking-widest uppercase transition-all hover:scale-105 active:scale-95 ${
-                              reg.paymentStatus
-                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                                : "border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-                            }`}
-                          >
-                            {reg.paymentStatus ? "Entry Paid" : "Entry Pending"}
-                          </button>
+                          {/* Payment Status & Transaction ID */}
+                          <div className="flex flex-col items-end gap-2">
+                            {reg.transactionId && (
+                              <div className="text-right">
+                                <p className="text-[9px] font-medium tracking-wide text-slate-600 uppercase">
+                                  Transaction ID
+                                </p>
+                                <p className="font-mono text-xs text-white">
+                                  {reg.transactionId}
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              {reg.paymentStatus === "pending" ? (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      handleTogglePayment(reg.$id, "verified")
+                                    }
+                                    disabled={updating}
+                                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[10px] font-black tracking-wider text-emerald-500 uppercase transition-all hover:bg-emerald-500/20"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                    Verify
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleTogglePayment(reg.$id, "rejected")
+                                    }
+                                    disabled={updating}
+                                    className="flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-[10px] font-black tracking-wider text-rose-500 uppercase transition-all hover:bg-rose-500/20"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                    Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <div
+                                  className={`rounded-xl border px-4 py-2 text-[10px] font-black tracking-widest uppercase ${
+                                    reg.paymentStatus === "verified"
+                                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                      : reg.paymentStatus === "rejected"
+                                        ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
+                                        : reg.paymentStatus === "free"
+                                          ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-500"
+                                          : "border-amber-500/20 bg-amber-500/10 text-amber-500"
+                                  }`}
+                                >
+                                  {reg.paymentStatus === "verified"
+                                    ? "✓ Paid"
+                                    : reg.paymentStatus === "rejected"
+                                      ? "✗ Rejected"
+                                      : reg.paymentStatus === "free"
+                                        ? "Free Entry"
+                                        : "Pending"}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
