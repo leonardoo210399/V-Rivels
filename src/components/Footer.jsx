@@ -100,6 +100,14 @@ export default function Footer() {
                   Refund Policy
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/shipping-policy"
+                  className="transition-colors hover:text-rose-400"
+                >
+                  Shipping Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
