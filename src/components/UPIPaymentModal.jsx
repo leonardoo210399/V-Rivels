@@ -15,23 +15,18 @@ import {
 // UPI Configuration
 const UPI_CONFIG = {
   vpa: "9028410543@okbizaxis",
-  payeeName: "Crypto news",
+  payeeName: "Crypto News",
   currency: "INR",
 };
 
 /**
  * Generates a UPI deep link URL
- * Note: We intentionally omit the 'pn' (payee name) parameter as it can cause
- * "risky transaction" errors when it doesn't match the registered bank name.
+ * Note: We use minimal parameters to avoid "risky transaction" errors.
+ * Some banks/UPI apps flag transactions with custom parameters.
  */
-function generateUPILink(amount, transactionNote) {
-  const params = new URLSearchParams({
-    pa: UPI_CONFIG.vpa,
-    am: amount.toString(),
-    cu: UPI_CONFIG.currency,
-    tn: transactionNote || "Tournament Entry Fee",
-  });
-  return `upi://pay?${params.toString()}`;
+function generateUPILink(amount) {
+  // Minimal UPI link - just payee address and amount
+  return `upi://pay?pa=${UPI_CONFIG.vpa}&am=${amount}`;
 }
 
 export default function UPIPaymentModal({
@@ -48,7 +43,7 @@ export default function UPIPaymentModal({
 
   if (!isOpen) return null;
 
-  const upiLink = generateUPILink(entryFee, `${tournamentName} Entry`);
+  const upiLink = generateUPILink(entryFee);
 
   const handleCopyUPI = async () => {
     try {
@@ -154,17 +149,83 @@ export default function UPIPaymentModal({
                   </div>
                 </div>
 
-                {/* Pay Button */}
-                <button
-                  onClick={handleOpenUPI}
-                  className="group mb-4 flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 px-6 py-4 font-bold text-white shadow-lg shadow-rose-500/20 transition-all hover:shadow-rose-500/40"
-                >
-                  <Smartphone className="h-5 w-5" />
-                  <span className="text-sm font-black tracking-wide uppercase">
-                    Pay with UPI App
-                  </span>
-                  <ExternalLink className="h-4 w-4 opacity-60 transition-transform group-hover:translate-x-1" />
-                </button>
+                {/* App-Specific Pay Buttons */}
+                <div className="mb-4 space-y-2">
+                  <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Pay with your preferred app
+                  </p>
+
+                  {/* Google Pay */}
+                  <button
+                    onClick={() => {
+                      window.location.href = `tez://upi/pay?pa=${UPI_CONFIG.vpa}&am=${entryFee}`;
+                      setTimeout(() => setStep(2), 1000);
+                    }}
+                    className="group flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-3 font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:shadow-blue-500/40"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M3.5 8.5A5 5 0 0 1 8.5 3.5h7a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5h-7a5 5 0 0 1-5-5v-7zm9.5 7.5V8l4 4-4 4z" />
+                    </svg>
+                    <span className="text-sm font-black tracking-wide">
+                      Google Pay
+                    </span>
+                  </button>
+
+                  {/* PhonePe */}
+                  <button
+                    onClick={() => {
+                      window.location.href = `phonepe://pay?pa=${UPI_CONFIG.vpa}&am=${entryFee}`;
+                      setTimeout(() => setStep(2), 1000);
+                    }}
+                    className="group flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-3 font-bold text-white shadow-lg shadow-purple-500/20 transition-all hover:shadow-purple-500/40"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                    </svg>
+                    <span className="text-sm font-black tracking-wide">
+                      PhonePe
+                    </span>
+                  </button>
+
+                  {/* Paytm */}
+                  <button
+                    onClick={() => {
+                      window.location.href = `paytmmp://pay?pa=${UPI_CONFIG.vpa}&am=${entryFee}`;
+                      setTimeout(() => setStep(2), 1000);
+                    }}
+                    className="group flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-sky-400 to-sky-500 px-6 py-3 font-bold text-white shadow-lg shadow-sky-500/20 transition-all hover:shadow-sky-500/40"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="3" />
+                    </svg>
+                    <span className="text-sm font-black tracking-wide">
+                      Paytm
+                    </span>
+                  </button>
+
+                  {/* Other UPI Apps */}
+                  <button
+                    onClick={handleOpenUPI}
+                    className="group flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-slate-950 px-6 py-3 font-bold text-slate-400 transition-all hover:border-white/20 hover:text-white"
+                  >
+                    <Smartphone className="h-5 w-5" />
+                    <span className="text-sm font-black tracking-wide">
+                      Other UPI Apps
+                    </span>
+                  </button>
+                </div>
 
                 {/* Already Paid Button */}
                 <button
