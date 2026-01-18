@@ -21,11 +21,12 @@ const UPI_CONFIG = {
 
 /**
  * Generates a UPI deep link URL
+ * Note: We intentionally omit the 'pn' (payee name) parameter as it can cause
+ * "risky transaction" errors when it doesn't match the registered bank name.
  */
 function generateUPILink(amount, transactionNote) {
   const params = new URLSearchParams({
     pa: UPI_CONFIG.vpa,
-    pn: UPI_CONFIG.payeeName,
     am: amount.toString(),
     cu: UPI_CONFIG.currency,
     tn: transactionNote || "Tournament Entry Fee",

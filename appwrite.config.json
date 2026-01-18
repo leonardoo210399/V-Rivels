@@ -755,10 +755,26 @@
                 },
                 {
                     "key": "paymentStatus",
-                    "type": "boolean",
+                    "type": "string",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "elements": [
+                        "free",
+                        "pending",
+                        "verified",
+                        "rejected"
+                    ],
+                    "format": "enum",
+                    "default": "free"
+                },
+                {
+                    "key": "transactionId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 },
                 {
                     "key": "checkedIn",
