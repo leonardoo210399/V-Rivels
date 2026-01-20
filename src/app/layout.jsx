@@ -3,6 +3,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import PageWrapper from "@/components/PageWrapper";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
 import "./app.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -31,6 +32,7 @@ export default function RootLayout({ children }) {
       >
         <AuthProvider>{children}</AuthProvider>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
