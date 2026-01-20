@@ -28,6 +28,9 @@ import DualRangeSlider from "@/components/DualRangeSlider";
 import Link from "next/link";
 import { rankIcons } from "@/assets/images/ranks";
 import { agentIcons } from "@/assets/images/agents";
+import { ScoutingReportModal } from "../profile/components";
+import { useProfileData, useScoutingReport } from "../profile/hooks";
+import { CheckCircle, XCircle, Info, AlertCircle } from "lucide-react";
 
 // Fallback icon
 const Cloud = ({ className }) => (
@@ -60,9 +63,33 @@ const GLOBAL_CACHE = {
 };
 
 export default function PlayerFinderPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Use Profile hooks to manage the scouting report
+  const {
+    valProfile,
+    mmrData,
+    availableAgents: modalAgents,
+    userPost,
+    setUserPost,
+  } = useProfileData(user, authLoading);
+
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+    type: "success",
+  });
+
+  const notify = (message, type = "success") => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ ...notification, show: false }), 4000);
+  };
+
+  const { showForm, setShowForm, posting, formData, setFormData, handlePost } =
+    useScoutingReport({ user, userPost, setUserPost, notify });
+
   const [availableAgents, setAvailableAgents] = useState([]);
 
   // Filter State
@@ -76,7 +103,9 @@ export default function PlayerFinderPage() {
 
   useEffect(() => {
     loadAgents();
+  }, [userPost]);
 
+  useEffect(() => {
     if (GLOBAL_CACHE.valorantAgents) {
       setAvailableAgents(GLOBAL_CACHE.valorantAgents);
     } else {
@@ -203,13 +232,22 @@ export default function PlayerFinderPage() {
               Agent Directory • Active Listings
             </p>
           </div>
-          <Link
-            href="/profile"
+          <button
+            onClick={() => {
+              if (!user)
+                return notify("Please login to post a listing", "error");
+              if (!valProfile)
+                return notify(
+                  "Please link your Riot account in your Profile first",
+                  "error",
+                );
+              setShowForm(true);
+            }}
             className="group flex w-full items-center justify-center gap-4 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-8 py-4 text-[11px] font-black tracking-[0.2em] text-white uppercase shadow-2xl shadow-rose-600/30 transition-all hover:scale-[1.02] hover:from-rose-500 hover:to-rose-600 active:scale-95 md:w-auto"
           >
             <UserPlus className="h-5 w-5" />
-            Post Your Listing
-          </Link>
+            {userPost ? "Update Your Listing" : "Post Your Listing"}
+          </button>
         </div>
 
         {/* Layout Container */}
@@ -538,6 +576,42 @@ export default function PlayerFinderPage() {
           </main>
         </div>
       </div>
+      {/* Player Finder Form Modal */}
+      <ScoutingReportModal
+        isOpen={showForm && !!valProfile}
+        onClose={() => setShowForm(false)}
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handlePost}
+        userPost={userPost}
+        mmrData={mmrData}
+        availableAgents={modalAgents}
+        posting={posting}
+      />
+
+      {/* Notification UI */}
+      {notification.show && (
+        <div className="animate-in slide-in-from-bottom-5 fixed bottom-8 left-1/2 z-[300] -translate-x-1/2 duration-500">
+          <div
+            className={`flex items-center gap-3 rounded-2xl border px-6 py-4 shadow-2xl backdrop-blur-xl ${
+              notification.type === "success"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+                : notification.type === "error"
+                  ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
+                  : "border-white/10 bg-slate-800/80 text-white"
+            }`}
+          >
+            {notification.type === "success" && (
+              <CheckCircle className="h-5 w-5" />
+            )}
+            {notification.type === "error" && <XCircle className="h-5 w-5" />}
+            {notification.type === "info" && <Info className="h-5 w-5" />}
+            <span className="pt-0.5 text-sm leading-none font-black tracking-widest uppercase">
+              {notification.message}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
