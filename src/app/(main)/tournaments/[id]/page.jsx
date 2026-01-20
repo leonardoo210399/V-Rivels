@@ -7,6 +7,10 @@ import {
   deleteTournament,
   checkInForTournament,
 } from "@/lib/tournaments";
+import {
+  createPaymentRequest,
+  getPaymentRequestsForUser,
+} from "@/lib/payment_requests";
 import { getMatches } from "@/lib/brackets";
 import CompleteBracket from "@/components/CompleteBracket";
 import CompleteStandings from "@/components/CompleteStandings";
@@ -14,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getUserProfile } from "@/lib/users";
 import { getAccount } from "@/lib/valorant";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Calendar,
   Trophy,
@@ -27,6 +32,7 @@ import {
   ChevronLeft,
   ExternalLink,
   Info,
+  RotateCcw,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
@@ -125,6 +131,7 @@ export default function TournamentDetailPage({ params }) {
   const [checkingIn, setCheckingIn] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPaymentData, setPendingPaymentData] = useState(null);
+  const [paymentRequest, setPaymentRequest] = useState(null);
 
   const [matches, setMatches] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
@@ -188,10 +195,17 @@ export default function TournamentDetailPage({ params }) {
 
         if (user) {
           try {
-            const profile = await getUserProfile(user.$id);
+            const [profile, payReq] = await Promise.all([
+              getUserProfile(user.$id),
+              getPaymentRequestsForUser(id, user.$id),
+            ]);
             setUserProfile(profile);
+            setPaymentRequest(payReq);
           } catch (profileError) {
-            console.warn("Failed to load user profile:", profileError);
+            console.warn(
+              "Failed to load user profile or payment request:",
+              profileError,
+            );
           }
         }
       } catch (error) {
@@ -331,7 +345,44 @@ export default function TournamentDetailPage({ params }) {
 
   const handlePaymentComplete = async (transactionId) => {
     if (!pendingPaymentData) return;
-    await completeRegistration(pendingPaymentData, transactionId, "pending");
+    setRegistering(true);
+    try {
+      await createPaymentRequest(
+        id,
+        user.$id,
+        pendingPaymentData.name,
+        pendingPaymentData.metadata,
+        transactionId,
+      );
+      setSuccess(true);
+      setShowPaymentModal(false);
+      setPendingPaymentData(null);
+      // Refresh payment request
+      const payReq = await getPaymentRequestsForUser(id, user.$id);
+      setPaymentRequest(payReq);
+    } catch (err) {
+      setError(err.message);
+      // alert(err.message); // Removed in favor of inline modal error
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleRetryPayment = () => {
+    if (!paymentRequest) return;
+    try {
+      const meta = JSON.parse(paymentRequest.metadata);
+      setPendingPaymentData({
+        name: paymentRequest.teamName,
+        metadata: meta,
+      });
+      setShowPaymentModal(true);
+    } catch (e) {
+      console.error("Failed to parse metadata for retry", e);
+      alert(
+        "Could not load previous details. Please refresh and try registering again.",
+      );
+    }
   };
 
   const handleDelete = async () => {
@@ -366,6 +417,10 @@ export default function TournamentDetailPage({ params }) {
   const userRegistration = registrations.find((r) => r.userId === user?.$id);
   const isRegistered = !!userRegistration;
   const isCheckedIn = userRegistration?.checkedIn;
+  const isPaymentPending =
+    !isRegistered && paymentRequest?.paymentStatus === "pending";
+  const isPaymentRejected =
+    !isRegistered && paymentRequest?.paymentStatus === "rejected";
   const isFull = registrations.length >= tournament.maxTeams;
 
   const handleCheckIn = async () => {
@@ -821,12 +876,12 @@ export default function TournamentDetailPage({ params }) {
               ) : isRegistered ? (
                 <div className="flex flex-col gap-3 md:gap-4">
                   <div
-                    className={`flex items-center gap-2 rounded-lg border p-3 md:rounded-xl md:p-4 ${isCheckedIn ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : "border-amber-500/20 bg-amber-500/10 text-amber-500"}`}
+                    className={`flex items-center gap-2 rounded-lg border p-3 md:rounded-xl md:p-4 ${isCheckedIn ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"}`}
                   >
                     {isCheckedIn ? (
                       <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
                     ) : (
-                      <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
+                      <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
                     )}
                     <span className="text-[10px] font-bold tracking-wide uppercase md:text-xs">
                       {isCheckedIn ? "Checked In!" : "Registered"}
@@ -846,6 +901,54 @@ export default function TournamentDetailPage({ params }) {
                       )}
                     </button>
                   )}
+                </div>
+              ) : isPaymentPending ? (
+                <div className="flex flex-col gap-3 md:gap-4">
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-amber-500 md:rounded-xl md:p-4">
+                    <div className="relative">
+                      <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
+                      <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-[10px] font-black tracking-widest uppercase md:text-xs">
+                        Verification Pending
+                      </p>
+                      <p className="text-[9px] leading-tight font-medium opacity-80 md:text-[10px]">
+                        We are verifying your payment. Status will update
+                        shortly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : isPaymentRejected ? (
+                <div className="flex flex-col gap-3 md:gap-4">
+                  <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
+                    <UserX className="h-4 w-4 md:h-5 md:w-5" />
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-0.5 text-[10px] font-black tracking-widest uppercase md:text-xs">
+                        Payment Rejected
+                      </p>
+                      <p className="text-[9px] leading-tight font-medium opacity-80 md:text-[10px]">
+                        {paymentRequest?.rejectionReason ||
+                          "Your payment was rejected. Please contact support."}
+                      </p>
+
+                      <button
+                        onClick={handleRetryPayment}
+                        className="mt-3 flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-500 hover:text-white md:text-xs"
+                      >
+                        <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                        Retry / Fix Payment
+                      </button>
+                      <Link
+                        href="/support"
+                        className="mt-3 flex items-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
+                      >
+                        <Info className="h-3 w-3 md:h-4 md:w-4" />
+                        Help / Support
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               ) : isFull ? (
                 <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
@@ -1033,11 +1136,13 @@ export default function TournamentDetailPage({ params }) {
         onClose={() => {
           setShowPaymentModal(false);
           setPendingPaymentData(null);
+          setError(null); // Clear error on close
         }}
-        tournamentName={tournament?.name || "Tournament"}
-        entryFee={parseFloat(tournament?.entryFee) || 0}
+        tournamentName={tournament.name}
+        entryFee={tournament.entryFee}
         onPaymentComplete={handlePaymentComplete}
         isProcessing={registering}
+        error={error} // Pass the error state
       />
     </div>
   );
