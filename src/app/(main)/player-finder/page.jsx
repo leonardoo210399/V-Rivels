@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getFreeAgents, deleteFreeAgentPost } from "@/lib/players";
 import { getUserProfile } from "@/lib/users";
@@ -24,6 +24,7 @@ import {
   Activity,
 } from "lucide-react";
 import Loader from "@/components/Loader";
+import DualRangeSlider from "@/components/DualRangeSlider";
 import Link from "next/link";
 import { rankIcons } from "@/assets/images/ranks";
 import { agentIcons } from "@/assets/images/agents";
@@ -66,8 +67,12 @@ export default function PlayerFinderPage() {
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All Roles");
-  const [regionFilter, setRegionFilter] = useState("All Regions");
+  const [roleFilter, setRoleFilter] = useState([]); // Array for multi-select
+  const [regionFilter, setRegionFilter] = useState([]); // Array for multi-select
+  const [mainAgentFilter, setMainAgentFilter] = useState("All Agents");
+  const [discordFilter, setDiscordFilter] = useState(false); // New Discord Filter
+  // const [eloFilter, setEloFilter] = useState("All Ranks"); // Replaced by Range
+  const [eloRange, setEloRange] = useState({ min: 0, max: 2000 }); // Max Elo roughly 2000+? adjustable
 
   useEffect(() => {
     loadAgents();
@@ -104,16 +109,77 @@ export default function PlayerFinderPage() {
     const matchesSearch =
       agent.ingameName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       agent.mainAgent?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === "All Roles" || agent.role === roleFilter;
-    const matchesRegion =
-      regionFilter === "All Regions" ||
-      agent.region?.toLowerCase() === regionFilter.toLowerCase();
 
-    return matchesSearch && matchesRole && matchesRegion;
+    // Multi-select logic: if array is empty, match all. Else check inclusion.
+    const matchesRole =
+      roleFilter.length === 0 || roleFilter.includes(agent.role);
+
+    const matchesRegion =
+      regionFilter.length === 0 ||
+      regionFilter.includes(agent.region?.toLowerCase());
+
+    const matchesMainAgent =
+      mainAgentFilter === "All Agents" ||
+      agent.mainAgent?.toLowerCase() === mainAgentFilter.toLowerCase();
+
+    const matchesDiscord =
+      !discordFilter || agent.discordTag || agent.discordUsername;
+
+    // Note: Elo filtering is not fully supported as rank is not in DB.
+    // We would need to fetch all ranks to filter accurately, which is too expensive.
+    // For now, this filter might be visual or client-side only if we lift state later.
+    const matchesElo = true;
+
+    return (
+      matchesSearch &&
+      matchesRole &&
+      matchesRegion &&
+      matchesMainAgent &&
+      matchesDiscord &&
+      matchesElo
+    );
   });
 
-  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(false);
+  const [isRoleFilterOpen, setIsRoleFilterOpen] = useState(true); // Default open
   const [isRegionFilterOpen, setIsRegionFilterOpen] = useState(false);
+  const [isMainAgentFilterOpen, setIsMainAgentFilterOpen] = useState(false);
+  const [isEloFilterOpen, setIsEloFilterOpen] = useState(false);
+  const [isSocialFilterOpen, setIsSocialFilterOpen] = useState(true); // Default open
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false); // Collapsible on mobile
+
+  const handleEloChange = useCallback(({ min, max }) => {
+    setEloRange((prev) => {
+      if (prev.min === min && prev.max === max) return prev;
+      return { min, max };
+    });
+  }, []);
+
+  const toggleRole = (role) => {
+    setRoleFilter((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
+    );
+  };
+
+  const toggleRegion = (region) => {
+    setRegionFilter((prev) =>
+      prev.includes(region)
+        ? prev.filter((r) => r !== region)
+        : [...prev, region],
+    );
+  };
+
+  // Custom Checkbox Component
+  const Checkbox = ({ checked }) => (
+    <div
+      className={`flex h-4 w-4 items-center justify-center rounded border transition-all ${
+        checked
+          ? "border-rose-500 bg-rose-500 text-white"
+          : "border-slate-600 bg-transparent"
+      }`}
+    >
+      {checked && <div className="h-2 w-2 rounded-full bg-white" />}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 pt-24 pb-12">
@@ -146,192 +212,343 @@ export default function PlayerFinderPage() {
           </Link>
         </div>
 
-        {/* Search & Filters */}
-        <div
-          className={`relative mb-8 grid grid-cols-1 gap-4 rounded-2xl border border-white/5 bg-slate-900/50 p-4 backdrop-blur-sm md:grid-cols-4 ${isRoleFilterOpen || isRegionFilterOpen ? "z-[100]" : "z-10"}`}
-        >
-          <div className="relative md:col-span-2">
+        {/* Layout Container */}
+        <div className="flex flex-col gap-8 lg:flex-row">
+          {/* Mobile Search (Visible only on mobile) */}
+          <div className="relative lg:hidden">
             <input
               type="text"
               placeholder="Search by name or agent..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 pl-10 text-sm text-white transition-all outline-none focus:border-rose-500"
+              className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-4 pl-12 text-sm text-white transition-all outline-none focus:border-rose-500 focus:shadow-[0_0_20px_rgba(244,63,94,0.1)]"
             />
-            <Crosshair className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Crosshair className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-slate-500" />
           </div>
 
-          {/* Custom Role Filter */}
-          <div className={`relative ${isRoleFilterOpen ? "z-50" : "z-20"}`}>
-            <button
-              onClick={() => {
-                setIsRoleFilterOpen(!isRoleFilterOpen);
-                setIsRegionFilterOpen(false);
-              }}
-              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none hover:bg-white/5 focus:border-rose-500"
-            >
-              <span className="truncate">{roleFilter}</span>
-              <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${isRoleFilterOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {isRoleFilterOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setIsRoleFilterOpen(false)}
-                />
-                <div className="absolute top-full right-0 left-0 z-30 mt-2 max-h-[300px] overflow-y-auto rounded-xl border border-white/10 bg-slate-900 p-1 shadow-2xl backdrop-blur-xl">
+          {/* Sidebar Filters (Desktop: Left, Mobile: Top Stack) */}
+          <aside className="w-full shrink-0 space-y-4 lg:w-64">
+            <div className="rounded-2xl border border-white/5 bg-slate-900/50 p-6 backdrop-blur-sm">
+              <div
+                className={`${isMobileFiltersOpen ? "mb-6 border-b pb-4" : "mb-0 border-none pb-0"} flex cursor-pointer items-center justify-between border-white/10 lg:mb-6 lg:cursor-default lg:border-none lg:pb-0`}
+                onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold tracking-widest text-white uppercase">
+                    Filters
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-400 transition-transform lg:hidden ${isMobileFiltersOpen ? "rotate-180" : ""}`}
+                  />
+                </div>
+                {(roleFilter.length > 0 ||
+                  regionFilter.length > 0 ||
+                  discordFilter ||
+                  mainAgentFilter !== "All Agents" ||
+                  eloRange.min > 0 ||
+                  eloRange.max < 2000) && (
                   <button
-                    onClick={() => {
-                      setRoleFilter("All Roles");
-                      setIsRoleFilterOpen(false);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRoleFilter([]);
+                      setRegionFilter([]);
+                      setMainAgentFilter("All Agents");
+                      setDiscordFilter(false);
+                      setEloRange({ min: 0, max: 2000 });
                     }}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all ${
-                      roleFilter === "All Roles"
-                        ? "bg-rose-500/10 text-rose-500"
-                        : "text-slate-400 hover:bg-white/5 hover:text-white"
-                    }`}
+                    className="text-[10px] font-bold text-rose-500 hover:text-rose-400 hover:underline"
                   >
-                    <Crosshair className="h-4 w-4" />
-                    All Roles
+                    Clear All
                   </button>
-                  {Object.keys(ROLE_ICONS).map((role) => {
-                    const Icon = ROLE_ICONS[role];
-                    return (
+                )}
+              </div>
+
+              <div
+                className={`flex flex-col gap-6 ${isMobileFiltersOpen ? "flex" : "hidden lg:flex"}`}
+              >
+                {/* Role Filter (Accordion) */}
+                <div className="border-b border-white/5 pb-6">
+                  <button
+                    onClick={() => setIsRoleFilterOpen(!isRoleFilterOpen)}
+                    className="flex w-full items-center justify-between text-xs font-bold tracking-widest text-slate-400 uppercase transition-colors hover:text-white"
+                  >
+                    <span>Role</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${isRoleFilterOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isRoleFilterOpen && (
+                    <div className="mt-4 space-y-2">
+                      {/* "All Roles" logic isn't strictly needed for UI if we trust the "empty = all" logic,
+                           but showing it or just the options is fine. Reference suggests checking "All" or specific items.
+                           For simplicity in multi-select, usually "All" clears the specific selections.
+                       */}
+                      {Object.keys(ROLE_ICONS).map((role) => {
+                        const Icon = ROLE_ICONS[role];
+                        const isSelected = roleFilter.includes(role);
+                        return (
+                          <button
+                            key={role}
+                            onClick={() => toggleRole(role)}
+                            className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-all hover:bg-white/5 ${
+                              isSelected ? "text-white" : "text-slate-400"
+                            }`}
+                          >
+                            <Checkbox checked={isSelected} />
+                            <Icon
+                              className={`h-4 w-4 ${isSelected ? "text-rose-500" : "text-slate-500"}`}
+                            />
+                            <span>{role}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Main Agent Filter (Accordion) */}
+                <div className="border-b border-white/5 pb-6">
+                  <button
+                    onClick={() =>
+                      setIsMainAgentFilterOpen(!isMainAgentFilterOpen)
+                    }
+                    className="flex w-full items-center justify-between text-xs font-bold tracking-widest text-slate-400 uppercase transition-colors hover:text-white"
+                  >
+                    <span>Main Agent</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${isMainAgentFilterOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isMainAgentFilterOpen && (
+                    <div className="mt-4">
                       <button
-                        key={role}
-                        onClick={() => {
-                          setRoleFilter(role);
-                          setIsRoleFilterOpen(false);
-                        }}
-                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-all ${
-                          roleFilter === role
-                            ? "bg-rose-500/10 text-rose-500"
-                            : "text-slate-400 hover:bg-white/5 hover:text-white"
+                        onClick={() => setMainAgentFilter("All Agents")}
+                        className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-all hover:bg-white/5 ${
+                          mainAgentFilter === "All Agents"
+                            ? "text-rose-500"
+                            : "text-slate-400"
                         }`}
                       >
-                        <Icon className="h-4 w-4" />
-                        {role}
+                        <span
+                          className={`flex h-4 w-4 items-center justify-center rounded border ${mainAgentFilter === "All Agents" ? "border-rose-500 bg-rose-500" : "border-slate-600"}`}
+                        >
+                          {mainAgentFilter === "All Agents" && (
+                            <div className="h-2 w-2 rounded-full bg-white" />
+                          )}
+                        </span>
+                        All Agents
                       </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
 
-          {/* Custom Region Filter */}
-          <div className={`relative ${isRegionFilterOpen ? "z-50" : "z-20"}`}>
-            <button
-              onClick={() => {
-                setIsRegionFilterOpen(!isRegionFilterOpen);
-                setIsRoleFilterOpen(false);
-              }}
-              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none hover:bg-white/5 focus:border-rose-500"
-            >
-              <span className="truncate">
-                {regionFilter === "All Regions"
-                  ? "All Regions"
-                  : regionFilter === "ap"
-                    ? "Asia Pacific"
-                    : regionFilter === "eu"
-                      ? "Europe"
-                      : regionFilter === "na"
-                        ? "North America"
-                        : regionFilter === "kr"
-                          ? "Korea"
-                          : regionFilter === "latam"
-                            ? "LATAM"
-                            : regionFilter === "br"
-                              ? "Brazil"
-                              : regionFilter}
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${isRegionFilterOpen ? "rotate-180" : ""}`}
+                      <div className="custom-scrollbar mt-2 max-h-60 space-y-1 overflow-y-auto pr-2">
+                        {availableAgents
+                          .sort((a, b) =>
+                            a.displayName.localeCompare(b.displayName),
+                          )
+                          .map((agent) => {
+                            const isSelected =
+                              mainAgentFilter === agent.displayName;
+                            return (
+                              <button
+                                key={agent.uuid}
+                                onClick={() =>
+                                  setMainAgentFilter(agent.displayName)
+                                }
+                                className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-all hover:bg-white/5 ${
+                                  isSelected ? "text-white" : "text-slate-400"
+                                }`}
+                              >
+                                <span
+                                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${isSelected ? "border-rose-500 bg-rose-500" : "border-slate-600"}`}
+                                >
+                                  {isSelected && (
+                                    <div className="h-2 w-2 rounded-full bg-white" />
+                                  )}
+                                </span>
+                                {agent.displayIcon && (
+                                  <img
+                                    src={agent.displayIcon}
+                                    alt=""
+                                    className="h-5 w-5 rounded-full object-cover"
+                                  />
+                                )}
+                                <span className="truncate">
+                                  {agent.displayName}
+                                </span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Elo Filter (Accordion) */}
+                <div className="border-b border-white/5 pb-6">
+                  <button
+                    onClick={() => setIsEloFilterOpen(!isEloFilterOpen)}
+                    className="flex w-full items-center justify-between text-xs font-bold tracking-widest text-slate-400 uppercase transition-colors hover:text-white"
+                  >
+                    <span>Rank / Elo</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${isEloFilterOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isEloFilterOpen && (
+                    <div className="mt-6 px-2">
+                      <DualRangeSlider
+                        min={0}
+                        max={2000}
+                        initialMin={eloRange.min}
+                        initialMax={eloRange.max}
+                        onChange={handleEloChange}
+                      />
+                      <div className="mt-4 flex justify-between text-[10px] font-bold text-slate-500">
+                        <span>0 Elo</span>
+                        <span>2000+ Elo</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Region Filter (Accordion) */}
+                <div className="border-b border-white/5 pb-6">
+                  <button
+                    onClick={() => setIsRegionFilterOpen(!isRegionFilterOpen)}
+                    className="flex w-full items-center justify-between text-xs font-bold tracking-widest text-slate-400 uppercase transition-colors hover:text-white"
+                  >
+                    <span>Region</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${isRegionFilterOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isRegionFilterOpen && (
+                    <div className="mt-4 space-y-2">
+                      {[
+                        { value: "ap", label: "Asia Pacific" },
+                        { value: "eu", label: "Europe" },
+                        { value: "na", label: "North America" },
+                        { value: "kr", label: "Korea" },
+                        { value: "latam", label: "LATAM" },
+                        { value: "br", label: "Brazil" },
+                      ].map((option) => {
+                        const isSelected = regionFilter.includes(option.value);
+                        return (
+                          <button
+                            key={option.value}
+                            onClick={() => toggleRegion(option.value)}
+                            className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-all hover:bg-white/5 ${
+                              isSelected ? "text-white" : "text-slate-400"
+                            }`}
+                          >
+                            <Checkbox checked={isSelected} />
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Socials Filter (Accordion) */}
+                <div className="pb-2">
+                  <button
+                    onClick={() => setIsSocialFilterOpen(!isSocialFilterOpen)}
+                    className="flex w-full items-center justify-between text-xs font-bold tracking-widest text-slate-400 uppercase transition-colors hover:text-white"
+                  >
+                    <span>Socials</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${isSocialFilterOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isSocialFilterOpen && (
+                    <div className="mt-4 space-y-2">
+                      <button
+                        onClick={() => setDiscordFilter(!discordFilter)}
+                        className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-all hover:bg-white/5 ${
+                          discordFilter ? "text-white" : "text-slate-400"
+                        }`}
+                      >
+                        <Checkbox checked={discordFilter} />
+                        <span>Discord Available</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content (Search + Grid) */}
+          <main className="flex-1">
+            <div className="relative mb-6 hidden lg:block">
+              <input
+                type="text"
+                placeholder="Search by name or agent..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-4 pl-12 text-sm text-white transition-all outline-none focus:border-rose-500 focus:shadow-[0_0_20px_rgba(244,63,94,0.1)]"
               />
-            </button>
+              <Crosshair className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-slate-500" />
+            </div>
 
-            {isRegionFilterOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setIsRegionFilterOpen(false)}
-                />
-                <div className="absolute top-full right-0 left-0 z-30 mt-2 max-h-[300px] overflow-y-auto rounded-xl border border-white/10 bg-slate-900 p-1 shadow-2xl backdrop-blur-xl">
-                  {[
-                    { value: "All Regions", label: "All Regions" },
-                    { value: "ap", label: "Asia Pacific" },
-                    { value: "eu", label: "Europe" },
-                    { value: "na", label: "North America" },
-                    { value: "kr", label: "Korea" },
-                    { value: "latam", label: "LATAM" },
-                    { value: "br", label: "Brazil" },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => {
-                        setRegionFilter(option.value);
-                        setIsRegionFilterOpen(false);
-                      }}
-                      className={`flex w-full items-center rounded-lg px-4 py-3 text-left text-sm transition-all hover:bg-white/5 ${
-                        regionFilter === option.value
-                          ? "bg-rose-500/10 text-rose-500"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </>
+            {loading ? (
+              <Loader fullScreen={false} />
+            ) : filteredAgents.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/10 py-24 text-center">
+                <p className="mb-2 text-xs font-bold tracking-widest text-slate-500 uppercase">
+                  No Results Found
+                </p>
+                <p className="mb-6 text-sm text-slate-600">
+                  Try adjusting your filters or search terms.
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setRoleFilter([]);
+                    setRegionFilter([]);
+                    setMainAgentFilter("All Agents");
+                    setDiscordFilter(false);
+                    setEloRange({ min: 0, max: 2000 });
+                  }}
+                  className="mx-auto flex items-center justify-center gap-2 text-xs font-black tracking-widest text-rose-500 uppercase hover:text-rose-400"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Clear All Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-2">
+                {filteredAgents.map((agent) => (
+                  <AgentCard
+                    key={agent.$id}
+                    agent={agent}
+                    currentUser={user}
+                    RoleIcon={RoleIcon}
+                    availableAgents={availableAgents}
+                    eloRange={eloRange}
+                  />
+                ))}
+              </div>
             )}
-          </div>
+          </main>
         </div>
-
-        {/* Listings Grid */}
-        {loading ? (
-          <Loader fullScreen={false} />
-        ) : filteredAgents.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 py-24 text-center">
-            <p className="mb-2 text-xs font-bold tracking-widest text-slate-500 uppercase">
-              No Results Found
-            </p>
-            <p className="mb-6 text-sm text-slate-600">
-              Try adjusting your filters or search terms.
-            </p>
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setRoleFilter("All Roles");
-                setRegionFilter("All Regions");
-              }}
-              className="mx-auto flex items-center justify-center gap-2 text-xs font-black tracking-widest text-rose-500 uppercase hover:text-rose-400"
-            >
-              <RefreshCw className="h-3 w-3" />
-              Clear All Filters
-            </button>
-          </div>
-        ) : (
-          <div className="relative z-0 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAgents.map((agent) => (
-              <AgentCard
-                key={agent.$id}
-                agent={agent}
-                currentUser={user}
-                RoleIcon={RoleIcon}
-                availableAgents={availableAgents}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
+function AgentCard({
+  agent,
+  currentUser,
+  RoleIcon,
+  availableAgents,
+  eloRange,
+}) {
   const [valData, setValData] = useState(null);
   const [discordProfile, setDiscordProfile] = useState({
     tag: agent.discordTag,
@@ -419,6 +636,16 @@ function AgentCard({ agent, currentUser, RoleIcon, availableAgents }) {
 
     executeFetch();
   }, [agent.ingameName]);
+
+  // Client-side Elo Filtering
+  // Only filter if we have fetched the Elo data successfully
+  // If still loading or no Elo data found, we keep the card visible to be safe
+  const currentElo = valData?.mmr?.current_data?.elo;
+  if (!loading && currentElo !== undefined && currentElo !== null) {
+    if (currentElo < eloRange.min || currentElo > eloRange.max) {
+      return null;
+    }
+  }
 
   const rankDisplay =
     valData?.mmr?.current_data?.currenttierpatched || "Unranked";
