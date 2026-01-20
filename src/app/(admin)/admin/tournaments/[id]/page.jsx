@@ -8,6 +8,7 @@ import {
   getRegistrations,
   updateRegistrationPaymentStatus,
   registerForTournament,
+  deleteRegistration,
 } from "@/lib/tournaments";
 import {
   getTournamentPaymentRequests,
@@ -135,6 +136,18 @@ export default function TournamentControlPage({ params }) {
         getMatches(id),
         getTournamentPaymentRequests(id),
       ]);
+      
+
+      // Auto-fix count discrepancy
+      // If the counter on the tournament doc doesn't match the actual number of registration docs
+      if (tData.registeredTeams !== regsRes.total) {
+        console.warn(
+          `Fixing count discrepancy: ${tData.registeredTeams} -> ${regsRes.total}`,
+        );
+        await updateTournament(id, { registeredTeams: regsRes.total });
+        tData.registeredTeams = regsRes.total; // Update local object
+      }
+
       setTournament(tData);
       setRegistrations(regsRes.documents);
       setMatches(matchesRes);
@@ -676,6 +689,44 @@ export default function TournamentControlPage({ params }) {
     }
   };
 
+  const handleRevokeRegistration = async (registration) => {
+    if (
+      !confirm(
+        "Are you sure you want to REVOKE this registration? This will delete the entry and reject the payment.",
+      )
+    )
+      return;
+
+    setUpdating(true);
+    try {
+      // 1. Delete Registration
+      await deleteRegistration(registration.$id, id);
+
+      // 2. Find associated payment request and update it
+      // We look for verified requests for this user
+      const relatedRequest = paymentRequests.find(
+        (pr) =>
+          pr.userId === registration.userId && pr.paymentStatus === "verified",
+      );
+
+      if (relatedRequest) {
+        await updatePaymentRequestStatus(
+          relatedRequest.$id,
+          "rejected",
+          "Registration Revoked by Admin",
+        );
+      }
+
+      await loadData();
+      alert("Registration revoked successfully.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to revoke: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleRejectRequest = (request) => {
     setSelectedRequestForRejection(request);
     setRejectionReason("Invalid Transaction ID");
@@ -1033,25 +1084,37 @@ export default function TournamentControlPage({ params }) {
                                   </button>
                                 </>
                               ) : (
-                                <div
-                                  className={`rounded-xl border px-4 py-2 text-[10px] font-black tracking-widest uppercase ${
-                                    reg.paymentStatus === "verified"
-                                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                <>
+                                  <div
+                                    className={`rounded-xl border px-4 py-2 text-[10px] font-black tracking-widest uppercase ${
+                                      reg.paymentStatus === "verified"
+                                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                        : reg.paymentStatus === "rejected"
+                                          ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
+                                          : reg.paymentStatus === "free"
+                                            ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-500"
+                                            : "border-amber-500/20 bg-amber-500/10 text-amber-500"
+                                    }`}
+                                  >
+                                    {reg.paymentStatus === "verified"
+                                      ? "✓ Paid"
                                       : reg.paymentStatus === "rejected"
-                                        ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
+                                        ? "✗ Rejected"
                                         : reg.paymentStatus === "free"
-                                          ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-500"
-                                          : "border-amber-500/20 bg-amber-500/10 text-amber-500"
-                                  }`}
-                                >
-                                  {reg.paymentStatus === "verified"
-                                    ? "✓ Paid"
-                                    : reg.paymentStatus === "rejected"
-                                      ? "✗ Rejected"
-                                      : reg.paymentStatus === "free"
-                                        ? "Free Entry"
-                                        : "Pending"}
-                                </div>
+                                          ? "Free Entry"
+                                          : "Pending"}
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      handleRevokeRegistration(reg)
+                                    }
+                                    disabled={updating}
+                                    title="Revoke Registration"
+                                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:opacity-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>

@@ -423,6 +423,11 @@ export default function TournamentDetailPage({ params }) {
     !isRegistered && paymentRequest?.paymentStatus === "rejected";
   const isFull = registrations.length >= tournament.maxTeams;
 
+  // Check-in logic: Use specific checkInStart time if available
+  const now = new Date();
+  const checkInTime = new Date(tournament.checkInStart || tournament.date);
+  const canCheckIn = now >= checkInTime;
+
   const handleCheckIn = async () => {
     setCheckingIn(true);
     try {
@@ -889,17 +894,27 @@ export default function TournamentDetailPage({ params }) {
                   </div>
 
                   {!isCheckedIn && (
-                    <button
-                      onClick={handleCheckIn}
-                      disabled={checkingIn}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:opacity-50 md:rounded-xl md:py-4 md:text-xs"
-                    >
-                      {checkingIn ? (
-                        <Loader fullScreen={false} />
-                      ) : (
-                        "Check In Now"
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={handleCheckIn}
+                        disabled={checkingIn || !canCheckIn}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none md:rounded-xl md:py-4 md:text-xs"
+                      >
+                        {checkingIn ? (
+                          <Loader fullScreen={false} />
+                        ) : !canCheckIn ? (
+                          `Check-in opens at ${new Date(tournament.checkInStart || tournament.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                        ) : (
+                          "Check In Now"
+                        )}
+                      </button>
+                      {!canCheckIn && (
+                        <p className="text-center text-[9px] text-slate-500 md:text-[10px]">
+                          Check-in will be enabled automatically at the
+                          scheduled time.
+                        </p>
                       )}
-                    </button>
+                    </div>
                   )}
                 </div>
               ) : isPaymentPending ? (
