@@ -73,7 +73,9 @@ export async function registerForTournament(tournamentId, userId, teamName, data
             teamName,
             metadata: data.metadata || null,
             registeredAt: new Date().toISOString(),
-            checkedIn: false
+            checkedIn: false,
+            transactionId: data.transactionId || null,
+            paymentStatus: data.paymentStatus || "free",
         }
     );
 
@@ -177,6 +179,34 @@ export async function deleteTournament(id) {
         );
     } catch (error) {
         console.error("Critical failure during tournament deletion:", error);
+        throw error;
+    }
+}
+
+export async function deleteRegistration(registrationId, tournamentId) {
+    try {
+        const tournament = await getTournament(tournamentId);
+        
+        // 1. Delete the registration
+        await databases.deleteDocument(
+            DATABASE_ID,
+            REGISTRATIONS_COLLECTION_ID,
+            registrationId
+        );
+
+        // 2. Decrement registeredTeams count
+        await databases.updateDocument(
+            DATABASE_ID,
+            TOURNAMENTS_COLLECTION_ID,
+            tournamentId,
+            {
+                registeredTeams: Math.max(0, (tournament.registeredTeams || 0) - 1)
+            }
+        );
+
+        return true;
+    } catch (error) {
+        console.error("Delete registration error", error);
         throw error;
     }
 }

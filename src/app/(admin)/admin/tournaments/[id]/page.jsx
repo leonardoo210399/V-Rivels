@@ -7,7 +7,13 @@ import {
   deleteTournament,
   getRegistrations,
   updateRegistrationPaymentStatus,
+  registerForTournament,
+  deleteRegistration,
 } from "@/lib/tournaments";
+import {
+  getTournamentPaymentRequests,
+  updatePaymentRequestStatus,
+} from "@/lib/payment_requests";
 import {
   getMatches,
   updateMatchStatus,
@@ -61,6 +67,7 @@ export default function TournamentControlPage({ params }) {
 
   const [tournament, setTournament] = useState(null);
   const [registrations, setRegistrations] = useState([]);
+  const [paymentRequests, setPaymentRequests] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -90,6 +97,23 @@ export default function TournamentControlPage({ params }) {
   const [savingMatch, setSavingMatch] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
 
+  // Rejection Modal State
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [selectedRequestForRejection, setSelectedRequestForRejection] =
+    useState(null);
+  const [rejectionReason, setRejectionReason] = useState(
+    "Invalid Transaction ID",
+  );
+  const [customRejectionReason, setCustomRejectionReason] = useState("");
+
+  const REJECTION_REASONS = [
+    "Invalid Transaction ID",
+    "Payment Not Received",
+    "Incorrect Amount",
+    "Duplicate Request",
+    "Other",
+  ];
+
   // Edit Form State
   const [editForm, setEditForm] = useState({
     name: "",
@@ -106,14 +130,28 @@ export default function TournamentControlPage({ params }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [tData, regsRes, matchesRes] = await Promise.all([
+      const [tData, regsRes, matchesRes, payReqsRes] = await Promise.all([
         getTournament(id),
         getRegistrations(id),
         getMatches(id),
+        getTournamentPaymentRequests(id),
       ]);
+      
+
+      // Auto-fix count discrepancy
+      // If the counter on the tournament doc doesn't match the actual number of registration docs
+      if (tData.registeredTeams !== regsRes.total) {
+        console.warn(
+          `Fixing count discrepancy: ${tData.registeredTeams} -> ${regsRes.total}`,
+        );
+        await updateTournament(id, { registeredTeams: regsRes.total });
+        tData.registeredTeams = regsRes.total; // Update local object
+      }
+
       setTournament(tData);
       setRegistrations(regsRes.documents);
       setMatches(matchesRes);
+      setPaymentRequests(payReqsRes);
 
       // Sync edit form with loaded data
       setEditForm({
@@ -144,13 +182,13 @@ export default function TournamentControlPage({ params }) {
     loadData();
   }, [id]);
 
-  const handleTogglePayment = async (regId, currentStatus) => {
+  const handleTogglePayment = async (regId, newStatus) => {
     try {
       setUpdating(true);
-      await updateRegistrationPaymentStatus(regId, !currentStatus);
+      await updateRegistrationPaymentStatus(regId, newStatus);
       setRegistrations((prev) =>
         prev.map((reg) =>
-          reg.$id === regId ? { ...reg, paymentStatus: !currentStatus } : reg,
+          reg.$id === regId ? { ...reg, paymentStatus: newStatus } : reg,
         ),
       );
     } catch (e) {
@@ -619,6 +657,112 @@ export default function TournamentControlPage({ params }) {
     }
   };
 
+  const handleApproveRequest = async (request) => {
+    if (!confirm("Approve this payment and register the user?")) return;
+    setUpdating(true);
+    try {
+      const metadata = parseMetadata(request.metadata) || {};
+
+      // 1. Create Registration
+      await registerForTournament(
+        request.tournamentId,
+        request.userId,
+        request.teamName,
+        {
+          metadata: request.metadata, // Pass the original string, not the parsed object
+          transactionId: request.transactionId,
+          paymentStatus: "verified",
+        },
+      );
+
+      // 2. Update Request Status
+      await updatePaymentRequestStatus(request.$id, "verified");
+
+      // 3. Reload
+      await loadData();
+      alert("User registered successfully!");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to approve: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleRevokeRegistration = async (registration) => {
+    if (
+      !confirm(
+        "Are you sure you want to REVOKE this registration? This will delete the entry and reject the payment.",
+      )
+    )
+      return;
+
+    setUpdating(true);
+    try {
+      // 1. Delete Registration
+      await deleteRegistration(registration.$id, id);
+
+      // 2. Find associated payment request and update it
+      // We look for verified requests for this user
+      const relatedRequest = paymentRequests.find(
+        (pr) =>
+          pr.userId === registration.userId && pr.paymentStatus === "verified",
+      );
+
+      if (relatedRequest) {
+        await updatePaymentRequestStatus(
+          relatedRequest.$id,
+          "rejected",
+          "Registration Revoked by Admin",
+        );
+      }
+
+      await loadData();
+      alert("Registration revoked successfully.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to revoke: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleRejectRequest = (request) => {
+    setSelectedRequestForRejection(request);
+    setRejectionReason("Invalid Transaction ID");
+    setCustomRejectionReason("");
+    setRejectionModalOpen(true);
+  };
+
+  const confirmReject = async () => {
+    if (!selectedRequestForRejection) return;
+
+    const finalReason =
+      rejectionReason === "Other" ? customRejectionReason : rejectionReason;
+
+    if (!finalReason.trim()) {
+      alert("Please provide a rejection reason");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await updatePaymentRequestStatus(
+        selectedRequestForRejection.$id,
+        "rejected",
+        finalReason,
+      );
+      await loadData();
+      setRejectionModalOpen(false);
+      setSelectedRequestForRejection(null);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to reject: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const participantMap =
     registrations?.reduce((acc, r) => {
       acc[r.$id] = r.teamName
@@ -714,6 +858,7 @@ export default function TournamentControlPage({ params }) {
         <div className="flex w-fit items-center gap-1 rounded-2xl border border-white/5 bg-slate-900/50 p-1 backdrop-blur-sm">
           {[
             { id: "participants", label: "Participants", icon: Users },
+            { id: "requests", label: "Requests", icon: FileText },
             { id: "matches", label: "Match Control", icon: Swords },
             { id: "settings", label: "Settings", icon: Settings },
           ].map((tab) => (
@@ -733,6 +878,106 @@ export default function TournamentControlPage({ params }) {
         </div>
 
         <div className="animate-in fade-in duration-300">
+          {activeTab === "requests" && (
+            <div className="space-y-4">
+              {paymentRequests.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-white/5 bg-slate-950/30 p-12 text-center">
+                  <div className="mx-auto mb-4 w-fit rounded-full bg-slate-900 p-4">
+                    <FileText className="h-8 w-8 text-slate-700" />
+                  </div>
+                  <h3 className="text-xl font-bold tracking-widest text-slate-500 uppercase">
+                    No Payment Requests
+                  </h3>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Pending payment requests will appear here.
+                  </p>
+                </div>
+              ) : (
+                paymentRequests.map((req) => {
+                  const meta = parseMetadata(req.metadata);
+                  return (
+                    <div
+                      key={req.$id}
+                      className="group overflow-hidden rounded-3xl border border-white/5 bg-slate-950/30 backdrop-blur-sm transition-all hover:border-indigo-500/20"
+                    >
+                      <div className="flex flex-col justify-between gap-6 p-6 md:flex-row md:items-center">
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`rounded-2xl border border-white/5 p-4 ${req.paymentStatus === "pending" ? "bg-amber-500/10 text-amber-500" : req.paymentStatus === "verified" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}
+                          >
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <div className="mb-1 flex items-center gap-2">
+                              <h3 className="text-xl font-bold tracking-tight text-white">
+                                {is5v5
+                                  ? req.teamName
+                                  : meta?.playerName || req.teamName}
+                              </h3>
+                              <span
+                                className={`rounded px-2 py-0.5 text-[10px] font-black uppercase ${
+                                  req.paymentStatus === "pending"
+                                    ? "border border-amber-500/20 bg-amber-500/10 text-amber-500"
+                                    : req.paymentStatus === "verified"
+                                      ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                      : "border border-rose-500/20 bg-rose-500/10 text-rose-500"
+                                }`}
+                              >
+                                {req.paymentStatus}
+                              </span>
+                            </div>
+                            <p className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                              <Clock className="h-3 w-3" />
+                              Requested{" "}
+                              {new Date(req.requestedAt).toLocaleString()}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-400">
+                              Transaction ID:{" "}
+                              <span className="font-mono text-white">
+                                {req.transactionId}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {req.paymentStatus === "pending" && (
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleRejectRequest(req)}
+                              disabled={updating}
+                              className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-[10px] font-black tracking-widest text-rose-500 uppercase transition-all hover:bg-rose-500 hover:text-white disabled:opacity-50"
+                            >
+                              <X className="h-4 w-4" />
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => handleApproveRequest(req)}
+                              disabled={updating}
+                              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-500 disabled:opacity-50"
+                            >
+                              <Check className="h-4 w-4" />
+                              Approve
+                            </button>
+                          </div>
+                        )}
+                        {req.paymentStatus === "rejected" && (
+                          <div className="text-right">
+                            <p className="text-[10px] font-black text-rose-500 uppercase">
+                              Rejection Reason
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {req.rejectionReason || "No reason provided"}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
           {activeTab === "participants" && (
             <div className="grid gap-4">
               {registrations.length === 0 ? (
@@ -802,19 +1047,77 @@ export default function TournamentControlPage({ params }) {
                               </div>
                             </div>
                           )}
-                          <button
-                            onClick={() =>
-                              handleTogglePayment(reg.$id, reg.paymentStatus)
-                            }
-                            disabled={updating}
-                            className={`rounded-xl border px-6 py-2.5 text-[10px] font-black tracking-widest uppercase transition-all hover:scale-105 active:scale-95 ${
-                              reg.paymentStatus
-                                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                                : "border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-                            }`}
-                          >
-                            {reg.paymentStatus ? "Entry Paid" : "Entry Pending"}
-                          </button>
+                          {/* Payment Status & Transaction ID */}
+                          <div className="flex flex-col items-end gap-2">
+                            {reg.transactionId && (
+                              <div className="text-right">
+                                <p className="text-[9px] font-medium tracking-wide text-slate-600 uppercase">
+                                  Transaction ID
+                                </p>
+                                <p className="font-mono text-xs text-white">
+                                  {reg.transactionId}
+                                </p>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              {reg.paymentStatus === "pending" ? (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      handleTogglePayment(reg.$id, "verified")
+                                    }
+                                    disabled={updating}
+                                    className="flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[10px] font-black tracking-wider text-emerald-500 uppercase transition-all hover:bg-emerald-500/20"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                    Verify
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleTogglePayment(reg.$id, "rejected")
+                                    }
+                                    disabled={updating}
+                                    className="flex items-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-[10px] font-black tracking-wider text-rose-500 uppercase transition-all hover:bg-rose-500/20"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                    Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <div
+                                    className={`rounded-xl border px-4 py-2 text-[10px] font-black tracking-widest uppercase ${
+                                      reg.paymentStatus === "verified"
+                                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                        : reg.paymentStatus === "rejected"
+                                          ? "border-rose-500/20 bg-rose-500/10 text-rose-500"
+                                          : reg.paymentStatus === "free"
+                                            ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-500"
+                                            : "border-amber-500/20 bg-amber-500/10 text-amber-500"
+                                    }`}
+                                  >
+                                    {reg.paymentStatus === "verified"
+                                      ? "✓ Paid"
+                                      : reg.paymentStatus === "rejected"
+                                        ? "✗ Rejected"
+                                        : reg.paymentStatus === "free"
+                                          ? "Free Entry"
+                                          : "Pending"}
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      handleRevokeRegistration(reg)
+                                    }
+                                    disabled={updating}
+                                    title="Revoke Registration"
+                                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:opacity-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -2249,6 +2552,79 @@ export default function TournamentControlPage({ params }) {
           )}
         </div>
       </div>
+      {/* Rejection Modal */}
+      {rejectionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="animate-in zoom-in-95 w-full max-w-md rounded-3xl border border-rose-500/20 bg-slate-900 p-6 shadow-2xl duration-200">
+            <div className="mb-6 flex items-center gap-4">
+              <div className="rounded-full bg-rose-500/10 p-3 text-rose-500">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Reject Payment</h3>
+                <p className="text-sm text-slate-400">
+                  Select a reason for rejection
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6 space-y-3">
+              {REJECTION_REASONS.map((reason) => (
+                <label
+                  key={reason}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all ${
+                    rejectionReason === reason
+                      ? "border-rose-500 bg-rose-500/10 text-white"
+                      : "border-white/5 bg-slate-950/50 text-slate-400 hover:bg-slate-900 hover:text-white"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="rejectionReason"
+                    value={reason}
+                    checked={rejectionReason === reason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className="h-4 w-4 accent-rose-500"
+                  />
+                  <span className="font-medium">{reason}</span>
+                </label>
+              ))}
+
+              {rejectionReason === "Other" && (
+                <div className="animate-in slide-in-from-top-2 mt-2 pl-4">
+                  <textarea
+                    value={customRejectionReason}
+                    onChange={(e) => setCustomRejectionReason(e.target.value)}
+                    placeholder="Enter specific reason..."
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 focus:outline-none"
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRejectionModalOpen(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-bold text-white transition-all hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={updating}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/20 transition-all hover:bg-rose-500 disabled:opacity-50"
+              >
+                {updating ? (
+                  <LoaderIcon className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Confirm Rejection"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
