@@ -15,6 +15,9 @@ import { getUserFreeAgentPost } from "@/lib/players";
  * Custom hook to manage profile data fetching
  * Encapsulates all Valorant API and profile data loading logic
  */
+// LocalStorage key for tracking linked account status
+const LINKED_ACCOUNT_KEY = "vra_account_linked";
+
 export function useProfileData(user, authLoading) {
   // Valorant profile state
   const [valProfile, setValProfile] = useState(null);
@@ -28,6 +31,11 @@ export function useProfileData(user, authLoading) {
   const [loading, setLoading] = useState(false);
   const [mmrLoading, setMmrLoading] = useState(false);
   const [matchesLoading, setMatchesLoading] = useState(false);
+
+  // Track if user has previously linked their account (persisted in localStorage)
+  const [hasLinkedAccount, setHasLinkedAccount] = useState(false);
+  // Track if profile fetch failed (for showing appropriate error state)
+  const [profileFetchFailed, setProfileFetchFailed] = useState(false);
 
   // Form state for linking
   const [riotId, setRiotId] = useState("");
@@ -43,18 +51,35 @@ export function useProfileData(user, authLoading) {
     secondaryAgents: [],
   });
 
+  // Check localStorage on mount to see if user has previously linked account
+  useEffect(() => {
+    if (typeof window !== "undefined" && user) {
+      const linkedFlag = localStorage.getItem(`${LINKED_ACCOUNT_KEY}_${user.$id}`);
+      if (linkedFlag === "true") {
+        setHasLinkedAccount(true);
+      }
+    }
+  }, [user]);
+
   // Load profile data
   useEffect(() => {
     if (authLoading || !user) return;
 
     const loadProfile = async () => {
       setLoading(true);
+      setProfileFetchFailed(false);
       try {
         const profile = await getUserProfile(user.$id);
         if (profile) {
           setPlatformProfile(profile);
           setRiotId(profile.ingameName);
           setRiotTag(profile.tag);
+          
+          // Mark as linked in localStorage so we don't show the form again on network errors
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`${LINKED_ACCOUNT_KEY}_${user.$id}`, "true");
+            setHasLinkedAccount(true);
+          }
           setRegion(profile.region || "ap");
 
           // Fetch account data
@@ -119,6 +144,7 @@ export function useProfileData(user, authLoading) {
         }
       } catch (err) {
         console.error("Failed to load profile", err);
+        setProfileFetchFailed(true);
       } finally {
         setLoading(false);
       }
@@ -131,6 +157,21 @@ export function useProfileData(user, authLoading) {
       .then((res) => setAvailableAgents(res.data))
       .catch(console.error);
   }, [user, authLoading]);
+
+  // Function to refetch matches without reloading the whole page
+  const refetchMatches = async () => {
+    if (!valProfile?.puuid || !region) return;
+    
+    setMatchesLoading(true);
+    try {
+      const res = await getMatches(valProfile.puuid, region);
+      setMatches(res.data || []);
+    } catch (err) {
+      console.error("Failed to refetch matches:", err);
+    } finally {
+      setMatchesLoading(false);
+    }
+  };
 
   return {
     // Profile data
@@ -150,6 +191,12 @@ export function useProfileData(user, authLoading) {
     setLoading,
     mmrLoading,
     matchesLoading,
+    refetchMatches,
+    
+    // Linked account tracking
+    hasLinkedAccount,
+    setHasLinkedAccount,
+    profileFetchFailed,
 
     // Form state
     riotId,

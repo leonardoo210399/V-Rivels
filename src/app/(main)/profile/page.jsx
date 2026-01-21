@@ -87,6 +87,7 @@ export default function ProfilePage() {
     setLoading,
     mmrLoading,
     matchesLoading,
+    refetchMatches,
     riotId,
     setRiotId,
     riotTag,
@@ -95,7 +96,13 @@ export default function ProfilePage() {
     setRegion,
     userPost,
     setUserPost,
+    hasLinkedAccount,
+    setHasLinkedAccount,
+    profileFetchFailed,
   } = useProfileData(user, authLoading);
+
+  // LocalStorage key constant (must match the one in useProfileData)
+  const LINKED_ACCOUNT_KEY = "vra_account_linked";
 
   // Custom Notification State
   const [notification, setNotification] = useState({
@@ -320,6 +327,12 @@ export default function ProfilePage() {
           const savedProfile = await saveUserProfile(user.$id, profileData);
           console.log("Profile saved successfully:", savedProfile);
           setPlatformProfile(profileData);
+
+          // Mark as linked in localStorage so form never shows again
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`${LINKED_ACCOUNT_KEY}_${user.$id}`, "true");
+            setHasLinkedAccount(true);
+          }
         } catch (saveError) {
           console.error("Failed to save profile to Appwrite:", saveError);
           setError("Failed to save profile. Please try again.");
@@ -338,7 +351,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden px-4 py-4 pt-24 text-slate-200 md:px-12 md:py-12 md:pt-28">
+    <div className="relative min-h-screen w-full overflow-x-hidden px-4 py-4 pt-24 text-slate-200 md:px-12 md:py-12 md:pt-10">
       <div className="mx-auto max-w-6xl">
         <header className="mb-8 flex flex-wrap items-end justify-between gap-4 px-1">
           <div className="flex min-w-0 flex-col">
@@ -391,6 +404,36 @@ export default function ProfilePage() {
 
         {profileLoading && !valProfile ? (
           <ProfileSkeleton />
+        ) : !valProfile && hasLinkedAccount ? (
+          // User has previously linked but profile fetch failed - show error state, not the form
+          <div className="group relative mx-auto my-12 max-w-4xl overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900 p-12 text-center shadow-2xl backdrop-blur-xl md:p-20">
+            <div className="absolute top-0 right-0 h-96 w-96 translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-600/10 blur-[120px]" />
+            <div className="absolute bottom-0 left-0 h-96 w-96 -translate-x-1/2 translate-y-1/2 rounded-full bg-blue-600/5 blur-[120px]" />
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="mb-8 rounded-[2rem] border border-white/5 bg-slate-950 p-6 shadow-inner">
+                <AlertCircle className="h-16 w-16 text-amber-500" />
+              </div>
+              <h2 className="mb-4 text-3xl font-black tracking-tighter text-white uppercase md:text-4xl">
+                Loading Your Profile
+              </h2>
+              <p className="mb-8 max-w-sm text-sm text-slate-400 md:text-base">
+                {profileFetchFailed
+                  ? "We couldn't load your profile due to a network issue. Please check your connection and try again."
+                  : "Please wait while we fetch your profile data..."}
+              </p>
+              {profileFetchFailed && (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="group relative overflow-hidden rounded-2xl bg-rose-600 px-8 py-4 text-sm font-black text-white shadow-2xl shadow-rose-600/20 transition-all hover:bg-rose-700 active:scale-[0.98]"
+                >
+                  <span className="flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Retry Loading
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
         ) : !valProfile ? (
           <LinkAccountForm
             riotId={riotId}
@@ -430,6 +473,7 @@ export default function ProfilePage() {
                   setSelectedMatch(match);
                   setIsModalOpen(true);
                 }}
+                onRefetch={refetchMatches}
               />
             </div>
 
