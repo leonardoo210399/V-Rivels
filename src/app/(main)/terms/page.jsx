@@ -192,10 +192,10 @@ export default function TermsOfService() {
               <p className="mb-1">
                 <span className="font-bold text-white">Email:</span>{" "}
                 <a
-                  href="mailto:aditya210399@gmail.com"
+                  href="mailto:support@vrivalsarena.com"
                   className="text-rose-400 hover:underline"
                 >
-                  aditya210399@gmail.com
+                  support@vrivalsarena.com
                 </a>
               </p>
               <p className="mb-1">
