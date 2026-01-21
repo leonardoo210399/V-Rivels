@@ -1,4 +1,6 @@
-export default function sitemap() {
+import { getTournaments } from "@/lib/tournaments";
+
+export default async function sitemap() {
   const baseUrl = "https://www.vrivalsarena.com";
 
   // Core pages of the application
@@ -18,9 +20,23 @@ export default function sitemap() {
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
-    changeFrequency: route === "" || route === "/tournaments" ? "daily" : "weekly",
+    changeFrequency:
+      route === "" || route === "/tournaments" ? "daily" : "weekly",
     priority: route === "" ? 1 : 0.8,
   }));
 
-  return routes;
+  try {
+    const tournaments = await getTournaments();
+    const tournamentRoutes = tournaments.map((tournament) => ({
+      url: `${baseUrl}/tournaments/${tournament.$id}`,
+      lastModified: new Date(tournament.$updatedAt || tournament.$createdAt), // Use database timestamp
+      changeFrequency: "daily",
+      priority: 0.9, // High priority for individual tournaments
+    }));
+
+    return [...routes, ...tournamentRoutes];
+  } catch (error) {
+    console.error("Failed to generate tournament sitemap:", error);
+    return routes;
+  }
 }
