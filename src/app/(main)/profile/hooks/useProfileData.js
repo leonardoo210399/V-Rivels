@@ -182,6 +182,7 @@ export function useProfileData(user, authLoading) {
     mmrData,
     setMmrData,
     matches,
+    setMatches,
     cardData,
     setCardData,
     availableAgents,
