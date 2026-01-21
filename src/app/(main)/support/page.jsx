@@ -105,10 +105,10 @@ export default function SupportPage() {
               For general inquiries and account issues.
             </p>
             <a
-              href="mailto:aditya210399@gmail.com"
+              href="mailto:support@vrivalsarena.com"
               className="font-medium text-rose-400 hover:text-rose-300"
             >
-              aditya210399@gmail.com
+              support@vrivalsarena.com
             </a>
           </div>
 
@@ -284,7 +284,7 @@ export default function SupportPage() {
                 inquiries.
               </p>
               <a
-                href="mailto:aditya210399@gmail.com"
+                href="mailto:support@vrivalsarena.com"
                 className="text-sm font-bold text-rose-400 hover:underline"
               >
                 Contact Support &rarr;
@@ -300,7 +300,7 @@ export default function SupportPage() {
           <div className="flex flex-col justify-center gap-10 text-sm text-slate-400 md:flex-row">
             <div className="inline-block text-left">
               <p className="mb-2 font-bold text-slate-300">VRivals Arena</p>
-              <p>Email: aditya210399@gmail.com</p>
+              <p>Email: support@vrivalsarena.com</p>
               <p>Phone: 9356832187</p>
               <p>Address: Krishna Apartment, Nigdi</p>
             </div>

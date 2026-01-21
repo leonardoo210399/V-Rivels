@@ -754,6 +754,21 @@
                     "default": null
                 },
                 {
+                    "key": "checkedIn",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "checkedInAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
                     "key": "paymentStatus",
                     "type": "string",
                     "required": false,
@@ -775,21 +790,6 @@
                     "size": 100,
                     "default": null,
                     "encrypt": false
-                },
-                {
-                    "key": "checkedIn",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": false
-                },
-                {
-                    "key": "checkedInAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "format": "",
-                    "default": null
                 }
             ],
             "indexes": []
