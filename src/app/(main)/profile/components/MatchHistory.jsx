@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, ArrowRight, Search } from "lucide-react";
+import { Activity, ArrowRight, Search, RefreshCw } from "lucide-react";
 import { agentIcons } from "@/assets/images/agents";
 import Loader from "@/components/Loader";
 
@@ -8,6 +8,7 @@ export default function MatchHistory({
   matchesLoading,
   valProfile,
   onMatchClick,
+  onRefetch,
 }) {
   const [activeTab, setActiveTab] = useState("All");
 
@@ -24,20 +25,35 @@ export default function MatchHistory({
           </p>
         </div>
 
-        <div className="flex rounded-2xl border border-white/5 bg-slate-950/80 p-1.5">
-          {["All", "Competitive", "Unrated"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-xl px-6 py-2 text-[10px] font-black tracking-widest uppercase transition-all duration-300 ${
-                activeTab === tab
-                  ? "bg-rose-600 text-white shadow-xl shadow-rose-600/20"
-                  : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          {/* Refresh Button */}
+          <button
+            onClick={onRefetch}
+            disabled={matchesLoading}
+            className="group flex h-10 w-10 items-center justify-center rounded-xl border border-white/5 bg-slate-950/80 text-slate-500 transition-all hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Refresh matches"
+          >
+            <RefreshCw
+              className={`h-4 w-4 transition-transform ${matchesLoading ? "animate-spin" : "group-hover:rotate-45"}`}
+            />
+          </button>
+
+          {/* Tab Filters */}
+          <div className="flex rounded-2xl border border-white/5 bg-slate-950/80 p-1.5">
+            {["All", "Competitive", "Unrated"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`rounded-xl px-6 py-2 text-[10px] font-black tracking-widest uppercase transition-all duration-300 ${
+                  activeTab === tab
+                    ? "bg-rose-600 text-white shadow-xl shadow-rose-600/20"
+                    : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

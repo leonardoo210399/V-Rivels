@@ -21,6 +21,9 @@ const anton = Anton({
 export const metadata = {
   title: "VRivals Arena",
   description: "Compete in Valorant tournaments and track your stats.",
+  verification: {
+    google: "tG9j_ts9n13sPRmrPLQoG23SblLA5ctlkhIiFcSqP1k",
+  },
 };
 
 export default function RootLayout({ children }) {
