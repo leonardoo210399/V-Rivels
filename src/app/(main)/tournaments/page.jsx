@@ -68,8 +68,49 @@ export default function TournamentsPage() {
     return <Loader />;
   }
 
+  // Optimize SEO with Structured Data for Events
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: tournaments.map((t, index) => ({
+      "@type": "Event",
+      position: index + 1,
+      name: t.name,
+      startDate: t.date,
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+      location: {
+        "@type": "VirtualLocation",
+        url: "https://www.vrivalsarena.com/tournaments/" + t.$id,
+      },
+      image: [
+        "https://www.vrivalsarena.com/vrivals_logo.png", // Fallback or dynamic image
+      ],
+      description: `Join the ${t.name} Valorant tournament. Prize Pool: ₹${t.prizePool}. Format: ${t.gameType}.`,
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "INR",
+        availability:
+          t.maxTeams > (t.registeredTeams || 0)
+            ? "https://schema.org/InStock"
+            : "https://schema.org/SoldOut",
+        url: "https://www.vrivalsarena.com/tournaments/" + t.$id,
+      },
+      organizer: {
+        "@type": "Organization",
+        name: "VRivals Arena",
+        url: "https://www.vrivalsarena.com",
+      },
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Hero Section */}
       <section className="relative h-[30vh] w-full overflow-hidden border-b border-white/10 md:h-[40vh]">
         <div className="absolute inset-0 z-0 opacity-40">
