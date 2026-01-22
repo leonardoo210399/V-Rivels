@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getAccount, getMMR, getMatches, getPlayerCard } from "@/lib/valorant";
@@ -24,6 +24,7 @@ import {
 import MatchDetailsModal from "@/components/MatchDetailsModal";
 import Link from "next/link";
 import { getUserFreeAgentPost, updateFreeAgentPost } from "@/lib/players";
+import { checkDiscordMembership } from "@/lib/discord";
 import Loader from "@/components/Loader";
 import ProfileSkeleton from "@/components/ProfileSkeleton";
 import { useProfileData, useScoutingReport } from "./hooks";
@@ -142,6 +143,9 @@ export default function ProfilePage() {
   // Discord State
   const [discordIdentity, setDiscordIdentity] = useState(null);
   const [discordProfile, setDiscordProfile] = useState(null);
+  const [isInDiscordServer, setIsInDiscordServer] = useState(null);
+  const [checkingMembership, setCheckingMembership] = useState(false);
+  const membershipCheckedRef = useRef(false); // Prevent duplicate API calls
 
   // Check for Discord Session on Load and Save Data
   useEffect(() => {
@@ -160,6 +164,23 @@ export default function ProfilePage() {
 
           if (res.ok) {
             const discordUser = await res.json();
+
+            // Check Discord server membership (only if not already checked)
+            if (!membershipCheckedRef.current) {
+              membershipCheckedRef.current = true;
+              setCheckingMembership(true);
+              try {
+                const { isMember } = await checkDiscordMembership(
+                  session.providerAccessToken,
+                );
+                setIsInDiscordServer(isMember);
+              } catch (e) {
+                console.error("Failed to check Discord membership:", e);
+                membershipCheckedRef.current = false; // Allow retry on error
+              } finally {
+                setCheckingMembership(false);
+              }
+            }
             const discordTag =
               discordUser.discriminator === "0"
                 ? discordUser.username
@@ -253,12 +274,15 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch Discord Profile when Identity is found
+  // Fetch Discord Profile when Identity is found (membership check is done in checkDiscordSession)
   useEffect(() => {
     if (discordIdentity && discordIdentity.providerAccessToken) {
+      const accessToken = discordIdentity.providerAccessToken;
+
+      // Fetch Discord Profile
       fetch("https://discord.com/api/users/@me", {
         headers: {
-          Authorization: `Bearer ${discordIdentity.providerAccessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       })
         .then((res) => res.json())
@@ -266,6 +290,27 @@ export default function ProfilePage() {
           setDiscordProfile(data);
         })
         .catch((err) => console.error("Failed to fetch Discord profile:", err));
+
+      // Only check membership if it hasn't been checked yet (prevents duplicate calls)
+      if (
+        !membershipCheckedRef.current &&
+        isInDiscordServer === null &&
+        !checkingMembership
+      ) {
+        membershipCheckedRef.current = true;
+        setCheckingMembership(true);
+        checkDiscordMembership(accessToken)
+          .then(({ isMember }) => {
+            setIsInDiscordServer(isMember);
+          })
+          .catch((err) => {
+            console.error("Failed to check Discord membership:", err);
+            membershipCheckedRef.current = false; // Allow retry on error
+          })
+          .finally(() => {
+            setCheckingMembership(false);
+          });
+      }
     }
   }, [discordIdentity]);
 
@@ -486,10 +531,13 @@ export default function ProfilePage() {
               <DiscordCard
                 discordIdentity={discordIdentity}
                 discordProfile={discordProfile}
+                isInServer={isInDiscordServer}
+                checkingMembership={checkingMembership}
                 onUnlink={async () => {
                   try {
                     await unlinkDiscord(discordIdentity.$id);
                     setDiscordIdentity(null);
+                    setIsInDiscordServer(null);
                     notify("Discord account unlinked successfully.");
                   } catch (e) {
                     notify("Failed to unlink Discord.", "error");

@@ -118,7 +118,9 @@ export default function Footer() {
             </h3>
             <div className="flex space-x-4">
               <a
-                href="#"
+                href="https://discord.gg/gexZcZzCHV"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
               >
                 <FaDiscord size={20} />

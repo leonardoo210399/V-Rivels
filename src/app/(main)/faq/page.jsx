@@ -335,7 +335,7 @@ export default function FAQPage() {
               Contact Support
             </a>
             <a
-              href="https://discord.gg/vrivals"
+              href="https://discord.gg/gexZcZzCHV"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-6 py-3 font-bold text-white transition-colors hover:bg-slate-700"

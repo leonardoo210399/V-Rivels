@@ -2,9 +2,10 @@
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { FaDiscord } from "react-icons/fa";
 
 export default function LoginPage() {
-  const { user, loginWithGoogle } = useAuth();
+  const { user, loginWithGoogle, loginWithDiscord } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -59,10 +60,10 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="relative z-10 space-y-4">
+          <div className="relative z-10 space-y-3">
             <button
               onClick={loginWithGoogle}
-              className="group flex w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-black px-6 py-4.5 text-sm font-bold text-white shadow-2xl transition-all hover:border-white/20 hover:bg-zinc-900 hover:shadow-white/5 active:scale-[0.98]"
+              className="group flex w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-black px-6 py-4 text-sm font-bold text-white shadow-2xl transition-all hover:border-white/20 hover:bg-zinc-900 hover:shadow-white/5 active:scale-[0.98]"
             >
               <div className="flex items-center justify-center bg-transparent">
                 <svg
@@ -91,6 +92,14 @@ export default function LoginPage() {
                 </svg>
               </div>
               <span className="tracking-tight">Sign in with Google</span>
+            </button>
+
+            <button
+              onClick={loginWithDiscord}
+              className="group flex w-full items-center justify-center gap-3 rounded-full border border-indigo-500/30 bg-[#5865F2] px-6 py-4 text-sm font-bold text-white shadow-2xl shadow-indigo-600/20 transition-all hover:bg-[#4752C4] active:scale-[0.98]"
+            >
+              <FaDiscord className="h-5 w-5" />
+              <span className="tracking-tight">Sign in with Discord</span>
             </button>
           </div>
 

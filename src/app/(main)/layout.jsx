@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import PageWrapper from "@/components/PageWrapper";
 import Footer from "@/components/Footer";
 import AssetPreloader from "@/components/AssetPreloader";
+import DiscordWidget from "@/components/DiscordWidget";
 
 export default function MainLayout({ children }) {
   const pathname = usePathname();
@@ -15,6 +16,7 @@ export default function MainLayout({ children }) {
       <>
         <AssetPreloader />
         {children}
+        <DiscordWidget variant="floating" />
       </>
     );
   }
@@ -25,6 +27,7 @@ export default function MainLayout({ children }) {
       <Navbar />
       <PageWrapper>{children}</PageWrapper>
       <Footer />
+      <DiscordWidget variant="floating" />
     </>
   );
 }
