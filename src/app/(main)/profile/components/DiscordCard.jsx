@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, ExternalLink, Users } from "lucide-react";
 
 // Discord icon SVG component
 const DiscordIcon = ({ size = 24 }) => (
@@ -13,11 +13,15 @@ const DiscordIcon = ({ size = 24 }) => (
   </svg>
 );
 
+const DISCORD_INVITE_URL = "https://discord.gg/gexZcZzCHV";
+
 export default function DiscordCard({
   discordIdentity,
   discordProfile,
   onUnlink,
   onConnect,
+  isInServer = null, // null = loading/unknown, true = member, false = not member
+  checkingMembership = false,
 }) {
   return (
     <div className="group relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#5865F2]/10 p-8 transition-all duration-500 hover:bg-[#5865F2]/20">
@@ -53,16 +57,53 @@ export default function DiscordCard({
                   discordIdentity.providerInfo?.name ||
                   "Linked User"}
               </h4>
-              <p className="mb-4 px-2 text-[10px] font-bold tracking-wider text-slate-500">
+              <p className="mb-3 px-2 text-[10px] font-bold tracking-wider text-slate-500">
                 @
                 {discordProfile?.username ||
                   discordIdentity.providerInfo?.username ||
                   discordIdentity.providerEmail?.split("@")[0]}
               </p>
-              <p className="mb-3 flex items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
-                <CheckCircle className="h-3 w-3" />
-                Linked Successfully
-              </p>
+
+              {/* Membership Status Badge */}
+              {checkingMembership ? (
+                <div className="mb-3 flex items-center gap-1.5 rounded-full border border-slate-500/20 bg-slate-500/10 px-3 py-1.5">
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                  <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                    Checking...
+                  </span>
+                </div>
+              ) : isInServer === true ? (
+                <div className="mb-3 flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5">
+                  <CheckCircle className="h-3 w-3 text-emerald-400" />
+                  <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+                    VRivals Member
+                  </span>
+                </div>
+              ) : isInServer === false ? (
+                <div className="mb-3 flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5">
+                    <Users className="h-3 w-3 text-amber-400" />
+                    <span className="text-[10px] font-bold tracking-wider text-amber-400 uppercase">
+                      Not in Server
+                    </span>
+                  </div>
+                  <a
+                    href={DISCORD_INVITE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#5865F2] px-4 py-2 text-[10px] font-black tracking-widest text-white uppercase transition-all hover:bg-[#4752C4]"
+                  >
+                    Join VRivals Arena
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              ) : (
+                <p className="mb-3 flex items-center gap-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+                  <CheckCircle className="h-3 w-3" />
+                  Linked Successfully
+                </p>
+              )}
+
               <button
                 onClick={onUnlink}
                 className="text-[10px] font-black tracking-widest text-slate-500 uppercase transition-all hover:text-rose-500"

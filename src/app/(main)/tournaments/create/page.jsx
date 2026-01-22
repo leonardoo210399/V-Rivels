@@ -1,9 +1,21 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createTournament } from "@/lib/tournaments";
+import { announceNewTournament } from "@/lib/discord";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { Bold, List, Heading2, Eye, Edit3, Type, Undo2, Redo2, Plus, Trash2 } from "lucide-react";
+import {
+  Bold,
+  List,
+  Heading2,
+  Eye,
+  Edit3,
+  Type,
+  Undo2,
+  Redo2,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import Loader from "@/components/Loader";
 
@@ -50,39 +62,59 @@ Prepare your executes, refine your aim, and ensure your comms are crisp. The ser
 **Lock in. Step up. Reign supreme.**`;
 
 const RichPreview = ({ text }) => {
-    if (!text) return <p className="text-slate-600 italic text-sm">Preview will appear here...</p>;
-    const lines = text.split('\n');
+  if (!text)
     return (
-        <div className="space-y-3 p-4 rounded-md bg-slate-950/30 border border-white/5 min-h-[150px]">
-            {lines.map((line, i) => {
-                const trimmed = line.trim();
-                if (!trimmed) return <div key={i} className="h-2" />;
-                const isBullet = trimmed.startsWith('•') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
-                let content = isBullet ? trimmed.replace(/^[•\-*]\s*/, '') : trimmed;
-                const parts = content.split(/(\*\*.*?\*\*)/g);
-                const formattedContent = parts.map((part, j) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                        return <span key={j} className="font-bold text-white">{part.slice(2, -2)}</span>;
-                    }
-                    return part;
-                });
-                if (isBullet) {
-                    return (
-                        <div key={i} className="flex gap-3 pl-2 items-start">
-                            <div className="mt-2 h-1 w-1 rounded-full bg-rose-500 shrink-0" />
-                            <p className="text-sm text-slate-300 leading-relaxed">{formattedContent}</p>
-                        </div>
-                    );
-                }
-                const isHeader = !isBullet && ((trimmed === trimmed.toUpperCase() && trimmed.length > 3) || /^[A-Z\s]{4,}:/.test(trimmed));
-                return (
-                    <p key={i} className={`text-sm leading-relaxed ${isHeader ? 'font-bold text-rose-500 uppercase tracking-wider text-xs pt-2' : 'text-slate-400'}`}>
-                        {formattedContent}
-                    </p>
-                );
-            })}
-        </div>
+      <p className="text-sm text-slate-600 italic">
+        Preview will appear here...
+      </p>
     );
+  const lines = text.split("\n");
+  return (
+    <div className="min-h-[150px] space-y-3 rounded-md border border-white/5 bg-slate-950/30 p-4">
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={i} className="h-2" />;
+        const isBullet =
+          trimmed.startsWith("•") ||
+          trimmed.startsWith("- ") ||
+          trimmed.startsWith("* ");
+        let content = isBullet ? trimmed.replace(/^[•\-*]\s*/, "") : trimmed;
+        const parts = content.split(/(\*\*.*?\*\*)/g);
+        const formattedContent = parts.map((part, j) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            return (
+              <span key={j} className="font-bold text-white">
+                {part.slice(2, -2)}
+              </span>
+            );
+          }
+          return part;
+        });
+        if (isBullet) {
+          return (
+            <div key={i} className="flex items-start gap-3 pl-2">
+              <div className="mt-2 h-1 w-1 shrink-0 rounded-full bg-rose-500" />
+              <p className="text-sm leading-relaxed text-slate-300">
+                {formattedContent}
+              </p>
+            </div>
+          );
+        }
+        const isHeader =
+          !isBullet &&
+          ((trimmed === trimmed.toUpperCase() && trimmed.length > 3) ||
+            /^[A-Z\s]{4,}:/.test(trimmed));
+        return (
+          <p
+            key={i}
+            className={`text-sm leading-relaxed ${isHeader ? "pt-2 text-xs font-bold tracking-wider text-rose-500 uppercase" : "text-slate-400"}`}
+          >
+            {formattedContent}
+          </p>
+        );
+      })}
+    </div>
+  );
 };
 
 export default function CreateTournamentPage() {
@@ -90,20 +122,20 @@ export default function CreateTournamentPage() {
   const { user, loading: authLoading, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-      name: "",
-      date: "",
-      prizePool: "",
-      maxTeams: 16,
-      status: "scheduled",
-      description: "",
-      gameType: "5v5",
-      location: "Online",
-      checkInEnabled: false,
-      checkInStart: "",
-      entryFee: "",
-      firstPrize: "",
-      secondPrize: "",
-      additionalPrizes: []
+    name: "",
+    date: "",
+    prizePool: "",
+    maxTeams: 16,
+    status: "scheduled",
+    description: "",
+    gameType: "5v5",
+    location: "Online",
+    checkInEnabled: false,
+    checkInStart: "",
+    entryFee: "",
+    firstPrize: "",
+    secondPrize: "",
+    additionalPrizes: [],
   });
   const [showPreview, setShowPreview] = useState(false);
   const [history, setHistory] = useState([formData.description]);
@@ -113,20 +145,21 @@ export default function CreateTournamentPage() {
   useEffect(() => {
     const isDefault5v5 = formData.description === DEFAULT_5V5_DESCRIPTION;
     const isDefaultDM = formData.description === DEFAULT_DM_DESCRIPTION;
-    const isEmpty = !formData.description || formData.description.trim().length < 5;
+    const isEmpty =
+      !formData.description || formData.description.trim().length < 5;
 
     if (isEmpty || isDefault5v5 || isDefaultDM) {
-        if (formData.gameType === "Deathmatch" && !isDefaultDM) {
-            updateDescription(DEFAULT_DM_DESCRIPTION);
-        } else if (formData.gameType === "5v5" && !isDefault5v5) {
-            updateDescription(DEFAULT_5V5_DESCRIPTION);
-        }
+      if (formData.gameType === "Deathmatch" && !isDefaultDM) {
+        updateDescription(DEFAULT_DM_DESCRIPTION);
+      } else if (formData.gameType === "5v5" && !isDefault5v5) {
+        updateDescription(DEFAULT_5V5_DESCRIPTION);
+      }
     }
   }, [formData.gameType]);
 
   const updateDescription = (newText) => {
-    setFormData(prev => ({ ...prev, description: newText }));
-    
+    setFormData((prev) => ({ ...prev, description: newText }));
+
     // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newText);
@@ -137,17 +170,17 @@ export default function CreateTournamentPage() {
 
   const undo = () => {
     if (historyIndex > 0) {
-        const newIndex = historyIndex - 1;
-        setHistoryIndex(newIndex);
-        setFormData(prev => ({ ...prev, description: history[newIndex] }));
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setFormData((prev) => ({ ...prev, description: history[newIndex] }));
     }
   };
 
   const redo = () => {
     if (historyIndex < history.length - 1) {
-        const newIndex = historyIndex + 1;
-        setHistoryIndex(newIndex);
-        setFormData(prev => ({ ...prev, description: history[newIndex] }));
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setFormData((prev) => ({ ...prev, description: history[newIndex] }));
     }
   };
 
@@ -159,38 +192,38 @@ export default function CreateTournamentPage() {
     const end = textarea.selectionEnd;
     const text = formData.description;
     const selection = text.substring(start, end);
-    
+
     const before = text.substring(0, start);
     const after = text.substring(end);
-    
+
     // If it's a list item, check if we need a newline
     let finalPrefix = prefix;
-    if (prefix === "• " && before.length > 0 && !before.endsWith('\n')) {
-        finalPrefix = "\n• ";
+    if (prefix === "• " && before.length > 0 && !before.endsWith("\n")) {
+      finalPrefix = "\n• ";
     }
 
     const newText = before + finalPrefix + selection + suffix + after;
-    
+
     setFormData({ ...formData, description: newText });
-    
+
     // Reset focus and selection
     setTimeout(() => {
-        textarea.focus();
-        const cursorOffset = finalPrefix.length;
-        textarea.setSelectionRange(start + cursorOffset, end + cursorOffset);
+      textarea.focus();
+      const cursorOffset = finalPrefix.length;
+      textarea.setSelectionRange(start + cursorOffset, end + cursorOffset);
     }, 0);
   };
 
   useEffect(() => {
     if (!authLoading) {
-        if (!user || !isAdmin) {
-            router.push("/tournaments");
-        }
+      if (!user || !isAdmin) {
+        router.push("/tournaments");
+      }
     }
   }, [user, authLoading, isAdmin, router]);
 
   if (authLoading) {
-      return <Loader />;
+    return <Loader />;
   }
 
   if (!user || !isAdmin) return null;
@@ -199,32 +232,51 @@ export default function CreateTournamentPage() {
     e.preventDefault();
     setLoading(true);
     try {
-        const tournamentData = {
-            name: formData.name,
-            date: new Date(formData.date).toISOString(),
-            prizePool: formData.prizePool,
-            maxTeams: parseInt(formData.maxTeams),
-            gameType: formData.gameType,
-            status: formData.status,
-            description: formData.description,
-            location: formData.location || "Online",
-            checkInEnabled: formData.checkInEnabled,
-            checkInStart: formData.checkInEnabled && formData.checkInStart ? new Date(formData.checkInStart).toISOString() : null,
-            entryFee: formData.entryFee,
-            firstPrize: formData.firstPrize,
-            secondPrize: formData.secondPrize,
-            additionalPrizes: JSON.stringify(formData.additionalPrizes),
-            registeredTeams: 0,
-            bracketGenerated: false
-        };
+      const tournamentData = {
+        name: formData.name,
+        date: new Date(formData.date).toISOString(),
+        prizePool: formData.prizePool,
+        maxTeams: parseInt(formData.maxTeams),
+        gameType: formData.gameType,
+        status: formData.status,
+        description: formData.description,
+        location: formData.location || "Online",
+        checkInEnabled: formData.checkInEnabled,
+        checkInStart:
+          formData.checkInEnabled && formData.checkInStart
+            ? new Date(formData.checkInStart).toISOString()
+            : null,
+        entryFee: formData.entryFee,
+        firstPrize: formData.firstPrize,
+        secondPrize: formData.secondPrize,
+        additionalPrizes: JSON.stringify(formData.additionalPrizes),
+        registeredTeams: 0,
+        bracketGenerated: false,
+      };
 
-        await createTournament(tournamentData);
-        router.push("/tournaments");
+      const createdTournament = await createTournament(tournamentData);
+
+      // Send announcement to Discord (non-blocking)
+      try {
+        await announceNewTournament({
+          ...tournamentData,
+          $id: createdTournament.$id,
+        });
+      } catch (discordError) {
+        console.warn(
+          "Discord announcement failed (non-critical):",
+          discordError,
+        );
+      }
+
+      router.push("/tournaments");
     } catch (error) {
-        console.error("Failed to create tournament", error);
-        alert("Failed to create tournament (Check console - likely permission or DB issue)");
+      console.error("Failed to create tournament", error);
+      alert(
+        "Failed to create tournament (Check console - likely permission or DB issue)",
+      );
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -232,320 +284,406 @@ export default function CreateTournamentPage() {
     <div className="min-h-screen bg-slate-950 p-6 text-white">
       <div className="mx-auto max-w-2xl rounded-xl border border-white/10 bg-slate-900/50 p-8 backdrop-blur-sm">
         <h1 className="mb-6 text-2xl font-bold">Create Tournament</h1>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                 <label className="mb-1 block text-sm font-medium text-slate-400">Game Mode</label>
-                 <div className="relative flex p-1 bg-slate-950 rounded-xl border border-white/10 h-[42px]">
-                    {/* Sliding Background */}
-                    <div 
-                        className={`absolute inset-y-1 w-[calc(50%-4px)] bg-rose-600 rounded-lg shadow-lg shadow-rose-900/20 transition-all duration-300 ease-out ${
-                            formData.gameType === 'Deathmatch' ? 'translate-x-full' : 'translate-x-0'
-                        }`}
-                    />
-                    
-                    {/* Options */}
-                    <button
-                        type="button"
-                        onClick={() => setFormData({...formData, gameType: '5v5'})}
-                        className={`relative flex-1 flex items-center justify-center text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${
-                            formData.gameType === '5v5' ? 'text-white' : 'text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        5v5 Tournament
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setFormData({...formData, gameType: 'Deathmatch'})}
-                        className={`relative flex-1 flex items-center justify-center text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${
-                            formData.gameType === 'Deathmatch' ? 'text-white' : 'text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        Deathmatch
-                    </button>
-                 </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-400">
+              Game Mode
+            </label>
+            <div className="relative flex h-[42px] rounded-xl border border-white/10 bg-slate-950 p-1">
+              {/* Sliding Background */}
+              <div
+                className={`absolute inset-y-1 w-[calc(50%-4px)] rounded-lg bg-rose-600 shadow-lg shadow-rose-900/20 transition-all duration-300 ease-out ${
+                  formData.gameType === "Deathmatch"
+                    ? "translate-x-full"
+                    : "translate-x-0"
+                }`}
+              />
+
+              {/* Options */}
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, gameType: "5v5" })}
+                className={`relative flex flex-1 items-center justify-center text-[10px] font-black tracking-widest uppercase transition-colors duration-300 ${
+                  formData.gameType === "5v5"
+                    ? "text-white"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                5v5 Tournament
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, gameType: "Deathmatch" })
+                }
+                className={`relative flex flex-1 items-center justify-center text-[10px] font-black tracking-widest uppercase transition-colors duration-300 ${
+                  formData.gameType === "Deathmatch"
+                    ? "text-white"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Deathmatch
+              </button>
             </div>
+          </div>
 
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-400">
+              Tournament Name
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
-                <label className="mb-1 block text-sm font-medium text-slate-400">Tournament Name</label>
-                <input 
-                    type="text" 
-                    className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                />
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                Date
+              </label>
+              <input
+                type="datetime-local"
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 [color-scheme:dark] focus:border-rose-500 focus:outline-none"
+                value={formData.date}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
+                required
+              />
             </div>
-            
-             <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-400">Date</label>
-                    <input 
-                        type="datetime-local" 
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none [color-scheme:dark]"
-                         value={formData.date}
-                        onChange={(e) => setFormData({...formData, date: e.target.value})}
-                        required
-                    />
-                </div>
-                 <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-400">Prize Pool (Total)</label>
-                    <input 
-                        type="text" 
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                        placeholder="e.g. ₹10,000"
-                        value={formData.prizePool}
-                        onChange={(e) => setFormData({...formData, prizePool: e.target.value})}
-                        required
-                    />
-                </div>
-                 <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-400">
-                        {formData.gameType === 'Deathmatch' ? 'Entry Fee (Per Head)' : 'Entry Fee (Per Team)'}
-                    </label>
-                    <input 
-                        type="text" 
-                        required
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                        placeholder="e.g. ₹500"
-                        value={formData.entryFee}
-                        onChange={(e) => setFormData({...formData, entryFee: e.target.value})}
-                    />
-                </div>
-                <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-400">Location</label>
-                    <input 
-                        type="text" 
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        placeholder="Online"
-                    />
-                </div>
-             </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                Prize Pool (Total)
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
+                placeholder="e.g. ₹10,000"
+                value={formData.prizePool}
+                onChange={(e) =>
+                  setFormData({ ...formData, prizePool: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                {formData.gameType === "Deathmatch"
+                  ? "Entry Fee (Per Head)"
+                  : "Entry Fee (Per Team)"}
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
+                placeholder="e.g. ₹500"
+                value={formData.entryFee}
+                onChange={(e) =>
+                  setFormData({ ...formData, entryFee: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                Location
+              </label>
+              <input
+                type="text"
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
+                value={formData.location}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
+                placeholder="Online"
+              />
+            </div>
+          </div>
 
-             <div className="grid gap-4 md:grid-cols-2 pt-4 border-t border-white/5">
-                <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-400">1st Prize (Winner)</label>
-                    <input 
-                        type="text" 
-                        required
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-emerald-500 focus:outline-none"
-                        placeholder="e.g. ₹5,000"
-                        value={formData.firstPrize}
-                        onChange={(e) => setFormData({...formData, firstPrize: e.target.value})}
+          <div className="grid gap-4 border-t border-white/5 pt-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                1st Prize (Winner)
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-emerald-500 focus:outline-none"
+                placeholder="e.g. ₹5,000"
+                value={formData.firstPrize}
+                onChange={(e) =>
+                  setFormData({ ...formData, firstPrize: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                2nd Prize (Runner Up)
+              </label>
+              <input
+                type="text"
+                required
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-amber-500 focus:outline-none"
+                placeholder="e.g. ₹2,500"
+                value={formData.secondPrize}
+                onChange={(e) =>
+                  setFormData({ ...formData, secondPrize: e.target.value })
+                }
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="mb-1 block flex items-center justify-between text-sm font-medium text-slate-400">
+                <span>Additional Prizes (Optional)</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      additionalPrizes: [
+                        ...formData.additionalPrizes,
+                        { label: "", value: "" },
+                      ],
+                    })
+                  }
+                  className="flex items-center gap-1 text-xs text-rose-500 transition-colors hover:text-rose-400"
+                >
+                  <Plus className="h-3 w-3" /> Add Prize
+                </button>
+              </label>
+              <div className="mt-2 space-y-3">
+                {formData.additionalPrizes.map((prize, index) => (
+                  <div
+                    key={index}
+                    className="animate-in slide-in-from-right-2 flex gap-2 duration-300"
+                  >
+                    <input
+                      type="text"
+                      value={prize.label}
+                      onChange={(e) => {
+                        const newPrizes = [...formData.additionalPrizes];
+                        newPrizes[index].label = e.target.value;
+                        setFormData({
+                          ...formData,
+                          additionalPrizes: newPrizes,
+                        });
+                      }}
+                      placeholder="e.g. MVP"
+                      className="flex-[1.5] rounded-md border border-white/10 bg-slate-950 px-4 py-2 text-sm focus:border-rose-500 focus:outline-none"
                     />
-                </div>
-                <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-400">2nd Prize (Runner Up)</label>
-                    <input 
-                        type="text" 
-                        required
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-amber-500 focus:outline-none"
-                        placeholder="e.g. ₹2,500"
-                        value={formData.secondPrize}
-                        onChange={(e) => setFormData({...formData, secondPrize: e.target.value})}
+                    <input
+                      type="text"
+                      value={prize.value}
+                      onChange={(e) => {
+                        const newPrizes = [...formData.additionalPrizes];
+                        newPrizes[index].value = e.target.value;
+                        setFormData({
+                          ...formData,
+                          additionalPrizes: newPrizes,
+                        });
+                      }}
+                      placeholder="₹500"
+                      className="flex-1 rounded-md border border-white/10 bg-slate-950 px-4 py-2 text-sm focus:border-rose-500 focus:outline-none"
                     />
-                </div>
-                <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium text-slate-400 flex items-center justify-between">
-                        <span>Additional Prizes (Optional)</span>
-                        <button 
-                            type="button"
-                            onClick={() => setFormData({
-                                ...formData, 
-                                additionalPrizes: [...formData.additionalPrizes, { label: "", value: "" }]
-                            })}
-                            className="text-xs text-rose-500 hover:text-rose-400 flex items-center gap-1 transition-colors"
-                        >
-                            <Plus className="h-3 w-3" /> Add Prize
-                        </button>
-                    </label>
-                    <div className="space-y-3 mt-2">
-                        {formData.additionalPrizes.map((prize, index) => (
-                            <div key={index} className="flex gap-2 animate-in slide-in-from-right-2 duration-300">
-                                <input 
-                                    type="text" 
-                                    value={prize.label}
-                                    onChange={(e) => {
-                                        const newPrizes = [...formData.additionalPrizes];
-                                        newPrizes[index].label = e.target.value;
-                                        setFormData({ ...formData, additionalPrizes: newPrizes });
-                                    }}
-                                    placeholder="e.g. MVP"
-                                    className="flex-[1.5] rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none text-sm"
-                                />
-                                <input 
-                                    type="text" 
-                                    value={prize.value}
-                                    onChange={(e) => {
-                                        const newPrizes = [...formData.additionalPrizes];
-                                        newPrizes[index].value = e.target.value;
-                                        setFormData({ ...formData, additionalPrizes: newPrizes });
-                                    }}
-                                    placeholder="₹500"
-                                    className="flex-1 rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none text-sm"
-                                />
-                                <button 
-                                    type="button"
-                                    onClick={() => {
-                                        const newPrizes = formData.additionalPrizes.filter((_, i) => i !== index);
-                                        setFormData({ ...formData, additionalPrizes: newPrizes });
-                                    }}
-                                    className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </div>
-                        ))}
-                        {formData.additionalPrizes.length === 0 && (
-                            <p className="text-xs text-slate-600 italic">No additional prizes added.</p>
-                        )}
-                    </div>
-                </div>
-             </div>
-
-             <div className="grid gap-4 md:grid-cols-2 pt-4 border-t border-white/5">
-                <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-400">Max Teams/Players</label>
-                    <input 
-                        type="number" 
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
-                        value={formData.maxTeams}
-                        onChange={(e) => setFormData({...formData, maxTeams: e.target.value})}
-                        required
-                    />
-                </div>
-                <div className="flex items-end pb-1">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                        <div className="relative">
-                            <input 
-                                type="checkbox" 
-                                className="sr-only"
-                                checked={formData.checkInEnabled}
-                                onChange={(e) => setFormData({...formData, checkInEnabled: e.target.checked})}
-                            />
-                            <div className={`w-10 h-5 rounded-full transition-colors ${formData.checkInEnabled ? 'bg-rose-500' : 'bg-slate-800'}`} />
-                            <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${formData.checkInEnabled ? 'translate-x-5' : ''}`} />
-                        </div>
-                        <span className="text-sm font-medium text-slate-400 group-hover:text-slate-300 transition-colors">Enable Check-in</span>
-                    </label>
-                </div>
-             </div>
-
-             {formData.checkInEnabled && (
-                <div className="animate-in slide-in-from-top-2">
-                    <label className="mb-1 block text-sm font-medium text-slate-400">Check-in Opens At</label>
-                    <input 
-                        type="datetime-local" 
-                        className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none [color-scheme:dark]"
-                        value={formData.checkInStart}
-                        onChange={(e) => setFormData({...formData, checkInStart: e.target.value})}
-                        required={formData.checkInEnabled}
-                    />
-                </div>
-             )}
-            
-              <div className="pt-4 border-t border-white/5">
-                <div className="mb-2 flex items-center justify-between">
-                    <label className="text-sm font-medium text-slate-400">Description / Rules</label>
-                    <div className="flex bg-slate-950 rounded-lg p-1 border border-white/5">
-                        <button 
-                            type="button"
-                            onClick={() => setShowPreview(false)}
-                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${!showPreview ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-white'}`}
-                        >
-                            <div className="flex items-center gap-1.5">
-                                <Edit3 className="h-3 w-3" />
-                                Edit
-                            </div>
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={() => setShowPreview(true)}
-                            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${showPreview ? 'bg-rose-500 text-white' : 'text-slate-500 hover:text-white'}`}
-                        >
-                             <div className="flex items-center gap-1.5">
-                                <Eye className="h-3 w-3" />
-                                Preview
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                {!showPreview ? (
-                    <div className="space-y-0.5">
-                        <div className="flex items-center gap-1 px-2 py-1.5 bg-slate-950 border border-white/10 rounded-t-md border-b-0">
-                            <button 
-                                type="button" 
-                                onClick={() => insertFormat("**", "**")}
-                                title="Bold"
-                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
-                            >
-                                <Bold className="h-4 w-4" />
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={() => insertFormat("• ")}
-                                title="Bullet List"
-                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
-                            >
-                                <List className="h-4 w-4" />
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={() => insertFormat("HEADER: \n")}
-                                title="Section Header"
-                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors"
-                            >
-                                <Heading2 className="h-4 w-4" />
-                            </button>
-                            <div className="h-4 w-[1px] bg-white/5 mx-1" />
-                            <button 
-                                type="button" 
-                                onClick={undo}
-                                disabled={historyIndex === 0}
-                                title="Undo"
-                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors disabled:opacity-20"
-                            >
-                                <Undo2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={redo}
-                                disabled={historyIndex === history.length - 1}
-                                title="Redo"
-                                className="p-1.5 hover:bg-white/5 rounded-md text-slate-400 hover:text-white transition-colors disabled:opacity-20"
-                            >
-                                <Redo2 className="h-3.5 w-3.5" />
-                            </button>
-                            <div className="h-4 w-[1px] bg-white/5 mx-1" />
-                            <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest pl-2">Styling Toolbar</span>
-                        </div>
-                        <textarea 
-                            ref={textareaRef}
-                            className="w-full rounded-b-md border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white focus:border-rose-500 focus:outline-none min-h-[200px]"
-                            rows={8}
-                            value={formData.description}
-                            onChange={(e) => updateDescription(e.target.value)}
-                            placeholder="**MISSION STATEMENT**&#10;Welcome to our tournament...&#10;&#10;• Rule 1...&#10;• Rule 2..."
-                        />
-                    </div>
-                ) : (
-                    <RichPreview text={formData.description} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPrizes = formData.additionalPrizes.filter(
+                          (_, i) => i !== index,
+                        );
+                        setFormData({
+                          ...formData,
+                          additionalPrizes: newPrizes,
+                        });
+                      }}
+                      className="p-2 text-slate-600 transition-colors hover:text-rose-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                {formData.additionalPrizes.length === 0 && (
+                  <p className="text-xs text-slate-600 italic">
+                    No additional prizes added.
+                  </p>
                 )}
-                <p className="mt-2 text-[10px] text-slate-500 italic">
-                    Tip: Use **text** for bold, • for lists, and ALL CAPS for headers.
-                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 border-t border-white/5 pt-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                Max Teams/Players
+              </label>
+              <input
+                type="number"
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 focus:border-rose-500 focus:outline-none"
+                value={formData.maxTeams}
+                onChange={(e) =>
+                  setFormData({ ...formData, maxTeams: e.target.value })
+                }
+                required
+              />
+            </div>
+            <div className="flex items-end pb-1">
+              <label className="group flex cursor-pointer items-center gap-3">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={formData.checkInEnabled}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        checkInEnabled: e.target.checked,
+                      })
+                    }
+                  />
+                  <div
+                    className={`h-5 w-10 rounded-full transition-colors ${formData.checkInEnabled ? "bg-rose-500" : "bg-slate-800"}`}
+                  />
+                  <div
+                    className={`absolute top-1 left-1 h-3 w-3 rounded-full bg-white transition-transform ${formData.checkInEnabled ? "translate-x-5" : ""}`}
+                  />
+                </div>
+                <span className="text-sm font-medium text-slate-400 transition-colors group-hover:text-slate-300">
+                  Enable Check-in
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {formData.checkInEnabled && (
+            <div className="animate-in slide-in-from-top-2">
+              <label className="mb-1 block text-sm font-medium text-slate-400">
+                Check-in Opens At
+              </label>
+              <input
+                type="datetime-local"
+                className="w-full rounded-md border border-white/10 bg-slate-950 px-4 py-2 [color-scheme:dark] focus:border-rose-500 focus:outline-none"
+                value={formData.checkInStart}
+                onChange={(e) =>
+                  setFormData({ ...formData, checkInStart: e.target.value })
+                }
+                required={formData.checkInEnabled}
+              />
+            </div>
+          )}
+
+          <div className="border-t border-white/5 pt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium text-slate-400">
+                Description / Rules
+              </label>
+              <div className="flex rounded-lg border border-white/5 bg-slate-950 p-1">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className={`rounded-md px-3 py-1 text-[10px] font-bold tracking-wider uppercase transition-all ${!showPreview ? "bg-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Edit3 className="h-3 w-3" />
+                    Edit
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className={`rounded-md px-3 py-1 text-[10px] font-bold tracking-wider uppercase transition-all ${showPreview ? "bg-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="h-3 w-3" />
+                    Preview
+                  </div>
+                </button>
+              </div>
             </div>
 
-             <button 
-                type="submit" 
-                disabled={loading}
-                className="flex w-full items-center justify-center rounded-xl bg-rose-600 py-4 font-black text-white hover:bg-rose-700 disabled:opacity-50 shadow-lg shadow-rose-900/20 transition-all uppercase tracking-widest text-sm"
-            >
-                {loading ? <Loader fullScreen={false} size="sm" /> : "Publish Tournament"}
-            </button>
+            {!showPreview ? (
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1 rounded-t-md border border-b-0 border-white/10 bg-slate-950 px-2 py-1.5">
+                  <button
+                    type="button"
+                    onClick={() => insertFormat("**", "**")}
+                    title="Bold"
+                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <Bold className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormat("• ")}
+                    title="Bullet List"
+                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormat("HEADER: \n")}
+                    title="Section Header"
+                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <Heading2 className="h-4 w-4" />
+                  </button>
+                  <div className="mx-1 h-4 w-[1px] bg-white/5" />
+                  <button
+                    type="button"
+                    onClick={undo}
+                    disabled={historyIndex === 0}
+                    title="Undo"
+                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-20"
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={redo}
+                    disabled={historyIndex === history.length - 1}
+                    title="Redo"
+                    className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-20"
+                  >
+                    <Redo2 className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="mx-1 h-4 w-[1px] bg-white/5" />
+                  <span className="pl-2 text-[9px] font-bold tracking-widest text-slate-600 uppercase">
+                    Styling Toolbar
+                  </span>
+                </div>
+                <textarea
+                  ref={textareaRef}
+                  className="min-h-[200px] w-full rounded-b-md border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white focus:border-rose-500 focus:outline-none"
+                  rows={8}
+                  value={formData.description}
+                  onChange={(e) => updateDescription(e.target.value)}
+                  placeholder="**MISSION STATEMENT**&#10;Welcome to our tournament...&#10;&#10;• Rule 1...&#10;• Rule 2..."
+                />
+              </div>
+            ) : (
+              <RichPreview text={formData.description} />
+            )}
+            <p className="mt-2 text-[10px] text-slate-500 italic">
+              Tip: Use **text** for bold, • for lists, and ALL CAPS for headers.
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex w-full items-center justify-center rounded-xl bg-rose-600 py-4 text-sm font-black tracking-widest text-white uppercase shadow-lg shadow-rose-900/20 transition-all hover:bg-rose-700 disabled:opacity-50"
+          >
+            {loading ? (
+              <Loader fullScreen={false} size="sm" />
+            ) : (
+              "Publish Tournament"
+            )}
+          </button>
         </form>
       </div>
     </div>

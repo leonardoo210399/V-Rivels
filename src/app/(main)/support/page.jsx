@@ -123,7 +123,7 @@ export default function SupportPage() {
               Get real-time help from mods and the community.
             </p>
             <a
-              href="https://discord.gg/vrivals"
+              href="https://discord.gg/gexZcZzCHV"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-rose-400 hover:text-rose-300"

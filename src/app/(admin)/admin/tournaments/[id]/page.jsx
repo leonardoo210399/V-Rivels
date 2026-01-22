@@ -127,8 +127,8 @@ export default function TournamentControlPage({ params }) {
     additionalPrizes: [],
   });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const [tData, regsRes, matchesRes, payReqsRes] = await Promise.all([
         getTournament(id),
@@ -136,7 +136,6 @@ export default function TournamentControlPage({ params }) {
         getMatches(id),
         getTournamentPaymentRequests(id),
       ]);
-      
 
       // Auto-fix count discrepancy
       // If the counter on the tournament doc doesn't match the actual number of registration docs
@@ -174,7 +173,7 @@ export default function TournamentControlPage({ params }) {
     } catch (error) {
       console.error("Failed to load tournament data", error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -660,27 +659,56 @@ export default function TournamentControlPage({ params }) {
   const handleApproveRequest = async (request) => {
     if (!confirm("Approve this payment and register the user?")) return;
     setUpdating(true);
-    try {
-      const metadata = parseMetadata(request.metadata) || {};
 
-      // 1. Create Registration
-      await registerForTournament(
-        request.tournamentId,
-        request.userId,
-        request.teamName,
-        {
-          metadata: request.metadata, // Pass the original string, not the parsed object
-          transactionId: request.transactionId,
-          paymentStatus: "verified",
-        },
+    // Optimistic Update
+    setPaymentRequests((prev) =>
+      prev.map((r) =>
+        r.$id === request.$id ? { ...r, paymentStatus: "verified" } : r,
+      ),
+    );
+
+    try {
+      // Check if user is already registered
+      const existingReg = registrations.find(
+        (r) => r.userId === request.userId,
       );
+
+      if (existingReg) {
+        if (
+          confirm(
+            `User is already registered as "${existingReg.teamName}". Update their existing registration to VERIFIED?`,
+          )
+        ) {
+          // Update existing registration
+          await updateRegistrationPaymentStatus(
+            existingReg.$id,
+            "verified",
+            request.transactionId,
+          );
+        } else {
+          setUpdating(false);
+          return;
+        }
+      } else {
+        // 1. Create New Registration
+        await registerForTournament(
+          request.tournamentId,
+          request.userId,
+          request.teamName,
+          {
+            metadata: request.metadata, // Pass the original string, not the parsed object
+            transactionId: request.transactionId,
+            paymentStatus: "verified",
+          },
+        );
+      }
 
       // 2. Update Request Status
       await updatePaymentRequestStatus(request.$id, "verified");
 
       // 3. Reload
-      await loadData();
-      alert("User registered successfully!");
+      await loadData(false);
+      alert("User registered/updated successfully!");
     } catch (e) {
       console.error(e);
       alert("Failed to approve: " + e.message);
@@ -717,7 +745,7 @@ export default function TournamentControlPage({ params }) {
         );
       }
 
-      await loadData();
+      await loadData(false);
       alert("Registration revoked successfully.");
     } catch (e) {
       console.error(e);
@@ -746,13 +774,23 @@ export default function TournamentControlPage({ params }) {
     }
 
     setUpdating(true);
+
+    // Optimistic Update
+    setPaymentRequests((prev) =>
+      prev.map((r) =>
+        r.$id === selectedRequestForRejection.$id
+          ? { ...r, paymentStatus: "rejected", rejectionReason: finalReason }
+          : r,
+      ),
+    );
+
     try {
       await updatePaymentRequestStatus(
         selectedRequestForRejection.$id,
         "rejected",
         finalReason,
       );
-      await loadData();
+      await loadData(false);
       setRejectionModalOpen(false);
       setSelectedRequestForRejection(null);
     } catch (e) {
@@ -813,10 +851,10 @@ export default function TournamentControlPage({ params }) {
                   }`}
                 >
                   {tournament.status === "scheduled" || !tournament.status
-                    ? "SCHEDULED / UPCOMING"
+                    ? "SCHEDULED"
                     : tournament.status === "ongoing"
                       ? "ONGOING (LIVE)"
-                      : "COMPLETED / PAST"}
+                      : "COMPLETED"}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
@@ -844,6 +882,7 @@ export default function TournamentControlPage({ params }) {
           <div className="flex items-center gap-3">
             <Link
               href={`/tournaments/${id}`}
+              target="_blank"
               className="flex items-center gap-2 rounded-xl border border-white/5 bg-slate-900 px-4 py-2.5 text-xs font-black tracking-widest text-slate-400 uppercase transition-all hover:bg-slate-800 hover:text-white"
             >
               <ExternalLink className="h-4 w-4" />

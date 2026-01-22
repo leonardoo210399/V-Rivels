@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url("https://fonts.cdnfonts.com/css/general-sans");
+@import "tailwindcss";
 
 /* Font Face Definitions for Landing Page */
 @font-face {
@@ -581,11 +581,16 @@ input[type="datetime-local"] {
 
 /* Glow Pulse Animation */
 @keyframes glowPulse {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(244, 63, 94, 0.5), 0 0 40px rgba(244, 63, 94, 0.3);
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px rgba(244, 63, 94, 0.5),
+      0 0 40px rgba(244, 63, 94, 0.3);
   }
   50% {
-    box-shadow: 0 0 30px rgba(244, 63, 94, 0.8), 0 0 60px rgba(244, 63, 94, 0.5);
+    box-shadow:
+      0 0 30px rgba(244, 63, 94, 0.8),
+      0 0 60px rgba(244, 63, 94, 0.5);
   }
 }
 
@@ -595,11 +600,16 @@ input[type="datetime-local"] {
 
 /* Cyan Glow Pulse */
 @keyframes glowPulseCyan {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.5), 0 0 40px rgba(34, 211, 238, 0.3);
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px rgba(34, 211, 238, 0.5),
+      0 0 40px rgba(34, 211, 238, 0.3);
   }
   50% {
-    box-shadow: 0 0 30px rgba(34, 211, 238, 0.8), 0 0 60px rgba(34, 211, 238, 0.5);
+    box-shadow:
+      0 0 30px rgba(34, 211, 238, 0.8),
+      0 0 60px rgba(34, 211, 238, 0.5);
   }
 }
 
@@ -658,7 +668,8 @@ input[type="datetime-local"] {
 
 /* Float Up Animation */
 @keyframes floatUp {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -693,7 +704,8 @@ input[type="datetime-local"] {
 
 /* Scale Bounce */
 @keyframes scaleBounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -724,34 +736,39 @@ input[type="datetime-local"] {
 
 /* Team Glow Effects */
 .glow-rose {
-  box-shadow: 0 0 20px rgba(244, 63, 94, 0.4),
-              0 0 40px rgba(244, 63, 94, 0.2),
-              inset 0 0 20px rgba(244, 63, 94, 0.1);
+  box-shadow:
+    0 0 20px rgba(244, 63, 94, 0.4),
+    0 0 40px rgba(244, 63, 94, 0.2),
+    inset 0 0 20px rgba(244, 63, 94, 0.1);
 }
 
 .glow-cyan {
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.4),
-              0 0 40px rgba(34, 211, 238, 0.2),
-              inset 0 0 20px rgba(34, 211, 238, 0.1);
+  box-shadow:
+    0 0 20px rgba(34, 211, 238, 0.4),
+    0 0 40px rgba(34, 211, 238, 0.2),
+    inset 0 0 20px rgba(34, 211, 238, 0.1);
 }
 
 .glow-emerald {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4),
-              0 0 40px rgba(16, 185, 129, 0.2),
-              inset 0 0 20px rgba(16, 185, 129, 0.1);
+  box-shadow:
+    0 0 20px rgba(16, 185, 129, 0.4),
+    0 0 40px rgba(16, 185, 129, 0.2),
+    inset 0 0 20px rgba(16, 185, 129, 0.1);
 }
 
 /* Text Glow */
 .text-glow-rose {
-  text-shadow: 0 0 10px rgba(244, 63, 94, 0.8),
-               0 0 20px rgba(244, 63, 94, 0.5),
-               0 0 30px rgba(244, 63, 94, 0.3);
+  text-shadow:
+    0 0 10px rgba(244, 63, 94, 0.8),
+    0 0 20px rgba(244, 63, 94, 0.5),
+    0 0 30px rgba(244, 63, 94, 0.3);
 }
 
 .text-glow-cyan {
-  text-shadow: 0 0 10px rgba(34, 211, 238, 0.8),
-               0 0 20px rgba(34, 211, 238, 0.5),
-               0 0 30px rgba(34, 211, 238, 0.3);
+  text-shadow:
+    0 0 10px rgba(34, 211, 238, 0.8),
+    0 0 20px rgba(34, 211, 238, 0.5),
+    0 0 30px rgba(34, 211, 238, 0.3);
 }
 
 /* 3D Tilt Container */
@@ -761,7 +778,8 @@ input[type="datetime-local"] {
 }
 
 .tilt-card:hover {
-  transform: perspective(1000px) rotateY(var(--rotate-y, 0deg)) rotateX(var(--rotate-x, 0deg));
+  transform: perspective(1000px) rotateY(var(--rotate-y, 0deg))
+    rotateX(var(--rotate-x, 0deg));
 }
 
 /* Gradient Border */
@@ -771,13 +789,19 @@ input[type="datetime-local"] {
 }
 
 .gradient-border::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   padding: 1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(244, 63, 94, 0.5), rgba(34, 211, 238, 0.5));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  background: linear-gradient(
+    135deg,
+    rgba(244, 63, 94, 0.5),
+    rgba(34, 211, 238, 0.5)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;

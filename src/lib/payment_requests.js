@@ -73,3 +73,15 @@ export async function updatePaymentRequestStatus(requestId, status, rejectionRea
     }
   );
 }
+
+export async function getAllPendingPaymentRequests() {
+    const response = await databases.listDocuments(
+        DATABASE_ID,
+        PAYMENT_REQUESTS_COLLECTION_ID,
+        [
+            Query.equal("paymentStatus", "pending"),
+            Query.limit(5000) // Adjust limit as needed, max for Appwrite is usually restricted but we try high
+        ]
+    );
+    return response.documents;
+}

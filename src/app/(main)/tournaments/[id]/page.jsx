@@ -34,9 +34,12 @@ import {
   Info,
   RotateCcw,
 } from "lucide-react";
+import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
 import UPIPaymentModal from "@/components/UPIPaymentModal";
+import { account } from "@/lib/appwrite";
+import { checkDiscordMembership, DISCORD_INVITE_URL } from "@/lib/discord";
 const RichText = ({ text }) => {
   if (!text) return null;
 
@@ -136,6 +139,11 @@ export default function TournamentDetailPage({ params }) {
   const [matches, setMatches] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Discord membership check
+  const [isInDiscord, setIsInDiscord] = useState(null); // null = loading, true/false = result
+  const [hasDiscordLinked, setHasDiscordLinked] = useState(null); // null = loading, true/false = result
+  const [checkingDiscord, setCheckingDiscord] = useState(false);
+
   // Helper to create a map of ID -> Participant Name
   const parseMetadata = (metadata) => {
     try {
@@ -228,6 +236,60 @@ export default function TournamentDetailPage({ params }) {
     }
     loadData();
   }, [id, user]);
+
+  // Check Discord membership function (can be called manually)
+  const recheckDiscord = async () => {
+    if (!user) {
+      setIsInDiscord(null);
+      setHasDiscordLinked(null);
+      return;
+    }
+
+    setCheckingDiscord(true);
+    try {
+      const session = await account.getSession("current");
+      if (session?.provider === "discord" && session?.providerAccessToken) {
+        setHasDiscordLinked(true);
+        const { isMember } = await checkDiscordMembership(
+          session.providerAccessToken,
+        );
+        setIsInDiscord(isMember);
+      } else {
+        // User is logged in but not via Discord or no Discord linked
+        // Check if they have Discord identity linked
+        try {
+          const identities = await account.listIdentities();
+          const discord = identities.identities?.find(
+            (id) => id.provider === "discord",
+          );
+          if (discord?.providerAccessToken) {
+            setHasDiscordLinked(true);
+            const { isMember } = await checkDiscordMembership(
+              discord.providerAccessToken,
+            );
+            setIsInDiscord(isMember);
+          } else {
+            setHasDiscordLinked(false); // No Discord linked at all
+            setIsInDiscord(false);
+          }
+        } catch (e) {
+          setHasDiscordLinked(false);
+          setIsInDiscord(false);
+        }
+      }
+    } catch (e) {
+      console.error("Discord check failed:", e);
+      setHasDiscordLinked(false);
+      setIsInDiscord(false);
+    } finally {
+      setCheckingDiscord(false);
+    }
+  };
+
+  // Check Discord membership when user is logged in
+  useEffect(() => {
+    recheckDiscord();
+  }, [user]);
 
   const verifyMember = async (index) => {
     const member = members[index];
@@ -978,6 +1040,78 @@ export default function TournamentDetailPage({ params }) {
                   <span className="text-[9px] font-black tracking-widest uppercase md:text-[10px]">
                     Live / Completed
                   </span>
+                </div>
+              ) : checkingDiscord ? (
+                <div className="flex items-center justify-center gap-3 rounded-lg border border-white/5 bg-slate-900 p-4 md:rounded-xl md:p-6">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                  <span className="text-xs font-bold text-slate-400">
+                    Checking Discord status...
+                  </span>
+                </div>
+              ) : hasDiscordLinked === false ? (
+                <div className="flex flex-col gap-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 md:p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/10 md:h-12 md:w-12">
+                      <FaDiscord className="h-5 w-5 text-indigo-400 md:h-6 md:w-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black tracking-wide text-indigo-400 uppercase md:text-sm">
+                        Connect Discord
+                      </h4>
+                      <p className="text-[10px] text-slate-400 md:text-xs">
+                        Link your Discord account first
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-slate-400 md:text-xs">
+                    To register for tournaments, you need to connect your
+                    Discord account. Go to your Profile to link Discord.
+                  </p>
+                  <Link
+                    href="/profile"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500"
+                  >
+                    <FaDiscord className="h-4 w-4" />
+                    Connect Discord in Profile
+                  </Link>
+                </div>
+              ) : isInDiscord === false ? (
+                <div className="flex flex-col gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 md:p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 md:h-12 md:w-12">
+                      <FaDiscord className="h-5 w-5 text-amber-400 md:h-6 md:w-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black tracking-wide text-amber-400 uppercase md:text-sm">
+                        Join Our Discord
+                      </h4>
+                      <p className="text-[10px] text-slate-400 md:text-xs">
+                        You're not in VRivals Arena server
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-slate-400 md:text-xs">
+                    Your Discord is connected! Now join the VRivals Arena server
+                    for match coordination and announcements.
+                  </p>
+                  <a
+                    href={DISCORD_INVITE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 py-3 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-amber-600/20 transition-all hover:bg-amber-500"
+                  >
+                    <FaDiscord className="h-4 w-4" />
+                    Join Discord Server
+                  </a>
+                  <button
+                    onClick={recheckDiscord}
+                    disabled={checkingDiscord}
+                    className="text-[10px] font-bold text-slate-500 transition-all hover:text-white disabled:opacity-50"
+                  >
+                    {checkingDiscord
+                      ? "Checking..."
+                      : "Already joined? Click to refresh"}
+                  </button>
                 </div>
               ) : (
                 <form

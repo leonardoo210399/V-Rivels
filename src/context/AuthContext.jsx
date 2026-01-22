@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
         OAuthProvider.Discord,
         `${window.location.origin}/profile`,
         `${window.location.origin}/login`,
-        ["identify", "email"],
+        ["identify", "email", "guilds"],
       );
     } catch (error) {
       console.error(error);
