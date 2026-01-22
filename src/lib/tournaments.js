@@ -125,14 +125,19 @@ export async function getRegistration(registrationId) {
     );
 }
 
-export async function updateRegistrationPaymentStatus(registrationId, status) {
+export async function updateRegistrationPaymentStatus(registrationId, status, transactionId = null) {
+    const data = {
+        paymentStatus: status
+    };
+    if (transactionId) {
+        data.transactionId = transactionId;
+    }
+
     return await databases.updateDocument(
         DATABASE_ID,
         REGISTRATIONS_COLLECTION_ID,
         registrationId,
-        {
-            paymentStatus: status
-        }
+        data
     );
 }
 
