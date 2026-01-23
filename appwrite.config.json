@@ -299,7 +299,7 @@
                     "key": "mainAgent",
                     "type": "string",
                     "required": true,
-                    "array": false,
+                    "array": true,
                     "size": 50,
                     "default": null,
                     "encrypt": false
