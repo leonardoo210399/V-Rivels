@@ -866,46 +866,60 @@ function AgentCard({
 
       {/* Agent Icons Display */}
       <div className="relative z-10 mb-6">
-        <div className="flex flex-wrap items-center gap-6">
+        <div className="flex flex-wrap items-start gap-2 md:gap-3 lg:gap-6">
           {/* Main Agent(s) */}
+          {/* Main Agents Group */}
           {(Array.isArray(agent.mainAgent)
             ? agent.mainAgent
             : agent.mainAgent
               ? [agent.mainAgent]
               : []
-          ).map((mainName, mIdx) => {
-            const agentInfo = availableAgents.find(
-              (a) => a.displayName?.toLowerCase() === mainName?.toLowerCase(),
-            );
-            const icon =
-              typeof agentIcons[agentInfo?.displayName] === "object"
-                ? agentIcons[agentInfo?.displayName]?.src
-                : agentIcons[agentInfo?.displayName] || agentInfo?.displayIcon;
+          ).length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[9px] leading-none font-black tracking-[0.2em] text-rose-500 uppercase">
+                Main
+              </span>
+              <div className="flex -space-x-4">
+                {(Array.isArray(agent.mainAgent)
+                  ? agent.mainAgent
+                  : [agent.mainAgent]
+                ).map((mainName, mIdx) => {
+                  const agentInfo = availableAgents.find(
+                    (a) =>
+                      a.displayName?.toLowerCase() === mainName?.toLowerCase(),
+                  );
+                  const icon =
+                    typeof agentIcons[agentInfo?.displayName] === "object"
+                      ? agentIcons[agentInfo?.displayName]?.src
+                      : agentIcons[agentInfo?.displayName] ||
+                        agentInfo?.displayIcon;
 
-            return (
-              <div key={mIdx} className="flex flex-col gap-2">
-                <span className="text-[9px] leading-none font-black tracking-[0.2em] text-rose-500 uppercase">
-                  {mIdx === 0 ? "Main" : "Main"}
-                </span>
-                <div className="group/main relative">
-                  <div className="absolute -inset-1 rounded-xl bg-rose-500/20 opacity-30 blur transition-opacity group-hover/main:opacity-60" />
-                  <div className="relative h-14 w-14 overflow-hidden rounded-xl border-2 border-rose-500 bg-slate-950 shadow-xl shadow-rose-500/10">
-                    {icon ? (
-                      <img
-                        src={icon}
-                        alt={mainName}
-                        className="h-full w-full scale-110 object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] font-black text-rose-500 uppercase">
-                        {mainName?.substring(0, 2)}
+                  return (
+                    <div
+                      key={mIdx}
+                      className="group/main relative transition-all hover:z-10"
+                      title={mainName}
+                    >
+                      <div className="absolute -inset-1 rounded-xl bg-rose-500/20 opacity-30 blur transition-opacity group-hover/main:opacity-60" />
+                      <div className="relative h-14 w-14 overflow-hidden rounded-xl border-2 border-rose-500 bg-slate-950 shadow-xl shadow-rose-500/10 transition-transform group-hover/main:scale-105">
+                        {icon ? (
+                          <img
+                            src={icon}
+                            alt={mainName}
+                            className="h-full w-full scale-110 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-slate-800 text-[10px] font-black text-rose-500 uppercase">
+                            {mainName?.substring(0, 2)}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          )}
 
           {/* Secondary Agents */}
           {agent.secondaryAgents && agent.secondaryAgents.length > 0 && (
@@ -913,8 +927,8 @@ function AgentCard({
               <span className="text-[9px] leading-none font-black tracking-[0.2em] text-slate-500 uppercase">
                 Secondary Agents
               </span>
-              <div className="flex -space-x-3">
-                {agent.secondaryAgents.slice(0, 4).map((name, idx) => {
+              <div className="flex -space-x-2 md:-space-x-3">
+                {agent.secondaryAgents.slice(0, 5).map((name, idx) => {
                   const agentInfo = availableAgents.find(
                     (a) => a.displayName?.toLowerCase() === name?.toLowerCase(),
                   );
@@ -926,7 +940,7 @@ function AgentCard({
                   return (
                     <div
                       key={idx}
-                      className="relative h-12 w-12 cursor-help overflow-hidden rounded-xl border-2 border-slate-950 bg-slate-900 shadow-lg transition-all hover:z-10 hover:scale-110"
+                      className="relative h-11 w-11 cursor-help overflow-hidden rounded-xl border-2 border-slate-950 bg-slate-900 shadow-lg transition-all hover:z-10 hover:scale-110 lg:h-12 lg:w-12"
                       title={name}
                     >
                       {icon ? (
@@ -943,11 +957,6 @@ function AgentCard({
                     </div>
                   );
                 })}
-                {agent.secondaryAgents.length > 4 && (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-slate-950 bg-slate-950 text-xs font-black text-rose-500 shadow-lg">
-                    +{agent.secondaryAgents.length - 4}
-                  </div>
-                )}
               </div>
             </div>
           )}
