@@ -15,12 +15,15 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import GlobalSearchModal from "./GlobalSearchModal";
+import { Search } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout, loading, isAdmin } = useAuth();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -32,6 +35,18 @@ export default function Navbar() {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Ctrl+K to open search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Don't show navbar on login page
@@ -147,6 +162,20 @@ export default function Navbar() {
 
           {/* User Actions */}
           <div className="hidden flex-1 items-center justify-end gap-4 lg:flex">
+            {/* Search Bar - Moved to right side */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="group mr-2 flex w-64 items-center justify-between rounded-full border border-white/5 bg-white/5 px-4 py-2 text-sm text-slate-400 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                <span className="font-medium">Search players...</span>
+              </div>
+              <div className="flex items-center gap-1 rounded bg-slate-950/50 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 shadow-sm group-hover:text-slate-400">
+                <span className="text-xs">⌘</span>K
+              </div>
+            </button>
+
             {!loading && (
               <>
                 {user ? (
@@ -237,6 +266,18 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              {/* Mobile Search Item */}
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsSearchOpen(true);
+                }}
+                className="flex items-center gap-4 rounded-2xl px-6 py-4 text-lg font-bold text-slate-400 transition-all hover:bg-white/5 hover:text-white"
+              >
+                <Search className="h-4 w-4" />
+                Player Search
+              </button>
+
               {!loading && (
                 <div className="mt-4 flex flex-col gap-4 border-t border-white/10 pt-4">
                   {user ? (
@@ -275,6 +316,10 @@ export default function Navbar() {
           </div>
         )}
       </div>
+      <GlobalSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </header>
   );
 }
