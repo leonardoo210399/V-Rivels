@@ -966,19 +966,24 @@ export default function TournamentDetailPage({ params }) {
                 Entry Details
               </h3>
 
-              <div className="group relative mb-4 overflow-hidden rounded-xl border border-white/5 bg-slate-950 p-4 md:mb-6 md:rounded-2xl md:p-5">
-                <div className="absolute top-0 right-0 h-32 w-32 translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500/5 blur-3xl" />
-                <p className="mb-1 text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
+              <div className="group relative mb-5 overflow-hidden rounded-2xl border border-white/5 bg-slate-950/60 p-5 text-center transition-all hover:bg-slate-950/80 md:mb-6 md:p-6">
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-rose-500/10 blur-2xl transition-all group-hover:bg-rose-500/20" />
+                <p className="mb-2 text-[10px] font-black tracking-[0.2em] text-rose-500/80 uppercase md:text-xs">
                   {tournament.gameType === "Deathmatch"
-                    ? "Individual Fee"
-                    : "Team Entry Fee"}
+                    ? "INDIVIDUAL ENTRY"
+                    : "TEAM REGISTRATION"}
                 </p>
-                <p className="text-2xl font-black tracking-tight text-white italic md:text-3xl">
-                  ₹{tournament.entryFee}
-                </p>
-                <div className="mt-3 flex items-center gap-2 text-[8px] font-bold tracking-widest text-rose-500/60 uppercase md:mt-4 md:text-[9px]">
-                  <Info className="h-3 w-3" />
-                  One-time registration payment
+                <div className="relative inline-flex items-baseline gap-1">
+                  <span className="text-xl font-bold text-white/50 md:text-2xl">
+                    ₹
+                  </span>
+                  <p className="text-4xl font-black tracking-tighter text-white italic drop-shadow-lg md:text-5xl">
+                    {tournament.entryFee}
+                  </p>
+                </div>
+                <div className="mt-4 flex items-center justify-center gap-2 text-[9px] font-bold tracking-widest text-slate-500 uppercase md:text-[10px]">
+                  <div className="h-1 w-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                  Instant Activation
                 </div>
               </div>
               {tournament.checkInEnabled && (
@@ -1129,72 +1134,99 @@ export default function TournamentDetailPage({ params }) {
                   </span>
                 </div>
               ) : checkingDiscord ? (
-                <div className="flex items-center justify-center gap-3 rounded-lg border border-white/5 bg-slate-900 p-4 md:rounded-xl md:p-6">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-                  <span className="text-xs font-bold text-slate-400">
-                    Checking Discord status...
+                <div className="flex items-center justify-center gap-4 rounded-2xl border border-white/5 bg-slate-900/40 p-6 backdrop-blur-xl md:p-8">
+                  <div className="relative">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-rose-500/20 border-t-rose-500" />
+                    <div className="absolute inset-0 animate-ping rounded-full bg-rose-500/10" />
+                  </div>
+                  <span className="text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase md:text-xs">
+                    Scanning Tactical Comms...
                   </span>
                 </div>
               ) : hasDiscordLinked === false ? (
-                <div className="flex flex-col gap-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 md:p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/10 md:h-12 md:w-12">
-                      <FaDiscord className="h-5 w-5 text-indigo-400 md:h-6 md:w-6" />
+                <div className="group relative overflow-hidden rounded-2xl border border-rose-500/20 bg-rose-500/5 p-5 backdrop-blur-xl transition-all hover:bg-rose-500/[0.08] md:p-6">
+                  {/* Atmospheric background elements */}
+                  <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-rose-500/20 blur-[40px] transition-all group-hover:bg-rose-500/30" />
+                  <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-rose-500/5 blur-[40px]" />
+
+                  <div className="relative z-10 space-y-5">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 shadow-[0_0_20px_rgba(244,63,94,0.1)] transition-transform group-hover:scale-110">
+                        <FaDiscord className="h-7 w-7 text-rose-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-[10px] font-black tracking-[0.25em] text-rose-500 uppercase md:text-xs">
+                          IDENTITY LINK
+                        </h4>
+                        <p className="text-base font-black tracking-tight text-white italic md:text-lg">
+                          Connect Discord
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-xs font-black tracking-wide text-indigo-400 uppercase md:text-sm">
-                        Connect Discord
-                      </h4>
-                      <p className="text-[10px] text-slate-400 md:text-xs">
-                        Link your Discord account first
-                      </p>
-                    </div>
+
+                    <p className="text-[11px] leading-relaxed font-medium text-slate-400 md:text-xs">
+                      Join the battle. We need your Discord profile to grant you
+                      private access to match lobbies and voice comms.
+                    </p>
+
+                    <Link
+                      href="/profile"
+                      className="group/btn relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-rose-600 py-4 text-xs font-black tracking-[0.2em] text-white uppercase shadow-[0_8px_20px_rgba(225,29,72,0.3)] transition-all hover:bg-rose-500 hover:shadow-[0_12px_24px_rgba(225,29,72,0.5)] md:text-[13px]"
+                    >
+                      <FaDiscord className="relative z-10 h-5 w-5 transition-transform group-hover/btn:scale-125" />
+                      <span className="relative z-10">Link in Profile</span>
+                    </Link>
                   </div>
-                  <p className="text-[10px] leading-relaxed text-slate-400 md:text-xs">
-                    To register for tournaments, you need to connect your
-                    Discord account. Go to your Profile to link Discord.
-                  </p>
-                  <Link
-                    href="/profile"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500"
-                  >
-                    <FaDiscord className="h-4 w-4" />
-                    Connect Discord in Profile
-                  </Link>
                 </div>
               ) : isInDiscord === false ? (
-                <div className="flex flex-col gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 md:p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 md:h-12 md:w-12">
-                      <FaDiscord className="h-5 w-5 text-amber-400 md:h-6 md:w-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black tracking-wide text-amber-400 uppercase md:text-sm">
-                        Join Our Discord
-                      </h4>
-                      <p className="text-[10px] text-slate-400 md:text-xs">
-                        You're not in VRivals Arena server
+                <div className="flex flex-col gap-4">
+                  <div className="group relative overflow-hidden rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 backdrop-blur-xl transition-all hover:bg-amber-500/[0.08] md:p-6">
+                    {/* Atmospheric background elements */}
+                    <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-500/20 blur-[40px] transition-all group-hover:bg-amber-500/30" />
+
+                    <div className="relative z-10 space-y-5">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-transform group-hover:scale-110">
+                          <FaDiscord className="h-7 w-7 text-amber-500" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-[10px] font-black tracking-[0.25em] text-amber-500 uppercase md:text-xs">
+                            MISSING ACCESS
+                          </h4>
+                          <p className="text-base font-black tracking-tight text-white italic md:text-lg">
+                            Join Our Server
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] leading-relaxed font-medium text-slate-400 md:text-xs">
+                        You've linked your account! Now join the official
+                        VRivals Arena server to unlock your private match
+                        lobbies.
                       </p>
+
+                      <a
+                        href={DISCORD_INVITE_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group/btn relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-amber-600 py-4 text-xs font-black tracking-[0.2em] text-white uppercase shadow-[0_8px_20px_rgba(217,119,6,0.3)] transition-all hover:bg-amber-500 hover:shadow-[0_12px_24px_rgba(217,119,6,0.5)] md:text-[13px]"
+                      >
+                        <FaDiscord className="relative z-10 h-5 w-5 transition-transform group-hover/btn:scale-125" />
+                        <span className="relative z-10">
+                          Join VRivals Server
+                        </span>
+                      </a>
                     </div>
                   </div>
-                  <p className="text-[10px] leading-relaxed text-slate-400 md:text-xs">
-                    Your Discord is connected! Now join the VRivals Arena server
-                    for match coordination and announcements.
-                  </p>
-                  <a
-                    href={DISCORD_INVITE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 py-3 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-amber-600/20 transition-all hover:bg-amber-500"
-                  >
-                    <FaDiscord className="h-4 w-4" />
-                    Join Discord Server
-                  </a>
+
                   <button
                     onClick={recheckDiscord}
                     disabled={checkingDiscord}
-                    className="text-[10px] font-bold text-slate-500 transition-all hover:text-white disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 transition-all hover:text-white disabled:opacity-50"
                   >
+                    <RotateCcw
+                      className={`h-3 w-3 ${checkingDiscord ? "animate-spin" : ""}`}
+                    />
                     {checkingDiscord
                       ? "Checking..."
                       : "Already joined? Click to refresh"}
