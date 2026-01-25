@@ -75,7 +75,7 @@ export default function RulesAndRegulations() {
                 If you suspect a violation of these rules, you must capture proof (screenshots, video recording).
             </p>
             <ul className="list-disc list-inside space-y-3 text-slate-400 ml-2">
-              <li><strong>Evidence:</strong> Admins will only act on solid evidence. "He seems suspicious" is not enough.</li>
+              <li><strong>Evidence:</strong> Admins will only act on solid evidence. "He/She seems suspicious" is not enough.</li>
               <li><strong>Reporting:</strong> Open a ticket in our Support center immediately after the match. Do not spam admins.</li>
               <li><strong>Final Decision:</strong> Admin decisions are final and binding in all disputes.</li>
             </ul>

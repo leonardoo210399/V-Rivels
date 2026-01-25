@@ -32,9 +32,9 @@ COMPETITIVE DYNAMICS:
 - **Spawn Mastery**: Players must adapt to rapid re-spawns and maintain map awareness to avoid being caught in crossfires.
 
 EVENT RULES & ETIQUETTE:
-- **Mandatory Check-in**: All participants must check-in via the portal 15 minutes before the lobby goes live.
+- **Mandatory Check-in**: All participants must check-in via the portal 15 minutes before the match to secure their slot.
+- **Join Discord**: Joining our official Discord server is mandatory for all participants to receive lobby details and communicate with admins.
 - **Fair Play**: We maintain a zero-tolerance policy for any third-party software or exploits. Our marshals monitor live standings for statistical anomalies.
-- **Hardware**: For the best experience, ensure your network connection is stable. Technical disconnects during the match cannot be restarted.
 
 FINAL WORD:
 The lobby is waiting. Your rivals are practicing. Every corner is a potential duel and every shot counts towards your legacy. Do you have the composure to maintain a streak, or will you fall in the chaos of the arena?
@@ -54,8 +54,9 @@ TOURNAMENT DYNAMICS:
 - **The Stakes**: Players are competing not just for the prize pool, but for points in our seasonal leaderboard. Consistency across our circuit is the path to being invited to our year-end grand finals.
 - **Map Pool**: All matches will be played on current competitive rotation maps. Map vetos will be handled via our integrated system 15 minutes prior to match start.
 
-THE ROAD TO CHAMPIONSHIP:
-From the first pistol round of the qualifiers to the final clutch in the Grand Finals, every moment will be tracked on our live Tournament Map. Spectators can follow the progression in real-time, watching as the bracket narrows and favorites are tested.
+EVENT GUIDELINES:
+- **Check-in**: Team captains must check-in 15 minutes prior to the scheduled start time.
+- **Communication**: All teams must be present in the official Discord server for coordination.
 
 FINAL WORD:
 Prepare your executes, refine your aim, and ensure your comms are crisp. The server is waiting, and the community is watching. Do you have the composure to clutch the win, or will you fall to the pressure of the big stage?

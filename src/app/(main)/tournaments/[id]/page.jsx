@@ -694,8 +694,14 @@ export default function TournamentDetailPage({ params }) {
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           {tournament.gameType === "Deathmatch"
-                            ? "Score limit: 40 kills"
+                            ? "Score limit: 40 kills or 10 mins"
                             : "Initial rounds: BO1"}
+                        </li>
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
+                          <div className="h-1 w-1 rounded-full bg-rose-500" />
+                          {tournament.gameType === "Deathmatch"
+                            ? "All Weapons Allowed"
+                            : "Map Veto System"}
                         </li>
                       </ul>
                     </div>
@@ -706,11 +712,15 @@ export default function TournamentDetailPage({ params }) {
                       <ul className="space-y-2 md:space-y-3">
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
-                          Be present 15m before start
+                          Check-in 15m before start
                         </li>
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
-                          Good sportsmanship is required
+                          Joining Discord is mandatory
+                        </li>
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
+                          <div className="h-1 w-1 rounded-full bg-rose-500" />
+                          Strict Anti-Cheat Policy
                         </li>
                       </ul>
                     </div>
@@ -999,7 +1009,7 @@ export default function TournamentDetailPage({ params }) {
                 </div>
               ) : isPaymentRejected ? (
                 <div className="flex flex-col gap-3 md:gap-4">
-                  <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
+                  <div className="flex items-start gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
                     <UserX className="h-4 w-4 md:h-5 md:w-5" />
                     <div className="min-w-0 flex-1">
                       <p className="mb-0.5 text-[10px] font-black tracking-widest uppercase md:text-xs">
@@ -1012,14 +1022,14 @@ export default function TournamentDetailPage({ params }) {
 
                       <button
                         onClick={handleRetryPayment}
-                        className="mt-3 flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-500 hover:text-white md:text-xs"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-500 hover:text-white md:text-xs"
                       >
                         <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
                         Retry / Fix Payment
                       </button>
                       <Link
                         href="/support"
-                        className="mt-3 flex items-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
+                        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
                       >
                         <Info className="h-3 w-3 md:h-4 md:w-4" />
                         Help / Support
