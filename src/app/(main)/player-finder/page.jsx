@@ -746,7 +746,7 @@ function AgentCard({
 
   return (
     <div
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-b-4 border-white/10 bg-slate-900/50 p-6 transition-all hover:bg-slate-900/80"
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-b-4 border-white/10 bg-slate-900/60 p-4 backdrop-blur-md transition-all hover:bg-slate-900/80 md:p-6"
       style={{
         borderBottomColor: rankDisplay?.includes("Platinum")
           ? "#22d3ee"
@@ -925,7 +925,8 @@ function AgentCard({
           {agent.secondaryAgents && agent.secondaryAgents.length > 0 && (
             <div className="flex flex-col gap-2">
               <span className="text-[9px] leading-none font-black tracking-[0.2em] text-slate-500 uppercase">
-                Secondary Agents
+                <span className="md:hidden">Secondary</span>
+                <span className="hidden md:inline">Secondary Agents</span>
               </span>
               <div className="flex -space-x-2 md:-space-x-3">
                 {agent.secondaryAgents.slice(0, 5).map((name, idx) => {
