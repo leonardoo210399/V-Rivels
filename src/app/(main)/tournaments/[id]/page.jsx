@@ -14,6 +14,7 @@ import {
 import {
   deleteTournamentChannelsAction,
   addMemberToTournamentChannelsAction,
+  assignTournamentRoleAction,
 } from "@/app/actions/discord";
 import { getMatches } from "@/lib/brackets";
 import CompleteBracket from "@/components/CompleteBracket";
@@ -400,18 +401,25 @@ export default function TournamentDetailPage({ params }) {
       setShowPaymentModal(false);
       setPendingPaymentData(null);
 
-      // Auto-add to Discord Channels (if applicable)
-      if (
-        userProfile?.discordId &&
-        (tournament.discordChannelId || tournament.discordVoiceChannelId)
-      ) {
+      // Auto-add to Discord (prefer roles, fallback to individual permissions)
+      if (userProfile?.discordId) {
         try {
-          await addMemberToTournamentChannelsAction(
-            [tournament.discordChannelId, tournament.discordVoiceChannelId],
-            userProfile.discordId,
-          );
+          if (tournament.discordRoleId) {
+            await assignTournamentRoleAction(
+              tournament.discordRoleId,
+              userProfile.discordId,
+            );
+          } else if (
+            tournament.discordChannelId ||
+            tournament.discordVoiceChannelId
+          ) {
+            await addMemberToTournamentChannelsAction(
+              [tournament.discordChannelId, tournament.discordVoiceChannelId],
+              userProfile.discordId,
+            );
+          }
         } catch (discordErr) {
-          console.warn("Failed to add user to discord channels:", discordErr);
+          console.warn("Failed to grant Discord access:", discordErr);
         }
       }
 
@@ -538,18 +546,25 @@ export default function TournamentDetailPage({ params }) {
     try {
       await checkInForTournament(userRegistration.$id);
 
-      // Failsafe: Try to add to Discord again (in case they joined server late)
-      if (
-        userProfile?.discordId &&
-        (tournament.discordChannelId || tournament.discordVoiceChannelId)
-      ) {
+      // Failsafe: Try to grant Discord access again (prefer roles)
+      if (userProfile?.discordId) {
         try {
-          await addMemberToTournamentChannelsAction(
-            [tournament.discordChannelId, tournament.discordVoiceChannelId],
-            userProfile.discordId,
-          );
+          if (tournament.discordRoleId) {
+            await assignTournamentRoleAction(
+              tournament.discordRoleId,
+              userProfile.discordId,
+            );
+          } else if (
+            tournament.discordChannelId ||
+            tournament.discordVoiceChannelId
+          ) {
+            await addMemberToTournamentChannelsAction(
+              [tournament.discordChannelId, tournament.discordVoiceChannelId],
+              userProfile.discordId,
+            );
+          }
         } catch (e) {
-          console.warn("Discord Add Retry Skipped");
+          console.warn("Discord Access Retry Skipped");
         }
       }
 

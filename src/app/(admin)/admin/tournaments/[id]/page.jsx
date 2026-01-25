@@ -14,7 +14,10 @@ import {
   getTournamentPaymentRequests,
   updatePaymentRequestStatus,
 } from "@/lib/payment_requests";
-import { deleteTournamentChannelsAction } from "@/app/actions/discord";
+import {
+  deleteTournamentChannelsAction,
+  assignTournamentRoleAction,
+} from "@/app/actions/discord";
 import {
   getMatches,
   updateMatchStatus,
@@ -585,10 +588,10 @@ export default function TournamentControlPage({ params }) {
     // 1. Delete Discord Channels if they exist
     if (tournament.discordChannelId || tournament.discordVoiceChannelId) {
       try {
-        const result = await deleteTournamentChannelsAction([
-          tournament.discordChannelId,
-          tournament.discordVoiceChannelId,
-        ]);
+        const result = await deleteTournamentChannelsAction(
+          [tournament.discordChannelId, tournament.discordVoiceChannelId],
+          tournament.discordRoleId,
+        );
         if (result && result.error) {
           const proceed = confirm(
             `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway? (Channels will remain manually)`,
@@ -635,10 +638,10 @@ export default function TournamentControlPage({ params }) {
     setUpdating(true);
 
     try {
-      const result = await deleteTournamentChannelsAction([
-        tournament.discordChannelId,
-        tournament.discordVoiceChannelId,
-      ]);
+      const result = await deleteTournamentChannelsAction(
+        [tournament.discordChannelId, tournament.discordVoiceChannelId],
+        tournament.discordRoleId,
+      );
       if (result && result.error) {
         setDiscordDeleteError(result.error);
         setDiscordDeleteStep(0);
@@ -648,12 +651,14 @@ export default function TournamentControlPage({ params }) {
         if (tournament.discordChannelId) updateData.discordChannelId = null;
         if (tournament.discordVoiceChannelId)
           updateData.discordVoiceChannelId = null;
+        if (tournament.discordRoleId) updateData.discordRoleId = null;
 
         await updateTournament(id, updateData);
         setTournament((prev) => ({
           ...prev,
           discordChannelId: null,
           discordVoiceChannelId: null,
+          discordRoleId: null,
         }));
         alert("Discord Channels Deleted successfully!");
         setDiscordDeleteStep(0);
@@ -780,6 +785,25 @@ export default function TournamentControlPage({ params }) {
 
       // 2. Update Request Status
       await updatePaymentRequestStatus(request.$id, "verified");
+
+      // 2b. Assign Discord Role (if applicable)
+      try {
+        const userProfile = await getUserProfile(request.userId);
+        if (userProfile?.discordId && tournament.discordRoleId) {
+          console.log(
+            `[Admin] Assigning tournament role to ${userProfile.discordId}`,
+          );
+          await assignTournamentRoleAction(
+            tournament.discordRoleId,
+            userProfile.discordId,
+          );
+        }
+      } catch (discordErr) {
+        console.warn(
+          "Failed to assign Discord role during approval:",
+          discordErr,
+        );
+      }
 
       // 3. Reload
       await loadData(false);
