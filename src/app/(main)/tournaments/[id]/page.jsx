@@ -716,7 +716,7 @@ export default function TournamentDetailPage({ params }) {
                         </li>
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
-                          Joining Discord is mandatory
+                          Party Code via Discord
                         </li>
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
