@@ -14,6 +14,7 @@ import {
   getTournamentPaymentRequests,
   updatePaymentRequestStatus,
 } from "@/lib/payment_requests";
+import { deleteTournamentChannelsAction } from "@/app/actions/discord";
 import {
   getMatches,
   updateMatchStatus,
@@ -581,12 +582,86 @@ export default function TournamentControlPage({ params }) {
     setDeleteError(null);
     setUpdating(true);
 
+    // 1. Delete Discord Channels if they exist
+    if (tournament.discordChannelId || tournament.discordVoiceChannelId) {
+      try {
+        const result = await deleteTournamentChannelsAction([
+          tournament.discordChannelId,
+          tournament.discordVoiceChannelId,
+        ]);
+        if (result && result.error) {
+          const proceed = confirm(
+            `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway? (Channels will remain manually)`,
+          );
+          if (!proceed) {
+            setDeleteStep(0);
+            setUpdating(false);
+            return;
+          }
+        }
+      } catch (discordErr) {
+        console.warn("Failed to delete discord channels:", discordErr);
+        // Proceed anyway
+      }
+    }
+
     try {
       await deleteTournament(id);
       router.replace("/admin/tournaments");
     } catch (error) {
       setDeleteError(error.message);
       setDeleteStep(0);
+      setUpdating(false);
+    }
+  };
+
+  const [discordDeleteStep, setDiscordDeleteStep] = useState(0);
+  const [discordDeleteError, setDiscordDeleteError] = useState(null);
+
+  const handleManualDiscordDelete = async () => {
+    if (!tournament.discordChannelId && !tournament.discordVoiceChannelId) {
+      alert("No Discord channel IDs found for this tournament.");
+      return;
+    }
+
+    if (discordDeleteStep === 0) {
+      setDiscordDeleteStep(1);
+      setTimeout(() => setDiscordDeleteStep(0), 3000);
+      return;
+    }
+
+    setDiscordDeleteStep(2);
+    setDiscordDeleteError(null);
+    setUpdating(true);
+
+    try {
+      const result = await deleteTournamentChannelsAction([
+        tournament.discordChannelId,
+        tournament.discordVoiceChannelId,
+      ]);
+      if (result && result.error) {
+        setDiscordDeleteError(result.error);
+        setDiscordDeleteStep(0);
+      } else {
+        // Success: Clear the IDs from the tournament document
+        const updateData = {};
+        if (tournament.discordChannelId) updateData.discordChannelId = null;
+        if (tournament.discordVoiceChannelId)
+          updateData.discordVoiceChannelId = null;
+
+        await updateTournament(id, updateData);
+        setTournament((prev) => ({
+          ...prev,
+          discordChannelId: null,
+          discordVoiceChannelId: null,
+        }));
+        alert("Discord Channels Deleted successfully!");
+        setDiscordDeleteStep(0);
+      }
+    } catch (error) {
+      setDiscordDeleteError(error.message);
+      setDiscordDeleteStep(0);
+    } finally {
       setUpdating(false);
     }
   };
@@ -2545,6 +2620,57 @@ export default function TournamentControlPage({ params }) {
                         )}
                       </div>
                     </div>
+
+                    {(tournament.discordChannelId ||
+                      tournament.discordVoiceChannelId) && (
+                      <div className="mt-4 rounded-2xl border border-indigo-500/10 bg-indigo-500/5 p-6">
+                        <h4 className="mb-2 text-sm font-bold text-indigo-400">
+                          Discord Channel Management
+                        </h4>
+                        <p className="mb-6 text-xs leading-relaxed text-slate-500">
+                          Manually delete the associated Discord channels (Text
+                          & Voice). This is useful if you want to keep the
+                          tournament on the website but remove the Discord
+                          lobby.
+                        </p>
+                        <div className="space-y-4">
+                          <button
+                            onClick={handleManualDiscordDelete}
+                            type="button"
+                            disabled={discordDeleteStep === 2 || updating}
+                            className={`flex min-w-[200px] items-center justify-center gap-2 rounded-xl px-6 py-4 text-[10px] font-black tracking-widest uppercase shadow-lg transition-all ${
+                              discordDeleteStep === 1
+                                ? "animate-pulse bg-amber-500 text-slate-950 shadow-amber-900/20"
+                                : discordDeleteStep === 2
+                                  ? "cursor-not-allowed border border-white/5 bg-slate-900 text-slate-500"
+                                  : "bg-indigo-600 text-white shadow-indigo-900/20 hover:bg-indigo-700"
+                            }`}
+                          >
+                            {discordDeleteStep === 0 && (
+                              <>
+                                <Trash2 className="h-4 w-4" /> Delete Discord
+                                Channels
+                              </>
+                            )}
+                            {discordDeleteStep === 1 && (
+                              <>
+                                <Info className="h-4 w-4" /> Click to Confirm
+                              </>
+                            )}
+                            {discordDeleteStep === 2 && (
+                              <LoaderIcon className="h-4 w-4 animate-spin" />
+                            )}
+                          </button>
+
+                          {discordDeleteError && (
+                            <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-xs font-bold text-rose-500">
+                              <X className="h-4 w-4" />
+                              {discordDeleteError}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -382,18 +382,26 @@ export async function finalizeMatch(matchId, scoreA, scoreB) {
  */
 export async function finalizeDeathmatch(tournamentId, winnerRegId, runnerUpRegId = null) {
     const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
-    const USERS_COLLECTION_ID = "users";
+    const USERS_COLLECTION_ID = "users"; // Ensure this matches actual collection ID
+
+    console.log("Starting finalizeDeathmatch:", { tournamentId, winnerRegId, runnerUpRegId });
 
     try {
         const tournament = await databases.getDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, tournamentId);
         
         // CRITICAL: If the tournament is already completed, do NOT award prizes again
         if (tournament.status === 'completed') {
+            console.log("Tournament already completed. Skipping finalization.");
             return false;
         }
 
         // 1. Award Winner Stats
+        console.log("Fetching winner registration:", winnerRegId);
         const winnerReg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, winnerRegId);
+        
+        console.log("Fetching winner profile for user:", winnerReg.userId); // Check if this starts with underscore or is invalid
+        if (!winnerReg.userId) throw new Error("Winner Registration has no userId");
+
         const winnerProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, winnerReg.userId);
         
         const winnerData = {
@@ -405,11 +413,16 @@ export async function finalizeDeathmatch(tournamentId, winnerRegId, runnerUpRegI
             const prizeValue = parseInt(tournament.firstPrize?.replace(/[^0-9]/g, "")) || 0;
             winnerData.totalEarnings = (winnerProfile.totalEarnings || 0) + prizeValue;
         }
+        
+        console.log("Updating winner stats...", winnerReg.userId);
         await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, winnerReg.userId, winnerData);
 
         // 2. Award Runner Up Stats
         if (runnerUpRegId) {
+            console.log("Fetching runner up:", runnerUpRegId);
             const runnerUpReg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, runnerUpRegId);
+            
+            console.log("Fetching runner up profile:", runnerUpReg.userId);
             const runnerUpProfile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, runnerUpReg.userId);
             
             const runnerData = {
@@ -425,6 +438,7 @@ export async function finalizeDeathmatch(tournamentId, winnerRegId, runnerUpRegI
         }
 
         // 3. Mark tournament with winners for reversal support
+        console.log("Updating tournament doc:", tournamentId);
         await databases.updateDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, tournamentId, {
             winnerRegId,
             runnerUpRegId

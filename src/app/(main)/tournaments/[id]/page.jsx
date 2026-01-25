@@ -11,6 +11,10 @@ import {
   createPaymentRequest,
   getPaymentRequestsForUser,
 } from "@/lib/payment_requests";
+import {
+  deleteTournamentChannelsAction,
+  addMemberToTournamentChannelsAction,
+} from "@/app/actions/discord";
 import { getMatches } from "@/lib/brackets";
 import CompleteBracket from "@/components/CompleteBracket";
 import CompleteStandings from "@/components/CompleteStandings";
@@ -395,6 +399,22 @@ export default function TournamentDetailPage({ params }) {
       setSuccess(true);
       setShowPaymentModal(false);
       setPendingPaymentData(null);
+
+      // Auto-add to Discord Channels (if applicable)
+      if (
+        userProfile?.discordId &&
+        (tournament.discordChannelId || tournament.discordVoiceChannelId)
+      ) {
+        try {
+          await addMemberToTournamentChannelsAction(
+            [tournament.discordChannelId, tournament.discordVoiceChannelId],
+            userProfile.discordId,
+          );
+        } catch (discordErr) {
+          console.warn("Failed to add user to discord channels:", discordErr);
+        }
+      }
+
       // Refresh registrations
       const regs = await getRegistrations(id);
       setRegistrations(regs.documents);
@@ -458,6 +478,29 @@ export default function TournamentDetailPage({ params }) {
 
     setDeleting(true);
     try {
+      // 1. Delete Discord Channels if they exist
+      if (tournament.discordChannelId || tournament.discordVoiceChannelId) {
+        try {
+          const result = await deleteTournamentChannelsAction([
+            tournament.discordChannelId,
+            tournament.discordVoiceChannelId,
+          ]);
+          if (result && result.error) {
+            const proceed = confirm(
+              `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway? (Channels will remain manually)`,
+            );
+            if (!proceed) {
+              setDeleting(false);
+              return;
+            }
+          }
+        } catch (discordErr) {
+          console.warn("Failed to delete discord channels:", discordErr);
+          // Proceed anyway
+        }
+      }
+
+      // 2. Delete from DB
       await deleteTournament(id);
       router.push("/tournaments");
     } catch (err) {
@@ -494,6 +537,22 @@ export default function TournamentDetailPage({ params }) {
     setCheckingIn(true);
     try {
       await checkInForTournament(userRegistration.$id);
+
+      // Failsafe: Try to add to Discord again (in case they joined server late)
+      if (
+        userProfile?.discordId &&
+        (tournament.discordChannelId || tournament.discordVoiceChannelId)
+      ) {
+        try {
+          await addMemberToTournamentChannelsAction(
+            [tournament.discordChannelId, tournament.discordVoiceChannelId],
+            userProfile.discordId,
+          );
+        } catch (e) {
+          console.warn("Discord Add Retry Skipped");
+        }
+      }
+
       // Refresh data
       const regs = await getRegistrations(id);
       setRegistrations(regs.documents);
@@ -973,7 +1032,7 @@ export default function TournamentDetailPage({ params }) {
                         className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none md:rounded-xl md:py-4 md:text-xs"
                       >
                         {checkingIn ? (
-                          <Loader fullScreen={false} />
+                          <Loader fullScreen={false} size="sm" />
                         ) : !canCheckIn ? (
                           `Check-in opens at ${new Date(tournament.checkInStart || tournament.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                         ) : (
@@ -986,6 +1045,24 @@ export default function TournamentDetailPage({ params }) {
                           scheduled time.
                         </p>
                       )}
+                    </div>
+                  )}
+
+                  {/* Discord Lobby Button */}
+                  {tournament.discordInviteUrl && (
+                    <div className="flex flex-col gap-2">
+                      <p className="mt-2 text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
+                        Discord Access
+                      </p>
+                      <a
+                        href={tournament.discordInviteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5865F2] py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-[#5865F2]/20 transition-all hover:bg-[#4752C4] md:rounded-xl md:py-4 md:text-sm"
+                      >
+                        <FaDiscord className="h-4 w-4" />
+                        Join Tournament Lobby
+                      </a>
                     </div>
                   )}
                 </div>

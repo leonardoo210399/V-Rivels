@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { createTournament } from "@/lib/tournaments";
+import { createTournament, updateTournament } from "@/lib/tournaments";
+import { createTournamentChannelAction } from "@/app/actions/discord";
 import { announceNewTournament } from "@/lib/discord";
 import {
   X,
@@ -42,7 +43,6 @@ PRIZE DISTRIBUTION:
 
 EVENT RULES & ETIQUETTE:
 - **Mandatory Check-in**: All participants must check-in via the portal 15 minutes before the match to secure their slot.
-- **Join Discord**: Joining our official Discord server is mandatory for all participants to receive lobby details and communicate with admins.
 - **Fair Play**: We maintain a zero-tolerance policy for any third-party software or exploits. Our marshals monitor live standings for statistical anomalies.
 
 FINAL WORD:
@@ -74,7 +74,7 @@ PRIZE DISTRIBUTION:
 
 EVENT GUIDELINES:
 - **Check-in**: Team captains must check-in 15 minutes prior to the scheduled start time.
-- **Communication**: All teams must be present in the official Discord server for coordination.
+- **Communication**: All coordination and announcements will happen in this Discord server.
 
 FINAL WORD:
 Prepare your executes, refine your aim, and ensure your comms are crisp. The server is waiting, and the community is watching. Do you have the composure to clutch the win, or will you fall to the pressure of the big stage?
@@ -233,6 +233,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true);
     try {
+      // 1. Prepare Data
       const tournamentData = {
         name: formData.name,
         date: new Date(formData.date).toISOString(),
@@ -255,19 +256,49 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         bracketGenerated: false,
       };
 
+      // 2. Create Tournament Document (Client Side)
       const createdTournament = await createTournament(tournamentData);
+      const tournamentId = createdTournament.$id;
 
-      // Send announcement to Discord (non-blocking)
+      // 3. Trigger Discord Bot (Server Side)
+      // We do this after creation so failure doesn't block the database write
+      try {
+        const botResult = await createTournamentChannelAction(formData.name, {
+          ...formData,
+          id: tournamentId,
+        });
+
+        if (botResult && !botResult.error) {
+          // 4. Update Tournament with Discord Data
+          try {
+            await updateTournament(tournamentId, {
+              discordChannelId: botResult.channelId,
+              discordVoiceChannelId: botResult.voiceChannelId,
+              discordInviteUrl: botResult.inviteUrl,
+              discordPartyCode: null,
+            });
+          } catch (dbError) {
+            console.error("Failed to save Discord ID to DB:", dbError);
+            alert(
+              "Tournament created, but failed to save Discord Link to database. \n\nCheck if 'discordChannelId' attribute exists in Appwrite Tournaments Collection.",
+            );
+          }
+        } else if (botResult && botResult.error) {
+          console.warn("Discord Bot Error:", botResult.error);
+        }
+      } catch (discordErr) {
+        console.warn("Failed to execute Discord Server Action:", discordErr);
+        // Don't fail the UI, just log it
+      }
+
+      // 5. Send Announcement Check (Existing Webhook logic)
       try {
         await announceNewTournament({
           ...tournamentData,
-          $id: createdTournament.$id,
+          $id: tournamentId,
         });
       } catch (discordError) {
-        console.warn(
-          "Discord announcement failed (non-critical):",
-          discordError,
-        );
+        console.warn("Discord announcement webhook failed:", discordError);
       }
 
       onSuccess();
