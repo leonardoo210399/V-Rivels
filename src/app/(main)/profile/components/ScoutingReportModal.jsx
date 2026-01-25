@@ -38,7 +38,7 @@ export default function ScoutingReportModal({
             <p className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase">
               {userPost
                 ? "Keep your recruitment profile fresh and active"
-                : "List yourself as a available talent for teams"}
+                : "List yourself as an available talent for teams"}
             </p>
           </div>
         </div>
@@ -98,9 +98,9 @@ export default function ScoutingReportModal({
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
             <div className="flex flex-col items-center">
               <label className="mb-4 block flex w-full items-center justify-between border-b border-white/5 pb-2 text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
-                Main Agent
+                Main Agents
                 <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[9px] font-bold text-rose-400 normal-case">
-                  Your star pick
+                  Select up to 2
                 </span>
               </label>
               <div className="grid grid-cols-5 justify-center gap-3 sm:grid-cols-6">
@@ -109,17 +109,30 @@ export default function ScoutingReportModal({
                     key={agent.uuid}
                     type="button"
                     onClick={() => {
+                      const currentMains = formData.mainAgent;
+                      let updatedMains;
+
+                      if (currentMains.includes(agent.displayName)) {
+                        updatedMains = currentMains.filter(
+                          (a) => a !== agent.displayName,
+                        );
+                      } else if (currentMains.length < 2) {
+                        updatedMains = [...currentMains, agent.displayName];
+                      } else {
+                        return; // Limit reached
+                      }
+
                       const updatedSecondary = formData.secondaryAgents.filter(
                         (a) => a !== agent.displayName,
                       );
                       setFormData({
                         ...formData,
-                        mainAgent: agent.displayName,
+                        mainAgent: updatedMains,
                         secondaryAgents: updatedSecondary,
                       });
                     }}
                     className={`relative aspect-square overflow-hidden rounded-xl border-2 transition-all duration-300 ${
-                      formData.mainAgent === agent.displayName
+                      formData.mainAgent.includes(agent.displayName)
                         ? "z-10 scale-105 border-rose-500 shadow-2xl shadow-rose-500/30"
                         : "border-white/5 opacity-30 hover:scale-105 hover:opacity-100"
                     }`}
@@ -134,7 +147,7 @@ export default function ScoutingReportModal({
                       alt={agent.displayName}
                       className="h-full w-full object-cover"
                     />
-                    {formData.mainAgent === agent.displayName && (
+                    {formData.mainAgent.includes(agent.displayName) && (
                       <div className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/80 to-transparent pb-1">
                         <span className="text-[8px] font-black tracking-widest text-rose-400 uppercase">
                           Main
@@ -158,7 +171,7 @@ export default function ScoutingReportModal({
                   <button
                     key={agent.uuid}
                     type="button"
-                    disabled={formData.mainAgent === agent.displayName}
+                    disabled={formData.mainAgent.includes(agent.displayName)}
                     onClick={() => {
                       const current = formData.secondaryAgents;
                       if (current.includes(agent.displayName)) {
@@ -223,7 +236,7 @@ export default function ScoutingReportModal({
                 type="submit"
                 disabled={
                   posting ||
-                  !formData.mainAgent ||
+                  formData.mainAgent.length === 0 ||
                   formData.secondaryAgents.length === 0 ||
                   !formData.description.trim()
                 }

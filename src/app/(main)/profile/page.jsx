@@ -129,7 +129,7 @@ export default function ProfilePage() {
     handleDeletePost,
     confirmDelete,
     editPost,
-  } = useScoutingReport({ user, userPost, setUserPost, notify });
+  } = useScoutingReport({ user, userPost, setUserPost, notify, mmrData });
 
   const [linkingLoading, setLinkingLoading] = useState(false); // For local actions like linking
   const [error, setError] = useState(null);
