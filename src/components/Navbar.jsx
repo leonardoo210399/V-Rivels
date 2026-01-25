@@ -15,13 +15,18 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import GlobalSearchModal from "./GlobalSearchModal";
+import { Search } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout, loading, isAdmin } = useAuth();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const profileDropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -29,9 +34,27 @@ export default function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsMoreOpen(false);
       }
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Ctrl+K to open search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Don't show navbar on login page
@@ -73,7 +96,7 @@ export default function Navbar() {
       <div className="relative container mx-auto px-4">
         <div className="flex h-20 items-center">
           {/* Logo Section */}
-          <div className="flex flex-1 justify-start">
+          <div className="flex flex-1 shrink-0 justify-start">
             <Link
               href="/"
               className="group flex items-center transition-transform hover:scale-105 active:scale-95"
@@ -94,7 +117,7 @@ export default function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 ${
+                  className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 lg:px-3 xl:px-5 ${
                     isActive
                       ? "bg-rose-500/5 text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.1)]"
                       : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
@@ -110,7 +133,7 @@ export default function Navbar() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsMoreOpen(!isMoreOpen)}
-                className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 ${
+                className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 lg:px-3 xl:px-5 ${
                   isMoreOpen || moreLinks.some((link) => pathname === link.href)
                     ? "bg-rose-500/5 text-rose-500"
                     : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
@@ -147,48 +170,88 @@ export default function Navbar() {
 
           {/* User Actions */}
           <div className="hidden flex-1 items-center justify-end gap-4 lg:flex">
+            {/* Search Bar - Moved to right side */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="group mr-2 flex w-64 items-center justify-between rounded-full border border-white/5 bg-white/5 px-4 py-2 text-sm text-slate-400 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white lg:w-48 xl:w-64"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                <span className="font-medium">Search players...</span>
+              </div>
+              <div className="flex items-center gap-1 rounded bg-slate-950/50 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 shadow-sm group-hover:text-slate-400">
+                <span className="text-xs">⌘</span>K
+              </div>
+            </button>
+
             {!loading && (
               <>
                 {user ? (
                   <div className="flex items-center gap-3">
-                    {isAdmin && (
-                      <Link
-                        href="/admin"
-                        className="hidden items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-xs font-bold tracking-wider text-rose-500 uppercase transition-all hover:bg-rose-500 hover:text-white md:flex"
+                    {/* Profile Dropdown */}
+                    <div className="relative" ref={profileDropdownRef}>
+                      <button
+                        onClick={() =>
+                          setIsProfileDropdownOpen(!isProfileDropdownOpen)
+                        }
+                        className="group relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/10 transition-all hover:border-rose-500 hover:shadow-[0_0_15px_rgba(244,63,94,0.4)]"
                       >
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        Admin
-                      </Link>
-                    )}
+                        <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-rose-700 text-sm font-black text-white">
+                          {user.name ? (
+                            user.name.charAt(0).toUpperCase()
+                          ) : (
+                            <User className="h-4 w-4" />
+                          )}
+                        </div>
+                      </button>
 
-                    <Link
-                      href="/profile"
-                      className={`group flex items-center gap-3 rounded-full border p-1 pr-4 transition-all duration-300 ${
-                        pathname === "/profile"
-                          ? "border-rose-500/50 bg-rose-500/10"
-                          : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
-                      }`}
-                    >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-rose-700 text-white shadow-lg">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="line-clamp-1 text-xs font-bold text-slate-100">
-                          {user.name || "Player"}
-                        </span>
-                        <span className="text-[10px] leading-none text-slate-500">
-                          View Profile
-                        </span>
-                      </div>
-                    </Link>
+                      {/* Dropdown Menu */}
+                      {isProfileDropdownOpen && (
+                        <div className="animate-in fade-in zoom-in absolute top-full right-0 mt-3 w-64 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/95 p-2 shadow-2xl backdrop-blur-xl">
+                          {/* User Header */}
+                          <div className="mb-2 border-b border-white/5 px-4 py-3">
+                            <p className="truncate text-sm font-bold text-white">
+                              {user.name || "Player"}
+                            </p>
+                            <p className="truncate text-xs font-medium text-slate-500">
+                              {user.email || "Agent"}
+                            </p>
+                          </div>
 
-                    <button
-                      onClick={logout}
-                      className="group flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition-all hover:border-rose-500/50 hover:bg-rose-500/10 hover:text-rose-500"
-                      title="Logout"
-                    >
-                      <LogOut className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-                    </button>
+                          {/* Admin Link */}
+                          {isAdmin && (
+                            <Link
+                              href="/admin"
+                              onClick={() => setIsProfileDropdownOpen(false)}
+                              className="mb-1 flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-amber-500 transition-colors hover:bg-amber-500/10"
+                            >
+                              <ShieldCheck className="h-4 w-4" />
+                              Admin Panel
+                            </Link>
+                          )}
+
+                          <Link
+                            href="/profile"
+                            onClick={() => setIsProfileDropdownOpen(false)}
+                            className="flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+                          >
+                            <User className="h-4 w-4" />
+                            View Profile
+                          </Link>
+
+                          <button
+                            onClick={() => {
+                              logout();
+                              setIsProfileDropdownOpen(false);
+                            }}
+                            className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium text-rose-500 transition-colors hover:bg-rose-500/10"
+                          >
+                            <LogOut className="h-4 w-4" />
+                            Sign Out
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <Link
@@ -202,8 +265,17 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu Toggle - Independent of User Actions */}
-          <div className="flex flex-1 justify-end lg:hidden">
+          {/* Mobile Actions - Search & Menu */}
+          <div className="flex flex-1 items-center justify-end gap-3 lg:hidden">
+            {/* Mobile Search Trigger */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-slate-300 transition-colors hover:bg-white/10 active:scale-95"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+
+            {/* Mobile Menu Toggle */}
             <button
               className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-slate-300 transition-colors hover:bg-white/10"
               onClick={() => setIsOpen(!isOpen)}
@@ -236,6 +308,18 @@ export default function Navbar() {
                   {link.name}
                 </Link>
               ))}
+
+              {/* Mobile Search Item */}
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsSearchOpen(true);
+                }}
+                className="flex items-center gap-4 rounded-2xl px-6 py-4 text-lg font-bold text-slate-400 transition-all hover:bg-white/5 hover:text-white"
+              >
+                <Search className="h-4 w-4" />
+                Player Search
+              </button>
 
               {!loading && (
                 <div className="mt-4 flex flex-col gap-4 border-t border-white/10 pt-4">
@@ -275,6 +359,10 @@ export default function Navbar() {
           </div>
         )}
       </div>
+      <GlobalSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </header>
   );
 }

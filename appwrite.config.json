@@ -296,15 +296,6 @@
                     "encrypt": false
                 },
                 {
-                    "key": "mainAgent",
-                    "type": "string",
-                    "required": true,
-                    "array": true,
-                    "size": 50,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
                     "key": "secondaryAgents",
                     "type": "string",
                     "required": false,
@@ -327,6 +318,15 @@
                     "type": "string",
                     "required": false,
                     "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "mainAgent",
+                    "type": "string",
+                    "required": true,
+                    "array": true,
                     "size": 50,
                     "default": null,
                     "encrypt": false
@@ -612,7 +612,7 @@
                     "type": "string",
                     "required": false,
                     "array": false,
-                    "size": 2000,
+                    "size": 10000,
                     "default": null,
                     "encrypt": false
                 },
@@ -685,6 +685,42 @@
                 },
                 {
                     "key": "runnerUpRegId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordChannelId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordInviteUrl",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordPartyCode",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "discordVoiceChannelId",
                     "type": "string",
                     "required": false,
                     "array": false,

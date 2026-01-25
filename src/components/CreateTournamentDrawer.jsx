@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { createTournament } from "@/lib/tournaments";
+import { createTournament, updateTournament } from "@/lib/tournaments";
+import { createTournamentChannelAction } from "@/app/actions/discord";
 import { announceNewTournament } from "@/lib/discord";
 import {
   X,
@@ -31,10 +32,18 @@ COMPETITIVE DYNAMICS:
 - **Standings**: Real-time tracking of kills and deaths. Only the most consistent slayers will climb the official leaderboard.
 - **Spawn Mastery**: Players must adapt to rapid re-spawns and maintain map awareness to avoid being caught in crossfires.
 
+LOBBY PROCEDURE:
+1. **Check-in**: Confirm your presence on the site 15 minutes before start.
+2. **Get Code**: Retrieve the Party Code from our Discord server's tournament channel.
+3. **Join**: Enter the code in-game to join the lobby immediately.
+
+PRIZE DISTRIBUTION:
+- **Method**: All winnings are transferred via UPI immediately after tournament completion.
+- **Coordination**: Winners will be contacted via a private Discord channel to confirm details.
+
 EVENT RULES & ETIQUETTE:
-- **Mandatory Check-in**: All participants must check-in via the portal 15 minutes before the lobby goes live.
+- **Mandatory Check-in**: All participants must check-in via the portal 15 minutes before the match to secure their slot.
 - **Fair Play**: We maintain a zero-tolerance policy for any third-party software or exploits. Our marshals monitor live standings for statistical anomalies.
-- **Hardware**: For the best experience, ensure your network connection is stable. Technical disconnects during the match cannot be restarted.
 
 FINAL WORD:
 The lobby is waiting. Your rivals are practicing. Every corner is a potential duel and every shot counts towards your legacy. Do you have the composure to maintain a streak, or will you fall in the chaos of the arena?
@@ -54,8 +63,18 @@ TOURNAMENT DYNAMICS:
 - **The Stakes**: Players are competing not just for the prize pool, but for points in our seasonal leaderboard. Consistency across our circuit is the path to being invited to our year-end grand finals.
 - **Map Pool**: All matches will be played on current competitive rotation maps. Map vetos will be handled via our integrated system 15 minutes prior to match start.
 
-THE ROAD TO CHAMPIONSHIP:
-From the first pistol round of the qualifiers to the final clutch in the Grand Finals, every moment will be tracked on our live Tournament Map. Spectators can follow the progression in real-time, watching as the bracket narrows and favorites are tested.
+LOBBY PROCEDURE:
+1. **Check-in**: Captains must check-in 15 minutes prior to start.
+2. **Get Code**: Captains will receive the Party Code in the private Discord match channel.
+3. **Join**: Enter the code in-game and invite your teammates to the lobby.
+
+PRIZE DISTRIBUTION:
+- **Method**: Prize money is sent via UPI to the team captain after the Grand Finals.
+- **Coordination**: Captains will provide details in the private admin channel on Discord.
+
+EVENT GUIDELINES:
+- **Check-in**: Team captains must check-in 15 minutes prior to the scheduled start time.
+- **Communication**: All coordination and announcements will happen in this Discord server.
 
 FINAL WORD:
 Prepare your executes, refine your aim, and ensure your comms are crisp. The server is waiting, and the community is watching. Do you have the composure to clutch the win, or will you fall to the pressure of the big stage?
@@ -124,7 +143,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
     name: "",
     date: "",
     prizePool: "",
-    maxTeams: 16,
+    maxTeams: 10,
     status: "scheduled",
     description: "",
     gameType: "5v5",
@@ -214,6 +233,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true);
     try {
+      // 1. Prepare Data
       const tournamentData = {
         name: formData.name,
         date: new Date(formData.date).toISOString(),
@@ -236,19 +256,49 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         bracketGenerated: false,
       };
 
+      // 2. Create Tournament Document (Client Side)
       const createdTournament = await createTournament(tournamentData);
+      const tournamentId = createdTournament.$id;
 
-      // Send announcement to Discord (non-blocking)
+      // 3. Trigger Discord Bot (Server Side)
+      // We do this after creation so failure doesn't block the database write
+      try {
+        const botResult = await createTournamentChannelAction(formData.name, {
+          ...formData,
+          id: tournamentId,
+        });
+
+        if (botResult && !botResult.error) {
+          // 4. Update Tournament with Discord Data
+          try {
+            await updateTournament(tournamentId, {
+              discordChannelId: botResult.channelId,
+              discordVoiceChannelId: botResult.voiceChannelId,
+              discordInviteUrl: botResult.inviteUrl,
+              discordPartyCode: null,
+            });
+          } catch (dbError) {
+            console.error("Failed to save Discord ID to DB:", dbError);
+            alert(
+              "Tournament created, but failed to save Discord Link to database. \n\nCheck if 'discordChannelId' attribute exists in Appwrite Tournaments Collection.",
+            );
+          }
+        } else if (botResult && botResult.error) {
+          console.warn("Discord Bot Error:", botResult.error);
+        }
+      } catch (discordErr) {
+        console.warn("Failed to execute Discord Server Action:", discordErr);
+        // Don't fail the UI, just log it
+      }
+
+      // 5. Send Announcement Check (Existing Webhook logic)
       try {
         await announceNewTournament({
           ...tournamentData,
-          $id: createdTournament.$id,
+          $id: tournamentId,
         });
       } catch (discordError) {
-        console.warn(
-          "Discord announcement failed (non-critical):",
-          discordError,
-        );
+        console.warn("Discord announcement webhook failed:", discordError);
       }
 
       onSuccess();
@@ -389,11 +439,32 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
                       type="datetime-local"
                       required
                       value={formData.date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, date: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const newDate = e.target.value;
+                        let newCheckIn = formData.checkInStart;
+
+                        if (newDate) {
+                          const d = new Date(newDate);
+                          d.setMinutes(d.getMinutes() - 15);
+
+                          // Format to YYYY-MM-DDTHH:mm local time string
+                          const pad = (n) => n.toString().padStart(2, "0");
+                          const year = d.getFullYear();
+                          const month = pad(d.getMonth() + 1);
+                          const day = pad(d.getDate());
+                          const hours = pad(d.getHours());
+                          const minutes = pad(d.getMinutes());
+                          newCheckIn = `${year}-${month}-${day}T${hours}:${minutes}`;
+                        }
+
+                        setFormData({
+                          ...formData,
+                          date: newDate,
+                          checkInStart: newCheckIn,
+                        });
+                      }}
                       onClick={(e) => e.target.showPicker()}
-                      className="w-full cursor-pointer rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white [color-scheme:dark] transition-all outline-none focus:border-rose-500/50"
+                      className="w-full cursor-pointer rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white [color-scheme:dark] transition-all outline-none focus:border-rose-500/50 [&::-webkit-calendar-picker-indicator]:[filter:invert(1)]"
                     />
                   </div>
                   <div>
@@ -615,7 +686,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
                           checkInStart: e.target.value,
                         })
                       }
-                      className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white [color-scheme:dark] transition-all outline-none focus:border-rose-500/50"
+                      className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white [color-scheme:dark] transition-all outline-none focus:border-rose-500/50 [&::-webkit-calendar-picker-indicator]:[filter:invert(1)]"
                     />
                   </div>
                 )}

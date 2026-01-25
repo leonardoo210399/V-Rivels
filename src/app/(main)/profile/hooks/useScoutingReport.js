@@ -5,18 +5,19 @@ import {
   deleteFreeAgentPost,
   updateFreeAgentPost,
 } from "@/lib/players";
+import { announceNewScoutingReport } from "@/lib/discord";
 
 /**
  * Custom hook to manage scouting report form state and submission
  */
-export function useScoutingReport({ user, userPost, setUserPost, notify }) {
+export function useScoutingReport({ user, userPost, setUserPost, notify, mmrData = null }) {
   const [showForm, setShowForm] = useState(false);
   const [posting, setPosting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [formData, setFormData] = useState({
     role: "Duelist",
     description: "",
-    mainAgent: "",
+    mainAgent: [],
     secondaryAgents: [],
   });
 
@@ -33,8 +34,8 @@ export function useScoutingReport({ user, userPost, setUserPost, notify }) {
         return;
       }
 
-      if (!formData.mainAgent) {
-        notify("Please select a Main Agent.", "error");
+      if (formData.mainAgent.length === 0) {
+        notify("Please select at least one Main Agent.", "error");
         setPosting(false);
         return;
       }
@@ -65,13 +66,25 @@ export function useScoutingReport({ user, userPost, setUserPost, notify }) {
       } else {
         post = await createFreeAgentPost(postData);
         notify("Scouting Report is now live!");
+        
+        // Send Discord announcement for new posts only
+        try {
+          await announceNewScoutingReport(postData, {
+            tier: mmrData?.current_data?.currenttier,
+            tierPatched: mmrData?.current_data?.currenttierpatched,
+            rankImage: mmrData?.current_data?.images?.large,
+          });
+        } catch (discordError) {
+          console.warn("Failed to send Discord announcement:", discordError);
+          // Don't fail the whole operation if Discord fails
+        }
       }
 
       setShowForm(false);
       setFormData({
         role: "Duelist",
         description: "",
-        mainAgent: "",
+        mainAgent: [],
         secondaryAgents: [],
       });
       setUserPost(post);
@@ -104,7 +117,11 @@ export function useScoutingReport({ user, userPost, setUserPost, notify }) {
       setFormData({
         role: post.role || "Duelist",
         description: post.description || "",
-        mainAgent: post.mainAgent || "",
+        mainAgent: Array.isArray(post.mainAgent)
+          ? post.mainAgent
+          : post.mainAgent
+            ? [post.mainAgent]
+            : [],
         secondaryAgents: post.secondaryAgents || [],
       });
     }

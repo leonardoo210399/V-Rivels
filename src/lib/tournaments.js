@@ -22,6 +22,9 @@ export async function getTournament(id) {
   );
 }
 
+// Discord Bot Logic removed - Moved to Server Action to prevent 500 Error
+// (createTournament runs in browser, discord.js runs in Node)
+
 export async function createTournament(data) {
   return await databases.createDocument(
     DATABASE_ID,
@@ -141,6 +144,8 @@ export async function updateRegistrationPaymentStatus(registrationId, status, tr
     );
 }
 
+import { deleteMatches } from "./brackets";
+
 export async function deleteTournament(id) {
     try {
         // 1. Delete all associated registrations
@@ -159,19 +164,7 @@ export async function deleteTournament(id) {
 
         // 2. Delete all associated matches
         try {
-            const MATCHES_COLLECTION_ID = "matches"; // Based on brackets.js
-            const matches = await databases.listDocuments(
-                DATABASE_ID,
-                MATCHES_COLLECTION_ID,
-                [Query.equal("tournamentId", id)]
-            );
-            if (matches.total > 0) {
-                await Promise.all(
-                    matches.documents.map(m => 
-                        databases.deleteDocument(DATABASE_ID, MATCHES_COLLECTION_ID, m.$id)
-                    )
-                );
-            }
+            await deleteMatches(id);
         } catch (e) {
             console.warn("Failed to clean up matches:", e.message);
         }

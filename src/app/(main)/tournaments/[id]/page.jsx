@@ -11,6 +11,10 @@ import {
   createPaymentRequest,
   getPaymentRequestsForUser,
 } from "@/lib/payment_requests";
+import {
+  deleteTournamentChannelsAction,
+  addMemberToTournamentChannelsAction,
+} from "@/app/actions/discord";
 import { getMatches } from "@/lib/brackets";
 import CompleteBracket from "@/components/CompleteBracket";
 import CompleteStandings from "@/components/CompleteStandings";
@@ -395,6 +399,22 @@ export default function TournamentDetailPage({ params }) {
       setSuccess(true);
       setShowPaymentModal(false);
       setPendingPaymentData(null);
+
+      // Auto-add to Discord Channels (if applicable)
+      if (
+        userProfile?.discordId &&
+        (tournament.discordChannelId || tournament.discordVoiceChannelId)
+      ) {
+        try {
+          await addMemberToTournamentChannelsAction(
+            [tournament.discordChannelId, tournament.discordVoiceChannelId],
+            userProfile.discordId,
+          );
+        } catch (discordErr) {
+          console.warn("Failed to add user to discord channels:", discordErr);
+        }
+      }
+
       // Refresh registrations
       const regs = await getRegistrations(id);
       setRegistrations(regs.documents);
@@ -458,6 +478,29 @@ export default function TournamentDetailPage({ params }) {
 
     setDeleting(true);
     try {
+      // 1. Delete Discord Channels if they exist
+      if (tournament.discordChannelId || tournament.discordVoiceChannelId) {
+        try {
+          const result = await deleteTournamentChannelsAction([
+            tournament.discordChannelId,
+            tournament.discordVoiceChannelId,
+          ]);
+          if (result && result.error) {
+            const proceed = confirm(
+              `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway? (Channels will remain manually)`,
+            );
+            if (!proceed) {
+              setDeleting(false);
+              return;
+            }
+          }
+        } catch (discordErr) {
+          console.warn("Failed to delete discord channels:", discordErr);
+          // Proceed anyway
+        }
+      }
+
+      // 2. Delete from DB
       await deleteTournament(id);
       router.push("/tournaments");
     } catch (err) {
@@ -494,6 +537,22 @@ export default function TournamentDetailPage({ params }) {
     setCheckingIn(true);
     try {
       await checkInForTournament(userRegistration.$id);
+
+      // Failsafe: Try to add to Discord again (in case they joined server late)
+      if (
+        userProfile?.discordId &&
+        (tournament.discordChannelId || tournament.discordVoiceChannelId)
+      ) {
+        try {
+          await addMemberToTournamentChannelsAction(
+            [tournament.discordChannelId, tournament.discordVoiceChannelId],
+            userProfile.discordId,
+          );
+        } catch (e) {
+          console.warn("Discord Add Retry Skipped");
+        }
+      }
+
       // Refresh data
       const regs = await getRegistrations(id);
       setRegistrations(regs.documents);
@@ -694,8 +753,14 @@ export default function TournamentDetailPage({ params }) {
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           {tournament.gameType === "Deathmatch"
-                            ? "Score limit: 40 kills"
+                            ? "Score limit: 40 kills or 10 mins"
                             : "Initial rounds: BO1"}
+                        </li>
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
+                          <div className="h-1 w-1 rounded-full bg-rose-500" />
+                          {tournament.gameType === "Deathmatch"
+                            ? "All Weapons Allowed"
+                            : "Map Veto System"}
                         </li>
                       </ul>
                     </div>
@@ -706,11 +771,15 @@ export default function TournamentDetailPage({ params }) {
                       <ul className="space-y-2 md:space-y-3">
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
-                          Be present 15m before start
+                          Check-in 15m before start
                         </li>
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
-                          Good sportsmanship is required
+                          Party Code via Discord
+                        </li>
+                        <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
+                          <div className="h-1 w-1 rounded-full bg-rose-500" />
+                          Strict Anti-Cheat Policy
                         </li>
                       </ul>
                     </div>
@@ -963,7 +1032,7 @@ export default function TournamentDetailPage({ params }) {
                         className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 disabled:shadow-none md:rounded-xl md:py-4 md:text-xs"
                       >
                         {checkingIn ? (
-                          <Loader fullScreen={false} />
+                          <Loader fullScreen={false} size="sm" />
                         ) : !canCheckIn ? (
                           `Check-in opens at ${new Date(tournament.checkInStart || tournament.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
                         ) : (
@@ -976,6 +1045,24 @@ export default function TournamentDetailPage({ params }) {
                           scheduled time.
                         </p>
                       )}
+                    </div>
+                  )}
+
+                  {/* Discord Lobby Button */}
+                  {tournament.discordInviteUrl && (
+                    <div className="flex flex-col gap-2">
+                      <p className="mt-2 text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
+                        Discord Access
+                      </p>
+                      <a
+                        href={tournament.discordInviteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5865F2] py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-[#5865F2]/20 transition-all hover:bg-[#4752C4] md:rounded-xl md:py-4 md:text-sm"
+                      >
+                        <FaDiscord className="h-4 w-4" />
+                        Join Tournament Lobby
+                      </a>
                     </div>
                   )}
                 </div>
@@ -999,7 +1086,7 @@ export default function TournamentDetailPage({ params }) {
                 </div>
               ) : isPaymentRejected ? (
                 <div className="flex flex-col gap-3 md:gap-4">
-                  <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
+                  <div className="flex items-start gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
                     <UserX className="h-4 w-4 md:h-5 md:w-5" />
                     <div className="min-w-0 flex-1">
                       <p className="mb-0.5 text-[10px] font-black tracking-widest uppercase md:text-xs">
@@ -1012,14 +1099,14 @@ export default function TournamentDetailPage({ params }) {
 
                       <button
                         onClick={handleRetryPayment}
-                        className="mt-3 flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-500 hover:text-white md:text-xs"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-500 hover:text-white md:text-xs"
                       >
                         <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
                         Retry / Fix Payment
                       </button>
                       <Link
                         href="/support"
-                        className="mt-3 flex items-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
+                        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
                       >
                         <Info className="h-3 w-3 md:h-4 md:w-4" />
                         Help / Support
