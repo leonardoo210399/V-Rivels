@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createTournament } from "@/lib/tournaments";
-import { announceNewTournament } from "@/lib/discord";
+import { announceNewTournamentAction } from "@/app/actions/discord";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -258,7 +258,7 @@ export default function CreateTournamentPage() {
 
       // Send announcement to Discord (non-blocking)
       try {
-        await announceNewTournament({
+        await announceNewTournamentAction({
           ...tournamentData,
           $id: createdTournament.$id,
         });

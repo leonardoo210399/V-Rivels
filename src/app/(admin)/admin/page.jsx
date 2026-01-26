@@ -5,7 +5,6 @@ import { Users, Trophy, Swords, Zap, Send } from "lucide-react";
 import Loader from "@/components/Loader";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
-import { announceNewScoutingReport } from "@/lib/discord";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";
