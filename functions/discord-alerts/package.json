@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Tournament Discord Alerts",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "build": "echo 'Build skipped: Not required for this function'"
   },

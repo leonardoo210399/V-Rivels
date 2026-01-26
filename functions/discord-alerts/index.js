@@ -2,6 +2,8 @@ import { Client, Databases, Query } from 'node-appwrite';
 import { Client as DiscordClient, GatewayIntentBits, Events } from 'discord.js';
 
 export default async ({ req, res, log, error }) => {
+  log('Function started. Initializing Appwrite client...');
+  
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT)
     .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
@@ -15,9 +17,12 @@ export default async ({ req, res, log, error }) => {
   const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://vrivalsarena.com";
 
+  log(`Variables check - DB: ${DATABASE_ID ? 'OK' : 'MISSING'}, Collection: ${TOURNAMENTS_COLLECTION_ID ? 'OK' : 'MISSING'}`);
+
   if (!DATABASE_ID || !TOURNAMENTS_COLLECTION_ID || !DISCORD_BOT_TOKEN) {
-    error('Missing required environment variables. Check DATABASE_ID, TOURNAMENTS_COLLECTION_ID, and DISCORD_BOT_TOKEN.');
-    return res.json({ success: false, message: 'Missing environment variables.' });
+    const msg = 'Missing required environment variables. Check DATABASE_ID, TOURNAMENTS_COLLECTION_ID, and DISCORD_BOT_TOKEN.';
+    error(msg);
+    return res.json({ success: false, message: msg });
   }
 
   try {
@@ -41,6 +46,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     // 2. Initialize Discord Client
+    log('Logging in to Discord...');
     const discordClient = new DiscordClient({ intents: [GatewayIntentBits.Guilds] });
     await discordClient.login(DISCORD_BOT_TOKEN);
 
