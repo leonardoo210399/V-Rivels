@@ -9,12 +9,14 @@ export default async ({ req, res, log, error }) => {
 
   const databases = new Databases(client);
 
-  const DATABASE_ID = process.env.DATABASE_ID;
-  const TOURNAMENTS_COLLECTION_ID = process.env.TOURNAMENTS_COLLECTION_ID;
+  // Map variables from your .env structure
+  const DATABASE_ID = process.env.DATABASE_ID || process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
+  const TOURNAMENTS_COLLECTION_ID = process.env.TOURNAMENTS_COLLECTION_ID || process.env.NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID;
   const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://vrivalsarena.com";
 
   if (!DATABASE_ID || !TOURNAMENTS_COLLECTION_ID || !DISCORD_BOT_TOKEN) {
-    error('Missing required environment variables.');
+    error('Missing required environment variables. Check DATABASE_ID, TOURNAMENTS_COLLECTION_ID, and DISCORD_BOT_TOKEN.');
     return res.json({ success: false, message: 'Missing environment variables.' });
   }
 
@@ -54,9 +56,8 @@ export default async ({ req, res, log, error }) => {
         const channel = await discordClient.channels.fetch(tournament.discordChannelId);
         if (channel) {
           const ping = tournament.discordRoleId ? `<@&${tournament.discordRoleId}> ` : "";
-          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vrivalsarena.com";
           
-          await channel.send(`${ping}🚨 **CHECK-IN IS NOW LIVE!**\nRegistered players for **${tournament.name}** can now check-in on the website.\n\n🔗 **Check-in Here:** <${siteUrl}/tournaments/${tournament.$id}>\n\n*Note: Failure to check-in may result in disqualification!*`);
+          await channel.send(`${ping}🚨 **CHECK-IN IS NOW LIVE!**\nRegistered players for **${tournament.name}** can now check-in on the website.\n\n🔗 **Check-in Here:** <${SITE_URL}/tournaments/${tournament.$id}>\n\n*Note: Failure to check-in may result in disqualification!*`);
           
           // 3. Mark as sent
           await databases.updateDocument(

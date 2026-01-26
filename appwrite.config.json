@@ -711,7 +711,7 @@
                     "encrypt": false
                 },
                 {
-                    "key": "discordPartyCode",
+                    "key": "valoPartyCode",
                     "type": "string",
                     "required": false,
                     "array": false,
@@ -736,6 +736,13 @@
                     "size": 50,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "checkInAlertSent",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": []
@@ -999,6 +1006,47 @@
                 }
             ],
             "indexes": []
+        }
+    ],
+    "functions": [
+        {
+            "$id": "discord-alerts",
+            "execute": [],
+            "name": "discord-alerts",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-22",
+            "scopes": [
+                "databases.read",
+                "databases.write",
+                "policies.read",
+                "policies.write",
+                "archives.read",
+                "archives.write",
+                "restorations.read",
+                "restorations.write",
+                "tables.read",
+                "collections.read",
+                "tables.write",
+                "collections.write",
+                "columns.read",
+                "attributes.read",
+                "columns.write",
+                "attributes.write",
+                "indexes.read",
+                "indexes.write",
+                "rows.read",
+                "documents.read",
+                "rows.write",
+                "documents.write"
+            ],
+            "events": [],
+            "schedule": "* * * * *",
+            "timeout": 15,
+            "entrypoint": "index.js",
+            "commands": "npm install && npm run build",
+            "specification": "s-0.5vcpu-512mb",
+            "path": "functions/discord-alerts"
         }
     ]
 }

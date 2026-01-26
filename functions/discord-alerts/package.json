@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Tournament Discord Alerts",
   "main": "index.js",
+  "scripts": {
+    "build": "echo 'Build skipped: Not required for this function'"
+  },
   "dependencies": {
     "node-appwrite": "latest",
     "discord.js": "^14.13.0"

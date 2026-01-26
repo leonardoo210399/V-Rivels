@@ -1,5 +1,5 @@
 "use server";
-import { createTournamentChannel, deleteTournamentChannels, addMemberToTournamentChannels, assignTournamentRole } from "@/lib/discord-bot";
+import { createTournamentChannel, deleteTournamentChannels, addMemberToTournamentChannels, assignTournamentRole, sendTournamentMessage } from "@/lib/discord-bot";
 
 /**
  * Server Action to create Discord Channels for a tournament.
@@ -24,4 +24,8 @@ export async function addMemberToTournamentChannelsAction(channelIds, discordUse
 export async function assignTournamentRoleAction(roleId, discordUserId) {
     console.log(`[Action] Triggering role assignment for User: ${discordUserId}, Role: ${roleId}`);
     return await assignTournamentRole(roleId, discordUserId);
+}
+
+export async function sendTournamentMessageAction(channelId, message, roleId = null) {
+    return await sendTournamentMessage(channelId, message, roleId);
 }
