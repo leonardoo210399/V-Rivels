@@ -274,13 +274,14 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
             await updateTournament(tournamentId, {
               discordChannelId: botResult.channelId,
               discordVoiceChannelId: botResult.voiceChannelId,
+              discordRoleId: botResult.roleId,
               discordInviteUrl: botResult.inviteUrl,
               discordPartyCode: null,
             });
           } catch (dbError) {
             console.error("Failed to save Discord ID to DB:", dbError);
             alert(
-              "Tournament created, but failed to save Discord Link to database. \n\nCheck if 'discordChannelId' attribute exists in Appwrite Tournaments Collection.",
+              "Tournament created, but failed to save Discord Link to database. \n\nCheck if 'discordChannelId' and 'discordRoleId' attributes exist in Appwrite Tournaments Collection.",
             );
           }
         } else if (botResult && botResult.error) {

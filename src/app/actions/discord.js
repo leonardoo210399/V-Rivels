@@ -1,6 +1,5 @@
 "use server";
-
-import { createTournamentChannel, deleteTournamentChannels, addMemberToTournamentChannels } from "@/lib/discord-bot";
+import { createTournamentChannel, deleteTournamentChannels, addMemberToTournamentChannels, assignTournamentRole } from "@/lib/discord-bot";
 
 /**
  * Server Action to create Discord Channels for a tournament.
@@ -8,16 +7,20 @@ import { createTournamentChannel, deleteTournamentChannels, addMemberToTournamen
  * 
  * @param {string} tournamentName 
  * @param {object} details
- * @returns {Promise<{channelId: string, voiceChannelId: string, inviteUrl: string, error: string}>}
+ * @returns {Promise<{channelId: string, voiceChannelId: string, roleId: string, inviteUrl: string, error: string}>}
  */
 export async function createTournamentChannelAction(tournamentName, details) {
   return await createTournamentChannel(tournamentName, details);
 }
 
-export async function deleteTournamentChannelsAction(channelIds) {
-    return await deleteTournamentChannels(channelIds);
+export async function deleteTournamentChannelsAction(channelIds, roleId = null) {
+    return await deleteTournamentChannels(channelIds, roleId);
 }
 
 export async function addMemberToTournamentChannelsAction(channelIds, discordUserId) {
     return await addMemberToTournamentChannels(channelIds, discordUserId);
+}
+
+export async function assignTournamentRoleAction(roleId, discordUserId) {
+    return await assignTournamentRole(roleId, discordUserId);
 }
