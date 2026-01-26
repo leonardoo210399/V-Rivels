@@ -22,5 +22,6 @@ export async function addMemberToTournamentChannelsAction(channelIds, discordUse
 }
 
 export async function assignTournamentRoleAction(roleId, discordUserId) {
+    console.log(`[Action] Triggering role assignment for User: ${discordUserId}, Role: ${roleId}`);
     return await assignTournamentRole(roleId, discordUserId);
 }

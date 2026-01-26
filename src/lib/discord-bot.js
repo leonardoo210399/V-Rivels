@@ -228,10 +228,15 @@ export async function createTournamentChannel(tournamentName, details = {}) {
  * @param {string} discordUserId 
  */
 export async function assignTournamentRole(roleId, discordUserId) {
-    console.log(`[DiscordBot] AssignRole Request - User: ${discordUserId}, Role: ${roleId}`);
+    // Sanitize input: Remove any <@! >, spaces, or non-numeric characters if it's a mention
+    const sanitizedUserId = String(discordUserId).replace(/[^0-9]/g, "");
+    const sanitizedRoleId = String(roleId).replace(/[^0-9]/g, "");
+
+    console.log(`[DiscordBot] AssignRole Request - Original User: "${discordUserId}", Sanitized: "${sanitizedUserId}"`);
+    console.log(`[DiscordBot] AssignRole Request - Role: "${sanitizedRoleId}"`);
     
     if (!BOT_TOKEN) return { error: "Bot token missing" };
-    if (!roleId || !discordUserId) return { error: "Missing RoleID or UserID" };
+    if (!sanitizedRoleId || !sanitizedUserId) return { error: "Invalid RoleID or UserID format" };
     
     const client = new Client({ 
       intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] 
@@ -246,41 +251,56 @@ export async function assignTournamentRole(roleId, discordUserId) {
         }
 
         const guild = await client.guilds.fetch(VRIVALS_SERVER_ID);
-        if (!guild) throw new Error("Server not found");
+        if (!guild) {
+          console.error(`[DiscordBot] Guild not found for ID: ${VRIVALS_SERVER_ID}`);
+          throw new Error(`Discord Server (Guild) not found. Check VRIVALS_SERVER_ID in discord.js`);
+        }
+        
+        console.log(`[DiscordBot] Connected to Guild: ${guild.name} (${guild.id})`);
 
         // Hierarchy Check
         const botMember = await guild.members.fetch(client.user.id);
         const botHighestRole = botMember.roles.highest;
         
-        console.log(`[DiscordBot] Bot Role: ${botHighestRole.name} (Pos: ${botHighestRole.position})`);
+        console.log(`[DiscordBot] Bot Hierarchy: "${botHighestRole.name}" (Position: ${botHighestRole.position})`);
 
         // Fetch User
         let member = null;
         try {
-            member = await guild.members.fetch(discordUserId);
+            console.log(`[DiscordBot] Fetching member: ${sanitizedUserId}...`);
+            member = await guild.members.fetch(sanitizedUserId);
+            console.log(`[DiscordBot] Member found: ${member.user.tag}`);
         } catch (fetchErr) {
-            console.error(`[DiscordBot] Member fetch failed: ${fetchErr.message}. User might not be in server.`);
-            throw new Error("User not found in Discord server. Ask them to join first!");
+            console.error(`[DiscordBot] Member fetch failed for ${sanitizedUserId}: ${fetchErr.message}`);
+            throw new Error(`Member not found in "${guild.name}". Ensure the user has joined the server.`);
         }
 
         if (member) {
             // Check if role exists
-            const role = await guild.roles.fetch(roleId);
-            if (!role) throw new Error("Tournament role no longer exists.");
+            const role = await guild.roles.fetch(sanitizedRoleId);
+            if (!role) {
+              console.error(`[DiscordBot] Role not found in guild: ${sanitizedRoleId}`);
+              throw new Error("Tournament role no longer exists in your server.");
+            }
+
+            console.log(`[DiscordBot] Found Role: "${role.name}" (ID: ${role.id}, Position: ${role.position})`);
 
             // Final Hierarchy Check
             if (botHighestRole.position <= role.position) {
-                console.error(`[DiscordBot] HIERARCHY ERROR: Bot role [${botHighestRole.name}] is LOWER or EQUAL to Tournament Role [${role.name}]. Bot cannot assign this role.`);
-                throw new Error("Bot lacks hierarchy to assign this role. Move the Bot's own role to the top of settings.");
+                console.error(`[DiscordBot] HIERARCHY ERROR: Bot [${botHighestRole.name} @ ${botHighestRole.position}] cannot manage Role [${role.name} @ ${role.position}].`);
+                throw new Error(`Bot role is too low in Discord settings. Drag the Bot's role to the top.`);
             }
 
-            await member.roles.add(roleId);
-            console.log(`[DiscordBot] SUCCESS: Role ${role.name} assigned to user ${member.user.tag}`);
+            try {
+                await member.roles.add(sanitizedRoleId);
+                console.log(`[DiscordBot] SUCCESS: Assigned "${role.name}" to ${member.user.tag}`);
+            } catch (addError) {
+                console.error(`[DiscordBot] FAILED to add role: ${addError.message}`);
+                throw new Error(`Discord Error: ${addError.message}`);
+            }
             
             await client.destroy();
             return { success: true };
-        } else {
-            throw new Error("Member not found in guild");
         }
     } catch (e) {
         console.error("[DiscordBot] AssignRole ERROR:", e.message);
