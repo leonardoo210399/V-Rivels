@@ -70,7 +70,7 @@ export default async ({ req, res, log, error }) => {
 
     const results = [];
 
-    for (const tournament of tournaments.documents) {
+    for (const tournament of tournaments) {
       try {
         const channel = await discordClient.channels.fetch(tournament.discordChannelId);
         if (channel) {
