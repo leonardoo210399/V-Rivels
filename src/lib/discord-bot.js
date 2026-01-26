@@ -47,14 +47,22 @@ export async function createTournamentChannel(tournamentName, details = {}) {
     }
 
     // 2. Create the Role
-    const roleName = `Tournament: ${tournamentName.substring(0, 30)}`;
-    console.log(`[DiscordBot] Creating role: ${roleName}`);
-    const role = await guild.roles.create({
-      name: roleName,
-      color: "#ff4757", // Rose color
-      reason: `Tournament role for ${tournamentName}`,
-      permissions: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-    });
+    let role = null;
+    try {
+      const roleName = `Tournament: ${tournamentName.substring(0, 30)}`;
+      console.log(`[DiscordBot] Attempting to create role: ${roleName}`);
+      role = await guild.roles.create({
+        name: roleName,
+        color: "#ff4757", // Rose color
+        reason: `Tournament role for ${tournamentName}`,
+        permissions: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+      });
+      console.log(`[DiscordBot] Role created successfully: ${role.id}`);
+    } catch (roleErr) {
+      console.error("[DiscordBot] Role Creation FAILED:", roleErr.message);
+      // We continue because we want the channels to be created anyway, 
+      // but this explains why the role is missing.
+    }
 
     // 3. Create the Channel
     const sanitizedName = tournamentName
@@ -64,24 +72,31 @@ export async function createTournamentChannel(tournamentName, details = {}) {
       .substring(0, 30);
 
     console.log(`[DiscordBot] Creating text channel: ${sanitizedName}`);
+    
+    // Prepare permission overwrites
+    const textOverwrites = [
+      {
+        id: guild.id, // @everyone
+        deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.ViewChannel],
+      },
+      {
+        id: client.user.id, // Bot itself
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
+      }
+    ];
+
+    if (role) {
+      textOverwrites.push({
+        id: role.id, // Tournament Role
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+      });
+    }
+
     const channel = await guild.channels.create({
       name: sanitizedName,
       type: ChannelType.GuildText,
       parent: category.id,
-      permissionOverwrites: [
-        {
-          id: guild.id, // @everyone
-          deny: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.ViewChannel],
-        },
-        {
-          id: role.id, // Tournament Role
-          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-        },
-        {
-          id: client.user.id, // Bot itself
-          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
-        }
-      ],
+      permissionOverwrites: textOverwrites,
     });
 
     // 3b. Create the Voice Channel (Private + Linked)
@@ -90,24 +105,29 @@ export async function createTournamentChannel(tournamentName, details = {}) {
       const voiceName = `🔊 Lobby: ${tournamentName}`;
       console.log(`[DiscordBot] Creating private voice channel: ${voiceName}`);
       
+      const voiceOverwrites = [
+        {
+          id: guild.id, // @everyone
+          deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect], // Make it private
+        },
+        {
+          id: client.user.id, // Bot
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
+        }
+      ];
+
+      if (role) {
+        voiceOverwrites.push({
+          id: role.id, // Tournament Role
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak],
+        });
+      }
+
       const voiceChannel = await guild.channels.create({
         name: voiceName,
         type: ChannelType.GuildVoice,
         parent: category.id,
-        permissionOverwrites: [
-          {
-            id: guild.id, // @everyone
-            deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect], // Make it private
-          },
-          {
-            id: role.id, // Tournament Role
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak],
-          },
-          {
-            id: client.user.id, // Bot
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect],
-          }
-        ],
+        permissionOverwrites: voiceOverwrites,
       });
       voiceChannelId = voiceChannel.id;
       console.log(`[DiscordBot] Voice channel created successfully: ${voiceChannelId}`);
@@ -188,7 +208,7 @@ export async function createTournamentChannel(tournamentName, details = {}) {
     return {
       channelId: channel.id,
       voiceChannelId: voiceChannelId,
-      roleId: role.id,
+      roleId: role?.id || null,
       inviteUrl: invite.url,
       partyCode: null, 
     };
