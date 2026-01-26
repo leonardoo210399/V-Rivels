@@ -457,3 +457,190 @@ export async function sendTournamentMessage(channelId, message, roleId = null) {
     return { error: e.message };
   }
 }
+
+// ==========================================
+// MIGRATED ANNOUNCEMENT LOGIC (FROM WEBHOOKS)
+// ==========================================
+
+// Discord Agent Emoji Mapping
+const AGENT_EMOJIS = {
+  "Astra": "<:Astra:1464119402621571184>",
+  "Breach": "<:Breach:1464119496565330024>",
+  "Brimstone": "<:Brimstone:1464119563280187422>",
+  "Chamber": "<:Chamber:1464119792716742751>",
+  "Clove": "<:Clove:1464119821393199139>",
+  "Cypher": "<:Cypher:1464119916033478668>",
+  "Deadlock": "<:Deadlock:1464119946186457098>",
+  "Fade": "<:Fade:1464119988997586955>",
+  "Gekko": "<:Gekko:1464120021230813194>",
+  "Harbor": "<:Harbor:1464120059940311100>",
+  "Iso": "<:Iso:1464120095965057034>",
+  "Jett": "<:Jett:1464120126402986049>",
+  "KAY/O": "<:KAYO:1464120172322357301>",
+  "Killjoy": "<:Killjoy:1464120252446281904>",
+  "Neon": "<:Neon:1464120379693076725>",
+  "Omen": "<:Omen:1464120406435696811>",
+  "Phoenix": "<:Phoenix:1464120435720323073>",
+  "Raze": "<:Raze:1464120460559253640>",
+  "Reyna": "<:Reyna:1464120480314298553>",
+  "Sage": "<:Sage:1464120500753010748>",
+  "Skye": "<:Skye:1464120521724792917>",
+  "Sova": "<:Sova:1464120556747231316>",
+  "Tejo": "<:Tejo:1464120590834073693>",
+  "Veto": "<:Veto:1464120654214463529>",
+  "Viper": "<:Viper:1464120716382175434>",
+  "Vyse": "<:Vyse:1464120743854997554>",
+  "Waylay": "<:Waylay:1464120779766497342>",
+  "Yoru": "<:Yoru:1464120826847694962>",
+};
+
+function getAgentEmoji(agentName) {
+  return AGENT_EMOJIS[agentName] || agentName;
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function getTeaser(description) {
+  if (!description) return "Join now and compete for glory!";
+  const clean = description.replace(/\*\*/g, "").replace(/\n+/g, " ").trim();
+  if (clean.length <= 150) return clean;
+  return clean.substring(0, 147) + "...";
+}
+
+/**
+ * Announce a new tournament to the configured Discord channel
+ */
+export async function announceNewTournament(tournament) {
+  const channelId = process.env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID;
+  if (!BOT_TOKEN || !channelId) return { error: "Missing config" };
+
+  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+  try {
+    await client.login(BOT_TOKEN);
+    if (!client.isReady()) await new Promise((r) => client.once(Events.ClientReady, r));
+
+    const channel = await client.channels.fetch(channelId);
+    if (!channel) throw new Error("Announcements channel not found");
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vrivalsarena.com";
+    const tournamentUrl = `${siteUrl}/tournaments/${tournament.$id}`;
+    const entryFeeDisplay = tournament.entryFee 
+      ? (tournament.entryFee === "0" || tournament.entryFee === "Free" ? "🆓 FREE" : `₹${tournament.entryFee}`)
+      : "🆓 FREE";
+    const prizeDisplay = tournament.prizePool || "TBA";
+    const gameModeEmoji = tournament.gameType === "Deathmatch" ? "💀" : "⚔️";
+    const gameModeText = tournament.gameType === "Deathmatch" ? "Deathmatch FFA" : "5v5 Tournament";
+
+    const embed = {
+      title: `🏆 ${tournament.name}`,
+      url: tournamentUrl,
+      description: `${getTeaser(tournament.description)}\n\n**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**`,
+      color: 0xff4757, 
+      fields: [
+        { name: "📅 DATE", value: `\`${formatDate(tournament.date)}\``, inline: true },
+        { name: "🕐 TIME", value: `\`${formatTime(tournament.date)} IST\``, inline: true },
+        { name: `${gameModeEmoji} MODE`, value: `\`${gameModeText}\``, inline: true },
+        { name: "💰 PRIZE POOL", value: `\`${prizeDisplay}\``, inline: true },
+        { name: "🎟️ ENTRY FEE", value: `\`${entryFeeDisplay}\``, inline: true },
+        { name: "👥 SLOTS", value: `\`${tournament.maxTeams || "∞"} ${tournament.gameType === "Deathmatch" ? "players" : "teams"}\``, inline: true },
+        { name: "🏅 PRIZES", value: `> 🥇 **1st:** ${tournament.firstPrize || "TBA"}\n> 🥈 **2nd:** ${tournament.secondPrize || "TBA"}`, inline: false },
+        { name: "🔗 QUICK LINKS", value: `**[🎯 Register Now](${tournamentUrl})** • **[📋 View Details](${tournamentUrl})** • **[🏆 All Tournaments](${siteUrl}/tournaments)**`, inline: false },
+      ],
+      image: { url: "https://cdn.discordapp.com/attachments/1000433438148534415/1463524436308131945/image.png" },
+      thumbnail: { url: `${siteUrl}/vrivals_logo.png` },
+      footer: { text: "VRivals Arena • Limited slots available! Click title to register →", icon_url: `${siteUrl}/vrivals_logo.png` },
+      timestamp: new Date().toISOString(),
+    };
+
+    await channel.send({
+      content: "# 🔔 NEW TOURNAMENT ALERT!\n\n@everyone A new tournament has just been announced! Register now before slots fill up!\n\n",
+      embeds: [embed],
+    });
+
+    await client.destroy();
+    return { success: true };
+  } catch (e) {
+    console.error("[DiscordBot] AnnounceTournament ERROR:", e);
+    if (client) await client.destroy();
+    return { error: e.message };
+  }
+}
+
+/**
+ * Announce a new scouting report (player ad)
+ */
+export async function announceNewScoutingReport(data, rankData = null) {
+  const channelId = process.env.DISCORD_PLAYER_FINDER_CHANNEL_ID;
+  if (!BOT_TOKEN || !channelId) return { error: "Missing config" };
+
+  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+  try {
+    await client.login(BOT_TOKEN);
+    if (!client.isReady()) await new Promise((r) => client.once(Events.ClientReady, r));
+
+    const channel = await client.channels.fetch(channelId);
+    if (!channel) throw new Error("Player Finder channel not found");
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://vrivalsarena.com";
+    const playerFinderUrl = `${siteUrl}/player-finder`;
+    const playerProfileUrl = `${siteUrl}/player/${data.userId}`;
+
+    const mainAgentsArray = Array.isArray(data.mainAgent) ? data.mainAgent : (data.mainAgent ? [data.mainAgent] : []);
+    const mainAgentsEmojis = mainAgentsArray.map(agent => getAgentEmoji(agent)).join(" ");
+
+    const secondaryAgentsArray = data.secondaryAgents || [];
+    const secondaryAgentsEmojis = secondaryAgentsArray.slice(0, 5).map(agent => getAgentEmoji(agent)).join(" ") + 
+        (secondaryAgentsArray.length > 5 ? ` +${secondaryAgentsArray.length - 5}` : "");
+
+    const roleEmojis = { Duelist: "⚔️", Controller: "🌫️", Sentinel: "🛡️", Initiator: "⚡", Flex: "🔄" };
+    const roleEmoji = roleEmojis[data.role] || "🎮";
+    const regionNames = { ap: "Asia Pacific", eu: "Europe", na: "North America", kr: "Korea", latam: "LATAM", br: "Brazil" };
+    const regionDisplay = regionNames[data.region?.toLowerCase()] || data.region || "Unknown";
+    const rankDisplay = rankData?.tierPatched || "Unranked";
+
+    const descriptionTeaser = data.description?.length > 200 
+      ? data.description.substring(0, 197) + "..." 
+      : data.description || "No description provided.";
+
+    const embed = {
+      color: 0xff4757,
+      description: `**⭐ MAIN AGENTS:**\n# ${mainAgentsEmojis || "Not specified"}\n\n**🎮 SECONDARY:**\n${secondaryAgentsEmojis || "None"}\n\n━━━━━━━━━━━━━━━━━━━━━━━\n\n${roleEmoji} **Role:** \`${data.role || "Flex"}\`  •  🏆 **Rank:** \`${rankDisplay}\`  •  🌍 **Region:** \`${regionDisplay}\`\n\n> *"${descriptionTeaser}"*\n\n🔗 **[Check out this player on Player Finder →](${playerFinderUrl})**`,
+      thumbnail: { url: rankData?.rankImage || `${siteUrl}/vrivals_logo.png` },
+      footer: { text: "VRivals Arena • Player Finder", icon_url: `${siteUrl}/vrivals_logo.png` },
+      timestamp: new Date().toISOString(),
+    };
+
+    const introContent = `# 🔔 NEW PLAYER LISTING!\n\n# [${data.ingameName}#${data.tag}](${playerProfileUrl})\n**is looking for a team!**`;
+
+    await channel.send({
+      content: introContent,
+      embeds: [embed],
+    });
+
+    await client.destroy();
+    return { success: true };
+  } catch (e) {
+    console.error("[DiscordBot] AnnounceScoutingReport ERROR:", e);
+    if (client) await client.destroy();
+    return { error: e.message };
+  }
+}
