@@ -39,20 +39,22 @@ export default async ({ req, res, log, error }) => {
   try {
     // 1. Get all tournaments that need a check-in alert
     const now = new Date().toISOString();
-    const tournaments = await databases.listDocuments(
+    const tournamentsRes = await databases.listDocuments(
       DATABASE_ID,
       TOURNAMENTS_COLLECTION_ID,
       [
         Query.equal('checkInEnabled', true),
         Query.equal('checkInAlertSent', false),
-        Query.lessThanEqual('checkInStart', now),
-        Query.notEqual('discordChannelId', null)
+        Query.lessThanEqual('checkInStart', now)
       ]
     );
 
-    log(`Found ${tournaments.documents.length} tournaments needing check-in alerts.`);
+    // Filter out tournaments without a discord channel locally to avoid query errors
+    const tournaments = tournamentsRes.documents.filter(t => !!t.discordChannelId);
 
-    if (tournaments.documents.length === 0) {
+    log(`Found ${tournaments.length} valid tournaments needing check-in alerts.`);
+
+    if (tournaments.length === 0) {
       return res.json({ success: true, message: 'No alerts to send.' });
     }
 
