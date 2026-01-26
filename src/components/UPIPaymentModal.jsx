@@ -32,6 +32,7 @@ export default function UPIPaymentModal({
   error = null, // New error prop
 }) {
   const [transactionId, setTransactionId] = useState("");
+  const [validationError, setValidationError] = useState(""); // Local validation error
   const [copied, setCopied] = useState(false);
   const [step, setStep] = useState(1); // 1: Pay, 2: Enter Transaction ID
 
@@ -49,8 +50,17 @@ export default function UPIPaymentModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!transactionId.trim()) return;
-    onPaymentComplete(transactionId.trim());
+    const tid = transactionId.trim();
+    if (!tid) return;
+
+    // Standard UPI UTR/Transaction ID is 12 digits
+    if (!/^\d{12}$/.test(tid)) {
+      setValidationError("Please enter a valid 12-digit UTR / Transaction ID");
+      return;
+    }
+
+    setValidationError("");
+    onPaymentComplete(tid);
   };
 
   return (
@@ -274,11 +284,11 @@ export default function UPIPaymentModal({
                       <p className="mb-3 text-[10px] text-slate-400">
                         Enter the reference number to verify your payment.
                       </p>
-                      {error && (
+                      {(error || validationError) && (
                         <div className="animate-in slide-in-from-top-2 mb-4 flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
                           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
                           <p className="text-[10px] font-bold text-rose-500">
-                            {error}
+                            {error || validationError}
                           </p>
                         </div>
                       )}
@@ -289,10 +299,16 @@ export default function UPIPaymentModal({
                       <input
                         type="text"
                         value={transactionId}
-                        onChange={(e) => setTransactionId(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 12);
+                          setTransactionId(val);
+                          if (validationError) setValidationError("");
+                        }}
                         placeholder="e.g. 401234567890"
                         className={`w-full rounded-xl border bg-slate-950 px-3 py-3 font-mono text-sm text-white placeholder-slate-600 transition-all focus:ring-2 focus:outline-none ${
-                          error
+                          error || validationError
                             ? "border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20"
                             : "border-white/10 focus:border-rose-500/50 focus:ring-rose-500/20"
                         }`}
@@ -318,7 +334,7 @@ export default function UPIPaymentModal({
 
                   <button
                     type="submit"
-                    disabled={!transactionId.trim() || isProcessing}
+                    disabled={transactionId.length !== 12 || isProcessing}
                     className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-3 font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isProcessing ? (

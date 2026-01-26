@@ -140,6 +140,7 @@ export default function TournamentDetailPage({ params }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPaymentData, setPendingPaymentData] = useState(null);
   const [paymentRequest, setPaymentRequest] = useState(null);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
 
   const [matches, setMatches] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
@@ -243,6 +244,28 @@ export default function TournamentDetailPage({ params }) {
   }, [id, user]);
 
   // Check Discord membership function (can be called manually)
+  const refreshStatus = async () => {
+    if (!user) return;
+    setRefreshingStatus(true);
+    try {
+      const [regs, payReq] = await Promise.all([
+        getRegistrations(id),
+        getPaymentRequestsForUser(id, user.$id),
+      ]);
+      setRegistrations(regs.documents);
+      setPaymentRequest(payReq);
+
+      // If they are now registered, trigger success state
+      if (regs.documents.some((r) => r.userId === user.$id)) {
+        setSuccess(true);
+      }
+    } catch (e) {
+      console.error("Failed to refresh status:", e);
+    } finally {
+      setRefreshingStatus(false);
+    }
+  };
+
   const recheckDiscord = async () => {
     if (!user) {
       setIsInDiscord(null);
@@ -1124,19 +1147,44 @@ export default function TournamentDetailPage({ params }) {
                 </div>
               ) : isPaymentPending ? (
                 <div className="flex flex-col gap-3 md:gap-4">
-                  <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-amber-500 md:rounded-xl md:p-4">
-                    <div className="relative">
-                      <AlertCircle className="h-4 w-4 md:h-5 md:w-5" />
-                      <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="mb-0.5 text-[10px] font-black tracking-widest uppercase md:text-xs">
-                        Verification Pending
-                      </p>
-                      <p className="text-[9px] leading-tight font-medium opacity-80 md:text-[10px]">
-                        We are verifying your payment. Status will update
-                        shortly.
-                      </p>
+                  <div className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-500 md:rounded-2xl md:p-5">
+                    <div className="flex items-start gap-4">
+                      {/* Alert Icon with Pulse */}
+                      <div className="relative mt-0.5 shrink-0">
+                        <AlertCircle className="h-4.5 w-4.5 md:h-5 md:w-5" />
+                        <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
+                      </div>
+
+                      {/* Content Section */}
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center justify-between">
+                          <p className="text-[10px] font-black tracking-[0.2em] uppercase md:text-xs">
+                            Verification Pending
+                          </p>
+                          <button
+                            onClick={refreshStatus}
+                            disabled={refreshingStatus}
+                            className="group/refresh flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 transition-all hover:bg-amber-500/20 active:scale-90 disabled:opacity-50 md:h-8 md:w-8"
+                            title="Refresh Status"
+                          >
+                            <RotateCcw
+                              className={`h-3.5 w-3.5 transition-transform group-hover/refresh:rotate-180 md:h-4 md:w-4 ${refreshingStatus ? "animate-spin" : ""}`}
+                            />
+                          </button>
+                        </div>
+
+                        <p className="text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
+                          We are verifying your payment. We usually take 5-15
+                          mins to verify.
+                        </p>
+
+                        <div className="mt-3 flex items-center gap-1.5 opacity-60">
+                          <div className="h-1 w-1 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+                          <p className="text-[8px] font-black tracking-widest uppercase md:text-[9px]">
+                            Status will update shortly
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
