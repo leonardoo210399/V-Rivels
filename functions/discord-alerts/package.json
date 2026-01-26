@@ -1,0 +1,10 @@
+{
+  "name": "node-discord-alerts",
+  "version": "1.0.0",
+  "description": "Tournament Discord Alerts",
+  "main": "index.js",
+  "dependencies": {
+    "node-appwrite": "latest",
+    "discord.js": "^14.13.0"
+  }
+}
