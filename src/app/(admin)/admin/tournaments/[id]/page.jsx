@@ -793,10 +793,16 @@ export default function TournamentControlPage({ params }) {
           console.log(
             `[Admin] Assigning tournament role to ${userProfile.discordId}`,
           );
-          await assignTournamentRoleAction(
+          const discordResult = await assignTournamentRoleAction(
             tournament.discordRoleId,
             userProfile.discordId,
           );
+
+          if (discordResult && discordResult.error) {
+            alert(
+              `Payment verified, but Discord Role assignment failed: ${discordResult.error}\n\nAsk the user to join the Discord server if they haven't already.`,
+            );
+          }
         }
       } catch (discordErr) {
         console.warn(
