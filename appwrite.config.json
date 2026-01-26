@@ -711,7 +711,7 @@
                     "encrypt": false
                 },
                 {
-                    "key": "discordPartyCode",
+                    "key": "valoPartyCode",
                     "type": "string",
                     "required": false,
                     "array": false,
@@ -736,6 +736,13 @@
                     "size": 50,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "checkInAlertSent",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": []

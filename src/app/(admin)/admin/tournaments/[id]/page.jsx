@@ -17,6 +17,7 @@ import {
 import {
   deleteTournamentChannelsAction,
   assignTournamentRoleAction,
+  sendTournamentMessageAction,
 } from "@/app/actions/discord";
 import {
   getMatches,
@@ -129,7 +130,24 @@ export default function TournamentControlPage({ params }) {
     firstPrize: "",
     secondPrize: "",
     additionalPrizes: [],
+    description: "",
+    entryFee: "",
+    status: "scheduled",
+    discordChannelId: "",
+    discordVoiceChannelId: "",
+    discordRoleId: "",
+    discordInviteUrl: "",
+    valoPartyCode: "",
+    checkInEnabled: false,
+    checkInStart: "",
   });
+
+  const formatToLocalISO = (isoString) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  };
 
   const loadData = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -163,9 +181,7 @@ export default function TournamentControlPage({ params }) {
         prizePool: tData.prizePool || "",
         maxTeams: tData.maxTeams || 8,
         location: tData.location || "Online",
-        date: tData.date
-          ? new Date(tData.date).toISOString().split("T")[0]
-          : "",
+        date: formatToLocalISO(tData.date),
         firstPrize: tData.firstPrize || "",
         secondPrize: tData.secondPrize || "",
         additionalPrizes: tData.additionalPrizes
@@ -173,6 +189,16 @@ export default function TournamentControlPage({ params }) {
             ? JSON.parse(tData.additionalPrizes)
             : tData.additionalPrizes
           : [],
+        description: tData.description || "",
+        entryFee: tData.entryFee || "",
+        status: tData.status || "scheduled",
+        discordChannelId: tData.discordChannelId || "",
+        discordVoiceChannelId: tData.discordVoiceChannelId || "",
+        discordRoleId: tData.discordRoleId || "",
+        discordInviteUrl: tData.discordInviteUrl || "",
+        valoPartyCode: tData.valoPartyCode || "",
+        checkInEnabled: tData.checkInEnabled || false,
+        checkInStart: formatToLocalISO(tData.checkInStart),
       });
     } catch (error) {
       console.error("Failed to load tournament data", error);
@@ -249,9 +275,7 @@ export default function TournamentControlPage({ params }) {
   const selectMatchForEdit = async (match) => {
     setSelectedMatch(match);
     setMatchEditData({
-      scheduledTime: match.scheduledTime
-        ? new Date(match.scheduledTime).toISOString().slice(0, 16)
-        : "",
+      scheduledTime: formatToLocalISO(match.scheduledTime),
       notes: match.notes || "",
       playerStats: parsePlayerStats(match) || {},
       scoreA: match.scoreA || 0,
@@ -554,13 +578,72 @@ export default function TournamentControlPage({ params }) {
     try {
       const dataToUpdate = {
         ...editForm,
+        date: editForm.date ? new Date(editForm.date).toISOString() : null,
+        checkInStart: editForm.checkInStart
+          ? new Date(editForm.checkInStart).toISOString()
+          : null,
         additionalPrizes: JSON.stringify(editForm.additionalPrizes),
       };
+
+      // Reset alert status if check-in time is updated
+      if (dataToUpdate.checkInStart !== tournament.checkInStart) {
+        dataToUpdate.checkInAlertSent = false;
+      }
+
       await updateTournament(id, dataToUpdate);
+
+      // --- DISCORD NOTIFICATIONS ---
+      // 1. Party Code Update
+      if (
+        editForm.valoPartyCode &&
+        editForm.valoPartyCode !== tournament.valoPartyCode
+      ) {
+        if (tournament.discordChannelId) {
+          await sendTournamentMessageAction(
+            tournament.discordChannelId,
+            `📢 **MATCH LOBBY READY!**\nThe Valorant Party Code for **${tournament.name}** has been updated.\n\n🔑 **Code:** \`${editForm.valoPartyCode}\`\n\n*Please join the lobby immediately!*`,
+            tournament.discordRoleId,
+          );
+        }
+      }
+
       setTournament((prev) => ({ ...prev, ...dataToUpdate }));
       alert("Tournament updated successfully!");
     } catch (e) {
       alert("Failed to update tournament: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSendCheckInAlert = async () => {
+    if (!tournament.discordChannelId) {
+      alert("No Discord channel linked to this tournament.");
+      return;
+    }
+
+    if (
+      !confirm(
+        "Send Check-in live alert to Discord? This will ping everyone with the tournament role.",
+      )
+    )
+      return;
+
+    try {
+      setUpdating(true);
+      await sendTournamentMessageAction(
+        tournament.discordChannelId,
+        `🚨 **CHECK-IN IS NOW LIVE!**\nRegistered players for **${tournament.name}** can now check-in on the website.\n\n🔗 **Check-in Here:** <${window.location.origin}/tournaments/${id}>\n\n*Note: Failure to check-in may result in disqualification!*`,
+        tournament.discordRoleId,
+      );
+
+      // Update DB so automation doesn't send it again
+      await updateTournament(id, { checkInAlertSent: true });
+      setTournament((prev) => ({ ...prev, checkInAlertSent: true }));
+
+      alert("Check-in alert sent successfully!");
+    } catch (err) {
+      alert("Failed to send alert: " + (err.message || "Unknown error"));
     } finally {
       setUpdating(false);
     }
@@ -2317,182 +2400,330 @@ export default function TournamentControlPage({ params }) {
                 </div>
 
                 <form onSubmit={handleSaveSettings} className="space-y-10">
-                  <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
-                    {/* Left Side: Basic Info */}
-                    <div className="space-y-8">
-                      <div className="flex items-center gap-3 border-b border-white/5 pb-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                        <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
-                          General Information
-                        </h4>
+                  <div className="space-y-12">
+                    {/* Top Section: Identity & Core Prizes */}
+                    <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+                      {/* Left: Identity */}
+                      <div className="space-y-8">
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                          <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                            Tournament Identity
+                          </h4>
+                        </div>
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                            <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                              Event Name
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={editForm.name}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  name: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-4 font-bold text-white shadow-inner transition-all outline-none placeholder:text-slate-700 focus:border-rose-500"
+                              placeholder="Tournament Title"
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                Physical Location
+                              </label>
+                              <input
+                                type="text"
+                                value={editForm.location}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    location: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-4 font-bold text-white shadow-inner transition-all outline-none focus:border-rose-500"
+                                placeholder="Online"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                Game Mode
+                              </label>
+                              <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/5 bg-slate-900/50 p-1.5 shadow-inner">
+                                {["5v5", "Deathmatch"].map((mode) => (
+                                  <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() =>
+                                      setEditForm({
+                                        ...editForm,
+                                        gameType: mode,
+                                      })
+                                    }
+                                    className={`rounded-xl py-3 text-[10px] font-black tracking-widest uppercase transition-all ${
+                                      editForm.gameType === mode
+                                        ? "bg-rose-600 text-white shadow-lg shadow-rose-900/20"
+                                        : "text-slate-500 hover:bg-white/5 hover:text-white"
+                                    }`}
+                                  >
+                                    {mode}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="space-y-6">
-                        <div className="space-y-2">
-                          <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                            Event Name
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={editForm.name}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, name: e.target.value })
-                            }
-                            className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-4 font-bold text-white shadow-inner transition-all outline-none placeholder:text-slate-700 focus:border-rose-500"
-                            placeholder="Tournament Title"
-                          />
+                      {/* Right: Prize Core */}
+                      <div className="space-y-8">
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                            Main Prize Pool
+                          </h4>
                         </div>
-
-                        <div className="space-y-2">
-                          <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                            Physical Location
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm.location}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                location: e.target.value,
-                              })
-                            }
-                            className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-4 font-bold text-white shadow-inner transition-all outline-none focus:border-rose-500"
-                            placeholder="Online"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                            Game Mode
-                          </label>
-                          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/5 bg-slate-900/50 p-1.5 shadow-inner">
-                            {["5v5", "Deathmatch"].map((mode) => (
-                              <button
-                                key={mode}
-                                type="button"
-                                onClick={() =>
-                                  setEditForm({ ...editForm, gameType: mode })
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                            <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                              Total Prize Pool
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm.prizePool}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  prizePool: e.target.value,
+                                })
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-4 font-bold text-white shadow-inner transition-all outline-none placeholder:text-slate-700 focus:border-rose-500"
+                              placeholder="e.g. ₹10,000"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="ml-1 text-[10px] font-black tracking-widest text-emerald-500/50 uppercase">
+                                Winner (1st)
+                              </label>
+                              <input
+                                type="text"
+                                value={editForm.firstPrize}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    firstPrize: e.target.value,
+                                  })
                                 }
-                                className={`rounded-xl py-3 text-[10px] font-black tracking-widest uppercase transition-all ${
-                                  editForm.gameType === mode
-                                    ? "bg-rose-600 text-white shadow-lg shadow-rose-900/20"
-                                    : "text-slate-500 hover:bg-white/5 hover:text-white"
-                                }`}
-                              >
-                                {mode}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                              Match Date
-                            </label>
-                            <input
-                              type="date"
-                              value={editForm.date}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  date: e.target.value,
-                                })
-                              }
-                              className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-bold text-white [color-scheme:dark] shadow-inner transition-all outline-none focus:border-rose-500"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                              Max Capacity
-                            </label>
-                            <input
-                              type="number"
-                              value={editForm.maxTeams}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  maxTeams: parseInt(e.target.value),
-                                })
-                              }
-                              className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-bold text-white shadow-inner transition-all outline-none focus:border-rose-500"
-                              placeholder="16"
-                            />
+                                className="w-full rounded-2xl border border-white/5 bg-slate-950 px-5 py-3.5 font-bold text-white transition-all outline-none placeholder:text-slate-700 focus:border-emerald-500"
+                                placeholder="Winner Price"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="ml-1 text-[10px] font-black tracking-widest text-amber-500/50 uppercase">
+                                Runner Up (2nd)
+                              </label>
+                              <input
+                                type="text"
+                                value={editForm.secondPrize}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    secondPrize: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-2xl border border-white/5 bg-slate-950 px-5 py-3.5 font-bold text-white transition-all outline-none placeholder:text-slate-700 focus:border-amber-500"
+                                placeholder="Second Price"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right Side: Prizes */}
-                    <div className="space-y-8">
-                      <div className="flex items-center gap-3 border-b border-white/5 pb-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
-                          Prize Distribution
-                        </h4>
+                    {/* Middle Section: Technical Details & Additional Rewards */}
+                    <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+                      {/* Left: Schedule & Capacity */}
+                      <div className="space-y-8">
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                            Operational Details
+                          </h4>
+                        </div>
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                Match Date & Time
+                              </label>
+                              <input
+                                type="datetime-local"
+                                value={editForm.date}
+                                onChange={(e) => {
+                                  const nextDate = e.target.value;
+                                  let nextCheckInStart = editForm.checkInStart;
+
+                                  if (editForm.checkInEnabled && nextDate) {
+                                    const matchDate = new Date(nextDate);
+                                    const checkInDate = new Date(
+                                      matchDate.getTime() - 15 * 60000,
+                                    );
+                                    const offset =
+                                      checkInDate.getTimezoneOffset() * 60000;
+                                    nextCheckInStart = new Date(
+                                      checkInDate.getTime() - offset,
+                                    )
+                                      .toISOString()
+                                      .slice(0, 16);
+                                  }
+
+                                  setEditForm({
+                                    ...editForm,
+                                    date: nextDate,
+                                    checkInStart: nextCheckInStart,
+                                  });
+                                }}
+                                className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-bold text-white [color-scheme:dark] shadow-inner transition-all outline-none focus:border-blue-500"
+                              />
+                            </div>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between px-1">
+                                <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                  Check-in System
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const nextEnabled =
+                                      !editForm.checkInEnabled;
+                                    let nextCheckInStart =
+                                      editForm.checkInStart;
+
+                                    if (nextEnabled && editForm.date) {
+                                      const matchDate = new Date(editForm.date);
+                                      const checkInDate = new Date(
+                                        matchDate.getTime() - 15 * 60000,
+                                      );
+                                      const offset =
+                                        checkInDate.getTimezoneOffset() * 60000;
+                                      nextCheckInStart = new Date(
+                                        checkInDate.getTime() - offset,
+                                      )
+                                        .toISOString()
+                                        .slice(0, 16);
+                                    }
+
+                                    setEditForm({
+                                      ...editForm,
+                                      checkInEnabled: nextEnabled,
+                                      checkInStart: nextCheckInStart,
+                                    });
+                                  }}
+                                  className={`relative h-6 w-11 rounded-full transition-colors ${editForm.checkInEnabled ? "bg-emerald-500" : "bg-slate-800"}`}
+                                >
+                                  <div
+                                    className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white transition-transform ${editForm.checkInEnabled ? "translate-x-5" : "translate-x-0"}`}
+                                  />
+                                </button>
+                              </div>
+                              <div
+                                className={`transition-all duration-300 ${editForm.checkInEnabled ? "opacity-100" : "pointer-events-none opacity-20"}`}
+                              >
+                                <input
+                                  type="datetime-local"
+                                  value={editForm.checkInStart}
+                                  onChange={(e) =>
+                                    setEditForm({
+                                      ...editForm,
+                                      checkInStart: e.target.value,
+                                    })
+                                  }
+                                  className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-bold text-white [color-scheme:dark] shadow-inner transition-all outline-none focus:border-emerald-500"
+                                />
+                                <div className="mt-2 flex items-center justify-between px-1">
+                                  <p className="text-[9px] font-medium text-slate-600 uppercase italic">
+                                    Players can check-in after this time
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={handleSendCheckInAlert}
+                                    disabled={
+                                      updating ||
+                                      !editForm.checkInEnabled ||
+                                      !tournament.discordChannelId
+                                    }
+                                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-black tracking-widest uppercase transition-all ${
+                                      editForm.checkInEnabled &&
+                                      tournament.discordChannelId
+                                        ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+                                        : "cursor-not-allowed bg-slate-800 text-slate-500 opacity-50"
+                                    }`}
+                                  >
+                                    <span className="text-[12px]">📢</span>
+                                    {tournament.discordChannelId
+                                      ? "Send Live Alert"
+                                      : "Link Discord to Alert"}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                Max Capacity
+                              </label>
+                              <input
+                                type="number"
+                                value={editForm.maxTeams}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    maxTeams: parseInt(e.target.value),
+                                  })
+                                }
+                                className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-bold text-white shadow-inner transition-all outline-none focus:border-blue-500"
+                                placeholder="16"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                Entry Fee
+                              </label>
+                              <input
+                                type="text"
+                                value={editForm.entryFee}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    entryFee: e.target.value,
+                                  })
+                                }
+                                className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-bold text-white shadow-inner transition-all outline-none focus:border-blue-500"
+                                placeholder="e.g. ₹500 or Free"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="space-y-6">
-                        <div className="space-y-2">
-                          <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                            Total Prize Pool
-                          </label>
-                          <input
-                            type="text"
-                            value={editForm.prizePool}
-                            onChange={(e) =>
-                              setEditForm({
-                                ...editForm,
-                                prizePool: e.target.value,
-                              })
-                            }
-                            className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-4 font-bold text-white shadow-inner transition-all outline-none placeholder:text-slate-700 focus:border-rose-500"
-                            placeholder="e.g. ₹10,000"
-                          />
+                      {/* Right: Additional Rewards */}
+                      <div className="space-y-8">
+                        <div className="flex items-center gap-3 border-b border-white/5 pb-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-slate-500" />
+                          <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                            Extra Rewards
+                          </h4>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="ml-1 text-[10px] font-black tracking-widest text-emerald-500/50 uppercase">
-                              Winner (1st)
-                            </label>
-                            <input
-                              type="text"
-                              value={editForm.firstPrize}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  firstPrize: e.target.value,
-                                })
-                              }
-                              className="w-full rounded-2xl border border-white/5 bg-slate-950 px-5 py-3.5 font-bold text-white transition-all outline-none placeholder:text-slate-700 focus:border-emerald-500"
-                              placeholder="Winner Price"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="ml-1 text-[10px] font-black tracking-widest text-amber-500/50 uppercase">
-                              Runner Up (2nd)
-                            </label>
-                            <input
-                              type="text"
-                              value={editForm.secondPrize}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  secondPrize: e.target.value,
-                                })
-                              }
-                              className="w-full rounded-2xl border border-white/5 bg-slate-950 px-5 py-3.5 font-bold text-white transition-all outline-none placeholder:text-slate-700 focus:border-amber-500"
-                              placeholder="Second Price"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-4 pt-2">
+                        <div className="space-y-4">
                           <div className="flex items-center justify-between px-1">
                             <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                              Additional Rewards
+                              Custom Prizes
                             </label>
                             <button
                               type="button"
@@ -2567,8 +2798,8 @@ export default function TournamentControlPage({ params }) {
                               </div>
                             ))}
                             {editForm.additionalPrizes.length === 0 && (
-                              <div className="rounded-2xl border border-dashed border-white/5 bg-slate-950/20 py-8 text-center">
-                                <p className="text-[10px] font-bold tracking-widest text-slate-700 uppercase">
+                              <div className="rounded-2xl border border-dashed border-white/5 bg-slate-950/20 py-8 text-center text-slate-700">
+                                <p className="text-[10px] font-bold tracking-widest uppercase">
                                   No extra rewards defined
                                 </p>
                               </div>
@@ -2576,6 +2807,152 @@ export default function TournamentControlPage({ params }) {
                           </div>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Bottom Section: Full Width Description */}
+                    <div className="space-y-8 border-t border-white/5 pt-10">
+                      <div className="flex items-center gap-3">
+                        <div className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                        <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                          Tournament Description & Rules
+                        </h4>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          Public Information
+                        </label>
+                        <textarea
+                          value={editForm.description}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              description: e.target.value,
+                            })
+                          }
+                          rows={10}
+                          className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-6 py-5 leading-relaxed font-medium text-white shadow-inner transition-all outline-none focus:border-violet-500"
+                          placeholder="Tell your players about the tournament, its rules, format, and any other relevant information..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active Lobby Section */}
+                  <div className="space-y-8 border-t border-white/5 pt-10">
+                    <div className="flex items-center gap-3">
+                      <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                      <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                        Active Lobby & Match Info
+                      </h4>
+                    </div>
+
+                    <div className="max-w-md space-y-2">
+                      <label className="ml-1 text-[10px] font-black tracking-widest text-rose-500/70 uppercase">
+                        Valorant Party Code
+                      </label>
+                      <div className="group relative">
+                        <input
+                          type="text"
+                          value={editForm.valoPartyCode}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              valoPartyCode: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-rose-500/20 bg-rose-500/5 px-6 py-4 font-mono text-lg font-black tracking-widest text-white shadow-inner transition-all outline-none focus:border-rose-500/50"
+                          placeholder="e.g. PARTY-123"
+                        />
+                        <div className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[10px] font-black text-rose-500/20 uppercase">
+                          MATCH LOBBY
+                        </div>
+                      </div>
+                      <p className="px-1 text-[9px] font-medium text-slate-600">
+                        This code will be visible to all verified participants
+                        immediately. Update this when the lobby is ready.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Discord Integration Section */}
+                  <div className="space-y-8 border-t border-white/5 pt-10">
+                    <div className="flex items-center gap-3">
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                      <h4 className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                        Discord Integration
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                      <div className="space-y-2">
+                        <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          Channel ID
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.discordChannelId}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              discordChannelId: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-mono text-xs font-bold text-white shadow-inner transition-all outline-none focus:border-blue-500"
+                          placeholder="Text Channel ID"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          Voice Channel ID
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.discordVoiceChannelId}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              discordVoiceChannelId: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-mono text-xs font-bold text-white shadow-inner transition-all outline-none focus:border-blue-500"
+                          placeholder="Voice Channel ID"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          Role ID
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.discordRoleId}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              discordRoleId: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-mono text-xs font-bold text-white shadow-inner transition-all outline-none focus:border-blue-500"
+                          placeholder="Tournament Role ID"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="max-w-md space-y-2">
+                      <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                        Invite URL
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.discordInviteUrl}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            discordInviteUrl: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-3.5 font-bold text-white shadow-inner transition-all outline-none focus:border-blue-500"
+                        placeholder="https://discord.gg/..."
+                      />
                     </div>
                   </div>
 

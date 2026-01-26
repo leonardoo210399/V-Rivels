@@ -419,3 +419,41 @@ export async function deleteTournamentChannels(channelIds, roleId = null) {
     }
 }
 
+/**
+ * Serverless Discord Bot Action
+ * Sends a message to a specific channel, optionally pinging a role.
+ * 
+ * @param {string} channelId 
+ * @param {string} message 
+ * @param {string} roleId - Optional role ID to ping
+ */
+export async function sendTournamentMessage(channelId, message, roleId = null) {
+  if (!BOT_TOKEN) return { error: "Bot token missing" };
+  if (!channelId) return { error: "Channel ID missing" };
+
+  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+  try {
+    await client.login(BOT_TOKEN);
+    
+    // Wait for ready
+    if (!client.isReady()) {
+      await new Promise((resolve) => client.once(Events.ClientReady, resolve));
+    }
+
+    const channel = await client.channels.fetch(channelId);
+    if (!channel) throw new Error("Channel not found");
+
+    const ping = roleId ? `<@&${roleId}> ` : "";
+    const finalMessage = `${ping}${message}`;
+
+    await channel.send(finalMessage);
+    
+    await client.destroy();
+    return { success: true };
+  } catch (e) {
+    console.error("[DiscordBot] SendMessage ERROR:", e.message);
+    if (client) await client.destroy();
+    return { error: e.message };
+  }
+}

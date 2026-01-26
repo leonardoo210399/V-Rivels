@@ -276,7 +276,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
               discordVoiceChannelId: botResult.voiceChannelId,
               discordRoleId: botResult.roleId,
               discordInviteUrl: botResult.inviteUrl,
-              discordPartyCode: null,
+              valoPartyCode: null,
             });
           } catch (dbError) {
             console.error("Failed to save Discord ID to DB:", dbError);
