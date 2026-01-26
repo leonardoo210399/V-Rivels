@@ -4,10 +4,21 @@ import { Client as DiscordClient, GatewayIntentBits, Events } from 'discord.js';
 export default async ({ req, res, log, error }) => {
   log('Function started. Initializing Appwrite client...');
   
+  const endpoint = process.env.APPWRITE_FUNCTION_ENDPOINT || process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1';
+  const projectId = process.env.APPWRITE_FUNCTION_PROJECT_ID || process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+  const apiKey = process.env.APPWRITE_FUNCTION_API_KEY || process.env.APPWRITE_API_KEY;
+
+  log(`Connecting to: ${endpoint} | Project: ${projectId}`);
+
+  if (!projectId || !apiKey) {
+    error('Missing Appwrite Project ID or API Key in environment variables.');
+    return res.json({ success: false, message: 'Missing Appwrite config' });
+  }
+
   const client = new Client()
-    .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT)
-    .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-    .setKey(process.env.APPWRITE_FUNCTION_API_KEY);
+    .setEndpoint(endpoint)
+    .setProject(projectId)
+    .setKey(apiKey);
 
   const databases = new Databases(client);
 
