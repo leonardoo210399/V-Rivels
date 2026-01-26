@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { createTournament, updateTournament } from "@/lib/tournaments";
-import { createTournamentChannelAction } from "@/app/actions/discord";
-import { announceNewTournament } from "@/lib/discord";
+import {
+  createTournamentChannelAction,
+  announceNewTournamentAction,
+} from "@/app/actions/discord";
 import {
   X,
   Trophy,
@@ -292,14 +294,14 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         // Don't fail the UI, just log it
       }
 
-      // 5. Send Announcement Check (Existing Webhook logic)
+      // 5. Send Announcement Check (Existing Webhook logic -> Now Bot Action)
       try {
-        await announceNewTournament({
+        await announceNewTournamentAction({
           ...tournamentData,
           $id: tournamentId,
         });
       } catch (discordError) {
-        console.warn("Discord announcement webhook failed:", discordError);
+        console.warn("Discord announcement bot action failed:", discordError);
       }
 
       onSuccess();

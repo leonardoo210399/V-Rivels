@@ -1,5 +1,5 @@
 "use server";
-import { createTournamentChannel, deleteTournamentChannels, addMemberToTournamentChannels, assignTournamentRole, sendTournamentMessage } from "@/lib/discord-bot";
+import { createTournamentChannel, deleteTournamentChannels, addMemberToTournamentChannels, assignTournamentRole, sendTournamentMessage, announceNewTournament, announceNewScoutingReport } from "@/lib/discord-bot";
 
 /**
  * Server Action to create Discord Channels for a tournament.
@@ -28,4 +28,12 @@ export async function assignTournamentRoleAction(roleId, discordUserId) {
 
 export async function sendTournamentMessageAction(channelId, message, roleId = null) {
     return await sendTournamentMessage(channelId, message, roleId);
+}
+
+export async function announceNewTournamentAction(tournament) {
+    return await announceNewTournament(tournament);
+}
+
+export async function announceNewScoutingReportAction(data, rankData) {
+    return await announceNewScoutingReport(data, rankData);
 }

@@ -5,7 +5,7 @@ import {
   deleteFreeAgentPost,
   updateFreeAgentPost,
 } from "@/lib/players";
-import { announceNewScoutingReport } from "@/lib/discord";
+import { announceNewScoutingReportAction } from "@/app/actions/discord";
 
 /**
  * Custom hook to manage scouting report form state and submission
@@ -69,7 +69,7 @@ export function useScoutingReport({ user, userPost, setUserPost, notify, mmrData
         
         // Send Discord announcement for new posts only
         try {
-          await announceNewScoutingReport(postData, {
+          await announceNewScoutingReportAction(postData, {
             tier: mmrData?.current_data?.currenttier,
             tierPatched: mmrData?.current_data?.currenttierpatched,
             rankImage: mmrData?.current_data?.images?.large,
