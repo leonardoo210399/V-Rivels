@@ -38,6 +38,7 @@ import {
   ExternalLink,
   Info,
   RotateCcw,
+  Swords,
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
@@ -128,11 +129,11 @@ export default function TournamentDetailPage({ params }) {
   const [deleting, setDeleting] = useState(false);
   const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState([
-    { name: "", tag: "", verified: false, loading: false },
-    { name: "", tag: "", verified: false, loading: false },
-    { name: "", tag: "", verified: false, loading: false },
-    { name: "", tag: "", verified: false, loading: false },
-    { name: "", tag: "", verified: false, loading: false },
+    { name: "", tag: "", verified: false, loading: false, card: null },
+    { name: "", tag: "", verified: false, loading: false, card: null },
+    { name: "", tag: "", verified: false, loading: false, card: null },
+    { name: "", tag: "", verified: false, loading: false, card: null },
+    { name: "", tag: "", verified: false, loading: false, card: null },
   ]);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -333,9 +334,10 @@ export default function TournamentDetailPage({ params }) {
       const cleanTag = member.tag.startsWith("#")
         ? member.tag.substring(1)
         : member.tag;
-      await getAccount(member.name, cleanTag);
+      const acc = await getAccount(member.name, cleanTag);
       newMembers[index].verified = true;
       newMembers[index].tag = cleanTag; // Normalize tag
+      newMembers[index].card = acc.data?.card?.id || acc.data?.card || null;
     } catch (err) {
       alert(`Account ${member.name}#${member.tag} not found!`);
       newMembers[index].verified = false;
@@ -381,14 +383,17 @@ export default function TournamentDetailPage({ params }) {
     const metadata = {
       members:
         tournament.gameType === "5v5"
-          ? members.map((m) => ({ name: m.name, tag: m.tag }))
+          ? members.map((m) => ({
+              name: m.name,
+              tag: m.tag,
+              card: m.card,
+            }))
           : null,
       playerName:
         tournament.gameType !== "5v5"
           ? `${userProfile.ingameName}#${userProfile.tag}`
           : null,
       playerCard: userProfile?.card || null,
-      puuid: userProfile?.puuid || null,
     };
 
     const registrationData = {
@@ -925,6 +930,24 @@ export default function TournamentDetailPage({ params }) {
                           ({tournament.maxTeams - registrations.length} LEFT)
                         </span>
                       </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="rounded-lg border border-white/5 bg-slate-950 p-2.5 text-rose-500 shadow-lg shadow-rose-500/5 md:rounded-xl md:p-3">
+                      <Swords className="h-4 w-4 md:h-5 md:w-5" />
+                    </div>
+                    <div>
+                      <p className="mb-0.5 text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
+                        Format
+                      </p>
+                      <p className="text-xs font-bold tracking-tight text-white uppercase md:text-sm">
+                        {tournament.gameType === "Deathmatch"
+                          ? "Solo Deathmatch"
+                          : tournament.matchFormat &&
+                              tournament.matchFormat !== "Auto"
+                            ? tournament.matchFormat
+                            : "BO1 (Quals) / BO3 (Finals)"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 md:gap-4">

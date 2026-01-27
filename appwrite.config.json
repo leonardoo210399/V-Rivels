@@ -515,6 +515,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "matchFormat",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": "Auto",
+                    "encrypt": false
                 }
             ],
             "indexes": []
@@ -750,6 +759,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "matchFormat",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": "Auto",
+                    "encrypt": false
                 }
             ],
             "indexes": []

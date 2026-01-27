@@ -1,14 +1,42 @@
 "use client";
-import { useState } from "react";
-import { User, Crown, Star } from "lucide-react";
+import { User, Crown, Star, Target, Skull, Swords, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function PlayerCard3D({
   player,
   teamColor = "rose",
   isCaptain = false,
   mirrored = false,
+  stats = null,
 }) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [agentImage, setAgentImage] = useState(null);
+
+  useEffect(() => {
+    const activeAgentId = stats?.agentId;
+    const activeAgentName = player?.mainAgent;
+
+    if (activeAgentId) {
+      setAgentImage(
+        `https://media.valorant-api.com/agents/${activeAgentId}/displayicon.png`,
+      );
+    } else if (activeAgentName) {
+      fetch(`https://valorant-api.com/v1/agents?isPlayableCharacter=true`)
+        .then((res) => res.json())
+        .then((data) => {
+          const agent = data.data.find(
+            (a) =>
+              a.displayName.toLowerCase() === activeAgentName.toLowerCase(),
+          );
+          if (agent) {
+            setAgentImage(agent.displayIcon);
+          }
+        })
+        .catch(() => setAgentImage(null));
+    } else {
+      setAgentImage(null);
+    }
+  }, [player?.mainAgent, stats?.agentId]);
 
   const handleMouseMove = (e) => {
     const card = e.currentTarget;
@@ -86,15 +114,44 @@ export default function PlayerCard3D({
           >
             {/* Player Avatar */}
             <div
-              className={`shrink-0 rounded-xl border ${colors.border} bg-slate-900/50 p-3 backdrop-blur-sm`}
+              className={`shrink-0 overflow-hidden rounded-xl border ${colors.border} bg-slate-900/50 p-0 backdrop-blur-sm`}
             >
-              <User className="h-8 w-8 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
+                {stats?.agentId && agentImage ? (
+                  /* Show Agent Played after match stats are updated */
+                  <img
+                    src={agentImage}
+                    alt=""
+                    className="h-full w-full scale-125 object-contain transition-transform hover:scale-110"
+                  />
+                ) : stats?.playerCard || player?.card ? (
+                  /* Show Player Card before match stats */
+                  <img
+                    src={`https://media.valorant-api.com/playercards/${stats?.playerCard || player.card}/displayicon.png`}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform hover:scale-110"
+                  />
+                ) : agentImage ? (
+                  /* Fallback to Profile Main Agent */
+                  <img
+                    src={agentImage}
+                    alt=""
+                    className="h-full w-full scale-125 object-contain transition-transform hover:scale-110"
+                  />
+                ) : (
+                  <div className="p-2.5">
+                    <User className="h-full w-full text-white/50" />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Player Info */}
-            <div className={`min-w-0 flex-1 ${mirrored ? "text-right" : ""}`}>
+            <div
+              className={`min-w-0 flex-1 ${mirrored ? "flex flex-col items-end text-right" : ""}`}
+            >
               <div
-                className={`mb-1 flex items-center gap-1.5 ${mirrored ? "flex-row-reverse justify-end" : ""}`}
+                className={`mb-1 flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}
               >
                 <h3 className="truncate text-base font-black text-white uppercase md:text-lg">
                   {player?.ign ||
@@ -107,7 +164,7 @@ export default function PlayerCard3D({
                 )}
               </div>
               <p
-                className={`text-xs font-bold ${colors.text} tracking-wider uppercase`}
+                className={`text-xs font-bold ${colors.text} tracking-wider uppercase ${mirrored ? "text-right" : ""}`}
               >
                 {player?.tag || player?.teamTag || "TAG"}
               </p>
@@ -129,6 +186,50 @@ export default function PlayerCard3D({
               )}
             </div>
           )}
+
+          {/* In-Game Stats Overlay */}
+          {stats &&
+            (stats.kills > 0 ||
+              stats.deaths > 0 ||
+              stats.assists > 0 ||
+              stats.acs > 0) && (
+              <div
+                className={`mt-2 grid grid-cols-4 gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}
+              >
+                <div className="flex flex-col items-center rounded-lg border border-emerald-500/10 bg-emerald-500/5 py-1.5 transition-colors hover:bg-emerald-500/10">
+                  <span className="text-[7px] font-black tracking-widest text-emerald-500/70 uppercase">
+                    Kills
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {stats.kills || 0}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg border border-red-500/10 bg-red-500/5 py-1.5 transition-colors hover:bg-red-500/10">
+                  <span className="text-[7px] font-black tracking-widest text-red-500/70 uppercase">
+                    Death
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {stats.deaths || 0}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg border border-amber-500/10 bg-amber-500/5 py-1.5 transition-colors hover:bg-amber-500/10">
+                  <span className="text-[7px] font-black tracking-widest text-amber-500/70 uppercase">
+                    Assist
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {stats.assists || 0}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg border border-purple-500/10 bg-purple-500/5 py-1.5 transition-colors hover:bg-purple-500/10">
+                  <span className="text-[7px] font-black tracking-widest text-purple-500/70 uppercase">
+                    ACS
+                  </span>
+                  <span className="text-xs font-black text-white">
+                    {stats.acs || 0}
+                  </span>
+                </div>
+              </div>
+            )}
 
           {/* Agent Preferences */}
           {player?.agents && player.agents.length > 0 && (

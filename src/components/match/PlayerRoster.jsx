@@ -17,6 +17,7 @@ import { getUserProfile } from "@/lib/users";
 export default function PlayerRoster({
   teamA,
   teamB,
+  playerStats = {},
   loading = false,
   mirrored = false,
 }) {
@@ -56,8 +57,8 @@ export default function PlayerRoster({
                 playersA.push({
                   ingameName: member.name,
                   tag: member.tag,
-                  card: null, // We don't have card data for all members
-                  role: null, // Individual role not stored
+                  card: member.card || null,
+                  role: null,
                   mainAgent: null,
                   secondaryAgents: [],
                 });
@@ -121,7 +122,7 @@ export default function PlayerRoster({
                 playersB.push({
                   ingameName: member.name,
                   tag: member.tag,
-                  card: null,
+                  card: member.card || null,
                   role: null,
                   mainAgent: null,
                   secondaryAgents: [],
@@ -198,6 +199,7 @@ export default function PlayerRoster({
               player={null}
               teamColor={mirrored ? "cyan" : "rose"}
               mirrored={mirrored}
+              stats={playerStats[`${teamA ? "teamA" : "teamB"}_${i - 1}`]}
             />
           ))}
         </div>
@@ -239,7 +241,12 @@ export default function PlayerRoster({
             <div className="h-6 w-24 animate-pulse rounded bg-slate-800" />
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <PlayerCard3D key={i} player={null} teamColor="rose" />
+                <PlayerCard3D
+                  key={i}
+                  player={null}
+                  teamColor="rose"
+                  stats={playerStats[`teamA_${i - 1}`]}
+                />
               ))}
             </div>
           </div>
@@ -249,7 +256,12 @@ export default function PlayerRoster({
             <div className="h-6 w-24 animate-pulse rounded bg-slate-800" />
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <PlayerCard3D key={i} player={null} teamColor="cyan" />
+                <PlayerCard3D
+                  key={i}
+                  player={null}
+                  teamColor="cyan"
+                  stats={playerStats[`teamB_${i - 1}`]}
+                />
               ))}
             </div>
           </div>
@@ -294,6 +306,7 @@ export default function PlayerRoster({
                 player={player}
                 teamColor={teamColor}
                 mirrored={mirrored}
+                stats={playerStats[`${teamA ? "teamA" : "teamB"}_${idx}`]}
               />
             ))
           ) : (
@@ -351,7 +364,12 @@ export default function PlayerRoster({
             <div className="space-y-2">
               {teamAPlayers.length > 0 ? (
                 teamAPlayers.map((player, idx) => (
-                  <PlayerCard3D key={idx} player={player} teamColor="rose" />
+                  <PlayerCard3D
+                    key={idx}
+                    player={player}
+                    teamColor="rose"
+                    stats={playerStats[`teamA_${idx}`]}
+                  />
                 ))
               ) : (
                 <div className="rounded-xl border border-white/5 bg-slate-900/20 p-4 text-center">
@@ -382,6 +400,7 @@ export default function PlayerRoster({
                     player={player}
                     teamColor="cyan"
                     mirrored
+                    stats={playerStats[`teamB_${idx}`]}
                   />
                 ))
               ) : (

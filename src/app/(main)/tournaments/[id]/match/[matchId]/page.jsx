@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useState, use } from "react";
-import { getMatch, updateMatchScore, updateMatchVeto } from "@/lib/brackets";
+import {
+  getMatch,
+  updateMatchScore,
+  updateMatchVeto,
+  parsePlayerStats,
+} from "@/lib/brackets";
 import { getTournament, getRegistration } from "@/lib/tournaments";
 import { client } from "@/lib/appwrite";
 import { useAuth } from "@/context/AuthContext";
@@ -56,9 +61,14 @@ export default function MatchLobbyPage({ params }) {
   // Veto State
   const [vetoState, setVetoState] = useState({
     bannedMaps: [],
+    pickedMaps: [],
     currentTurn: "teamA",
     selectedMap: null,
+    selectedMaps: [],
   });
+
+  const [totalRounds, setTotalRounds] = useState(0);
+  const [playerStats, setPlayerStats] = useState({});
 
   // Score Reporting State
   const [scoreA, setScoreA] = useState(0);
@@ -70,6 +80,8 @@ export default function MatchLobbyPage({ params }) {
   const [toast, setToast] = useState(null);
   const [banningMap, setBanningMap] = useState(null);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [mapPlayerStats, setMapPlayerStats] = useState([]);
+  const [viewingMapIdx, setViewingMapIdx] = useState(null); // null means "Total"
 
   useEffect(() => {
     loadData();
@@ -82,9 +94,34 @@ export default function MatchLobbyPage({ params }) {
           setMatch(updatedMatch);
           if (updatedMatch.vetoData) {
             try {
-              setVetoState(JSON.parse(updatedMatch.vetoData));
+              const parsed = JSON.parse(updatedMatch.vetoData);
+              setVetoState({
+                ...parsed,
+                pickedMaps: parsed.pickedMaps || [],
+                selectedMaps:
+                  parsed.selectedMaps ||
+                  (parsed.selectedMap ? [parsed.selectedMap] : []),
+              });
             } catch (e) {
               console.error("Failed to parse veto data", e);
+            }
+          }
+          if (updatedMatch.playerStats) {
+            const parsedStats = parsePlayerStats(updatedMatch);
+            setPlayerStats(parsedStats.players || {});
+            // Update mapPlayerStats if present in consolidated format, otherwise check legacy field
+            if (parsedStats.mapPlayerStats.length > 0) {
+              setMapPlayerStats(parsedStats.mapPlayerStats);
+            } else if (updatedMatch.mapPlayerStats) {
+              try {
+                setMapPlayerStats(
+                  typeof updatedMatch.mapPlayerStats === "string"
+                    ? JSON.parse(updatedMatch.mapPlayerStats)
+                    : updatedMatch.mapPlayerStats,
+                );
+              } catch (e) {
+                console.error("Failed to parse map player stats", e);
+              }
             }
           }
         }
@@ -107,8 +144,47 @@ export default function MatchLobbyPage({ params }) {
         }
       }
 
+      if (matchData.playerStats) {
+        const parsedStats = parsePlayerStats(matchData);
+        setPlayerStats(parsedStats.players || {});
+
+        // Update mapPlayerStats if present in consolidated format
+        if (parsedStats.mapPlayerStats.length > 0) {
+          setMapPlayerStats(parsedStats.mapPlayerStats);
+        } else if (matchData.mapPlayerStats) {
+          // Fallback to legacy field
+          try {
+            setMapPlayerStats(
+              typeof matchData.mapPlayerStats === "string"
+                ? JSON.parse(matchData.mapPlayerStats)
+                : matchData.mapPlayerStats,
+            );
+          } catch (e) {
+            console.error("Map player stats parsing failed", e);
+          }
+        }
+      }
+
       const tourneyData = await getTournament(matchData.tournamentId);
       setTournament(tourneyData);
+
+      // Fetch matches to determine total rounds
+      try {
+        const allMatches = await getMatches(matchData.tournamentId);
+        if (allMatches.length > 0) {
+          const maxR = Math.max(...allMatches.map((m) => m.round));
+          setTotalRounds(maxR);
+        } else {
+          // Fallback calculation based on maxTeams
+          const teams = tourneyData.maxTeams || 16;
+          setTotalRounds(Math.ceil(Math.log2(teams)));
+        }
+      } catch (me) {
+        console.warn("Failed to fetch all matches for round calculation", me);
+        // Fallback
+        const teams = tourneyData.maxTeams || 16;
+        setTotalRounds(Math.ceil(Math.log2(teams)));
+      }
 
       if (matchData.teamA && matchData.teamA !== "LOBBY") {
         getRegistration(matchData.teamA).then(setTeamA).catch(console.error);
@@ -128,40 +204,85 @@ export default function MatchLobbyPage({ params }) {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const getEffectiveFormat = () => {
+    if (!tournament || !match) return "BO1";
+    if (match.matchFormat && match.matchFormat !== "Auto")
+      return match.matchFormat;
+    if (tournament.matchFormat && tournament.matchFormat !== "Auto")
+      return tournament.matchFormat;
+
+    const currentRound = match.round;
+    const isFinal = totalRounds > 0 && currentRound === totalRounds;
+    const isSemi = totalRounds > 1 && currentRound === totalRounds - 1;
+    if (isFinal || isSemi) return "BO3";
+    return "BO1";
+  };
+
+  const getVetoAction = (turnNumber, format) => {
+    if (format === "BO3") {
+      if (turnNumber === 3 || turnNumber === 4) return "pick";
+      return "ban";
+    }
+    if (format === "BO5") {
+      if (turnNumber >= 3 && turnNumber <= 6) return "pick";
+      return "ban";
+    }
+    return "ban";
+  };
+
   const handleBanMap = async (mapName) => {
     if (!isAdmin) {
       const isTeamATurn = vetoState.currentTurn === "teamA";
       const currentReg = isTeamATurn ? teamA : teamB;
       if (currentReg?.userId !== user?.$id) {
-        showToast("It's not your turn to ban!", "error");
+        showToast("It's not your turn!", "error");
         return;
       }
     }
 
-    if (vetoState.selectedMap) return;
+    const format = getEffectiveFormat();
+    const action = getVetoAction(
+      vetoState.bannedMaps.length + vetoState.pickedMaps.length + 1,
+      format,
+    );
+
+    if (vetoState.selectedMaps?.length > 0 || vetoState.selectedMap) return;
 
     setBanningMap(mapName);
-    const newBanned = [...vetoState.bannedMaps, mapName];
+    const newBanned =
+      action === "ban"
+        ? [...vetoState.bannedMaps, mapName]
+        : [...vetoState.bannedMaps];
+    const newPicked =
+      action === "pick"
+        ? [...vetoState.pickedMaps, mapName]
+        : [...vetoState.pickedMaps];
     const newTurn = vetoState.currentTurn === "teamA" ? "teamB" : "teamA";
 
-    let selected = null;
-    if (newBanned.length === MAP_POOL.length - 1) {
-      selected = MAP_POOL.find((m) => !newBanned.includes(m.name)).name;
+    let finalSelectedMaps = [];
+    if (newBanned.length + newPicked.length === MAP_POOL.length - 1) {
+      const decider = MAP_POOL.find(
+        (m) => !newBanned.includes(m.name) && !newPicked.includes(m.name),
+      ).name;
+      // Combine picks and decider in order: Picks first, then decider
+      finalSelectedMaps = [...newPicked, decider];
     }
 
     const newState = {
       bannedMaps: newBanned,
+      pickedMaps: newPicked,
       currentTurn: newTurn,
-      selectedMap: selected,
+      selectedMaps: finalSelectedMaps,
+      selectedMap: finalSelectedMaps[0] || null, // Fallback for old UI
     };
 
     try {
       await updateMatchVeto(matchId, newState);
       setVetoState(newState);
       showToast(
-        selected
-          ? `${selected} has been selected!`
-          : `${mapName} has been banned!`,
+        finalSelectedMaps.length > 0
+          ? `Veto completed! Maps: ${finalSelectedMaps.join(", ")}`
+          : `${mapName} has been ${action}ed!`,
         "success",
       );
     } catch (e) {
@@ -199,10 +320,13 @@ export default function MatchLobbyPage({ params }) {
   };
 
   const incrementScore = (team) => {
+    const effFormat = getEffectiveFormat();
+    const maxScore = effFormat === "BO5" ? 3 : effFormat === "BO3" ? 2 : 13;
+
     if (team === "A") {
-      setScoreA((prev) => Math.min(13, parseInt(prev || 0) + 1));
+      setScoreA((prev) => Math.min(maxScore, parseInt(prev || 0) + 1));
     } else {
-      setScoreB((prev) => Math.min(13, parseInt(prev || 0) + 1));
+      setScoreB((prev) => Math.min(maxScore, parseInt(prev || 0) + 1));
     }
   };
 
@@ -325,6 +449,38 @@ export default function MatchLobbyPage({ params }) {
           />
         </div>
 
+        {/* Map Stats Selector */}
+        {mapPlayerStats && mapPlayerStats.length > 0 && (
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+            <button
+              onClick={() => setViewingMapIdx(null)}
+              className={`rounded-lg px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all ${
+                viewingMapIdx === null
+                  ? "bg-rose-600 text-white shadow-lg shadow-rose-900/20"
+                  : "border border-white/5 bg-slate-900/50 text-slate-500 hover:text-white"
+              }`}
+            >
+              Series Total Stats
+            </button>
+            {mapPlayerStats.map((stats, idx) => {
+              if (!stats) return null;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setViewingMapIdx(idx)}
+                  className={`rounded-lg px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all ${
+                    viewingMapIdx === idx
+                      ? "bg-rose-600 text-white shadow-lg shadow-rose-900/20"
+                      : "border border-white/5 bg-slate-900/50 text-slate-500 hover:text-white"
+                  }`}
+                >
+                  Map {idx + 1} Stats
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* 3-Column Grid Layout */}
         <div className="grid gap-8 lg:grid-cols-12 xl:gap-10">
           {/* LEFT COLUMN: Team A Roster (Sticky) */}
@@ -340,6 +496,11 @@ export default function MatchLobbyPage({ params }) {
                 <PlayerRoster
                   teamA={teamA}
                   teamB={null}
+                  playerStats={
+                    viewingMapIdx === null
+                      ? playerStats
+                      : mapPlayerStats[viewingMapIdx]
+                  }
                   loading={loading}
                   mirrored={false}
                 />
@@ -383,20 +544,32 @@ export default function MatchLobbyPage({ params }) {
                   {!vetoState.selectedMap && !isCompleted && (
                     <div className="flex flex-col items-end gap-1.5">
                       <span className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">
-                        Bans Remaining
+                        Veto Progress ({getEffectiveFormat()})
                       </span>
                       <div className="flex items-center gap-1">
                         {Array.from({ length: MAP_POOL.length - 1 }).map(
-                          (_, i) => (
-                            <div
-                              key={i}
-                              className={`h-1.5 w-1.5 rounded-full transition-all ${
-                                i < vetoState.bannedMaps.length
-                                  ? "bg-slate-700"
-                                  : "bg-indigo-500 shadow-[0_0_5px_rgba(99,102,241,0.5)]"
-                              }`}
-                            />
-                          ),
+                          (_, i) => {
+                            const turnIdx = i + 1;
+                            const action = getVetoAction(
+                              turnIdx,
+                              getEffectiveFormat(),
+                            );
+                            return (
+                              <div
+                                key={i}
+                                className={`h-1.5 w-1.5 rounded-full transition-all ${
+                                  i <
+                                  vetoState.bannedMaps.length +
+                                    vetoState.pickedMaps.length
+                                    ? "bg-slate-700"
+                                    : action === "pick"
+                                      ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"
+                                      : "bg-indigo-500 shadow-[0_0_5px_rgba(99,102,241,0.5)]"
+                                }`}
+                                title={`Turn ${turnIdx}: ${action.toUpperCase()}`}
+                              />
+                            );
+                          },
                         )}
                       </div>
                     </div>
@@ -413,31 +586,52 @@ export default function MatchLobbyPage({ params }) {
                   )}
                 </div>
 
-                {/* Selected Map Hero */}
-                {vetoState.selectedMap ? (
-                  <div className="group relative overflow-hidden rounded-2xl border border-white/10">
-                    <div className="animate-fadeIn absolute inset-0 z-20 flex flex-col items-center justify-center p-8 text-center">
-                      <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/50 bg-slate-950/80 px-4 py-1.5 text-[10px] font-black tracking-[0.2em] text-emerald-400 uppercase shadow-xl backdrop-blur-md">
-                        <Zap className="h-3.5 w-3.5 animate-pulse" />
-                        Locked In
+                {/* Selected Maps Hero */}
+                {vetoState.selectedMaps?.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-2">
+                      <Zap className="h-4 w-4 text-emerald-400" />
+                      <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">
+                        Series Maps Locked
                       </span>
-                      <h3 className="text-6xl font-black text-white uppercase italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] md:text-8xl">
-                        {vetoState.selectedMap}
-                      </h3>
                     </div>
-
-                    <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-slate-900/60 to-slate-900/30" />
                     <div
-                      className="h-[400px] w-full bg-cover bg-center transition-transform duration-[2s] ease-in-out group-hover:scale-110 md:h-[500px]"
-                      style={{
-                        backgroundImage: `url(${(() => {
-                          const img = MAP_POOL.find(
-                            (m) => m.name === vetoState.selectedMap,
-                          )?.image;
-                          return typeof img === "object" ? img?.src : img;
-                        })()})`,
-                      }}
-                    />
+                      className={`grid gap-4 ${vetoState.selectedMaps.length > 1 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-1"}`}
+                    >
+                      {vetoState.selectedMaps.map((mapName, idx) => {
+                        const mapInfo = MAP_POOL.find(
+                          (m) => m.name === mapName,
+                        );
+                        const mapImage =
+                          typeof mapInfo?.image === "object"
+                            ? mapInfo?.image?.src
+                            : mapInfo?.image;
+                        return (
+                          <div
+                            key={mapName}
+                            className="group relative aspect-video overflow-hidden rounded-2xl border border-white/10"
+                          >
+                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 text-center">
+                              <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-slate-950/80 px-3 py-1 text-[8px] font-black tracking-[0.2em] text-emerald-400 uppercase shadow-xl backdrop-blur-md">
+                                Map {idx + 1}{" "}
+                                {idx === vetoState.selectedMaps.length - 1 &&
+                                vetoState.selectedMaps.length > 1
+                                  ? "(Decider)"
+                                  : ""}
+                              </span>
+                              <h3 className="text-2xl font-black text-white uppercase italic drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] md:text-3xl">
+                                {mapName}
+                              </h3>
+                            </div>
+                            <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent" />
+                            <div
+                              className="h-full w-full bg-cover bg-center transition-transform duration-[2s] group-hover:scale-110"
+                              style={{ backgroundImage: `url(${mapImage})` }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : isCompleted ? (
                   /* Match Completed - No Map Selected State */
@@ -513,9 +707,19 @@ export default function MatchLobbyPage({ params }) {
                           </div>
                           <div className={`h-8 w-[1px] bg-white/10`} />
                           <div
-                            className={`text-xs font-black uppercase ${vetoState.currentTurn === "teamA" ? "text-rose-500" : "text-cyan-400"}`}
+                            className={`text-xs font-black uppercase ${
+                              vetoState.currentTurn === "teamA"
+                                ? "text-rose-500"
+                                : "text-cyan-400"
+                            }`}
                           >
-                            TO BAN
+                            TO{" "}
+                            {getVetoAction(
+                              vetoState.bannedMaps.length +
+                                vetoState.pickedMaps.length +
+                                1,
+                              getEffectiveFormat(),
+                            ).toUpperCase()}
                           </div>
                         </div>
                       </div>
@@ -527,6 +731,9 @@ export default function MatchLobbyPage({ params }) {
                         const isBanned = vetoState.bannedMaps.includes(
                           map.name,
                         );
+                        const isPicked = vetoState.pickedMaps?.includes(
+                          map.name,
+                        );
                         const isBanning = banningMap === map.name;
 
                         return (
@@ -534,6 +741,7 @@ export default function MatchLobbyPage({ params }) {
                             key={map.name}
                             map={map}
                             isBanned={isBanned}
+                            isPicked={isPicked}
                             isSelected={false}
                             isBanning={isBanning}
                             onBan={handleBanMap}
@@ -549,7 +757,11 @@ export default function MatchLobbyPage({ params }) {
 
             {/* Match Rules & Info */}
             <div className="mt-8">
-              <MatchInfo tournament={tournament} match={match} />
+              <MatchInfo
+                tournament={tournament}
+                match={match}
+                totalRounds={totalRounds}
+              />
             </div>
           </div>
 
@@ -566,6 +778,11 @@ export default function MatchLobbyPage({ params }) {
                 <PlayerRoster
                   teamA={null}
                   teamB={teamB}
+                  playerStats={
+                    viewingMapIdx === null
+                      ? playerStats
+                      : mapPlayerStats[viewingMapIdx]
+                  }
                   loading={loading}
                   mirrored={true}
                 />

@@ -561,6 +561,8 @@ export async function updateMatchNotes(matchId, notes) {
 
 /**
  * Update complete match details (for admin panel)
+ * Note: seriesScores and mapPlayerStats are stored INSIDE playerStats JSON
+ * to avoid exceeding Appwrite's attribute limit on the matches collection
  */
 export async function updateMatchDetails(matchId, details) {
     const updateData = {};
@@ -571,14 +573,24 @@ export async function updateMatchDetails(matchId, details) {
     if (details.notes !== undefined) {
         updateData.notes = details.notes;
     }
-    if (details.playerStats !== undefined) {
-        updateData.playerStats = JSON.stringify(details.playerStats);
-    }
+    
+    // Consolidate all player/match stats into a single playerStats JSON field
+    // This avoids needing separate seriesScores and mapPlayerStats columns
+    const consolidatedStats = {
+        players: details.playerStats || {},
+        seriesScores: details.seriesScores || [],
+        mapPlayerStats: details.mapPlayerStats || [],
+    };
+    updateData.playerStats = JSON.stringify(consolidatedStats);
+    
     if (details.scoreA !== undefined) {
         updateData.scoreA = details.scoreA;
     }
     if (details.scoreB !== undefined) {
         updateData.scoreB = details.scoreB;
+    }
+    if (details.matchFormat !== undefined) {
+        updateData.matchFormat = details.matchFormat;
     }
     
     return await databases.updateDocument(
@@ -591,16 +603,36 @@ export async function updateMatchDetails(matchId, details) {
 
 /**
  * Parse player stats from match document
+ * Handles both legacy format (flat player stats) and new consolidated format
+ * Returns: { players: {}, seriesScores: [], mapPlayerStats: [] }
  */
 export function parsePlayerStats(match) {
-    if (!match.playerStats) return {};
+    if (!match.playerStats) {
+        return { players: {}, seriesScores: [], mapPlayerStats: [] };
+    }
     try {
-        return typeof match.playerStats === 'string' 
+        const parsed = typeof match.playerStats === 'string' 
             ? JSON.parse(match.playerStats) 
             : match.playerStats;
+        
+        // Check if it's the new consolidated format
+        if (parsed.players !== undefined) {
+            return {
+                players: parsed.players || {},
+                seriesScores: parsed.seriesScores || [],
+                mapPlayerStats: parsed.mapPlayerStats || [],
+            };
+        }
+        
+        // Legacy format: playerStats is just the player stats object
+        return {
+            players: parsed,
+            seriesScores: [],
+            mapPlayerStats: [],
+        };
     } catch (e) {
         console.error("Failed to parse player stats:", e);
-        return {};
+        return { players: {}, seriesScores: [], mapPlayerStats: [] };
     }
 }
 

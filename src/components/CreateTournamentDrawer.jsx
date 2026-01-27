@@ -156,6 +156,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
     firstPrize: "",
     secondPrize: "",
     additionalPrizes: [],
+    matchFormat: "Auto",
   });
   const [showPreview, setShowPreview] = useState(false);
   const [history, setHistory] = useState([formData.description]);
@@ -254,6 +255,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         firstPrize: formData.firstPrize,
         secondPrize: formData.secondPrize,
         additionalPrizes: JSON.stringify(formData.additionalPrizes),
+        matchFormat: formData.matchFormat,
         registeredTeams: 0,
         bracketGenerated: false,
       };
@@ -322,6 +324,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         firstPrize: "",
         secondPrize: "",
         additionalPrizes: [],
+        matchFormat: "Auto",
       });
     } catch (error) {
       console.error("Failed to create tournament", error);
@@ -523,19 +526,41 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
-                    placeholder="Online"
-                    className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none focus:border-rose-500/50"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) =>
+                        setFormData({ ...formData, location: e.target.value })
+                      }
+                      placeholder="Online"
+                      className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none focus:border-rose-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      Default Match Format
+                    </label>
+                    <select
+                      value={formData.matchFormat}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          matchFormat: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none focus:border-rose-500/50"
+                    >
+                      <option value="Auto">Auto (BO1 early/BO3 late)</option>
+                      <option value="BO1">Best of 1 (BO1)</option>
+                      <option value="BO3">Best of 3 (BO3)</option>
+                      <option value="BO5">Best of 5 (BO5)</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
