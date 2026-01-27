@@ -35,10 +35,12 @@ export async function getMMRByName(region, name, tag) {
   return response.json();
 }
 
-export async function getMatches(puuid, region = "ap") {
-  const response = await fetch(`${HENRIK_API_BASE}/v3/by-puuid/matches/${region}/${puuid}?size=10`);
+export async function getMatches(puuid, region = "ap", size = 15, mode = "") {
+  let url = `${HENRIK_API_BASE}/v3/by-puuid/matches/${region}/${puuid}?size=${size}`;
+  if (mode) url += `&mode=${mode}`;
+  const response = await fetch(url);
   if (!response.ok) {
-      throw new Error("Failed to fetch matches");
+    throw new Error("Failed to fetch matches");
   }
   return response.json();
 }
