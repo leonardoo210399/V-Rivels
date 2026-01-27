@@ -64,6 +64,27 @@ export default function TournamentsPage() {
     });
   }, [tournaments, filter, searchQuery, activeTab]);
 
+  const tabCounts = useMemo(() => {
+    const baseFiltered = tournaments.filter((t) => {
+      const matchesFilter = filter === "All" || t.gameType === filter;
+      const matchesSearch = t.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+
+    return {
+      UPCOMING: baseFiltered.filter(
+        (t) => (t.status || "scheduled") === "scheduled",
+      ).length,
+      LIVE: baseFiltered.filter((t) => (t.status || "scheduled") === "ongoing")
+        .length,
+      COMPLETED: baseFiltered.filter(
+        (t) => (t.status || "scheduled") === "completed",
+      ).length,
+    };
+  }, [tournaments, filter, searchQuery]);
+
   if (loading) {
     return <Loader />;
   }
@@ -262,12 +283,21 @@ export default function TournamentsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative pb-4 text-xs font-black tracking-[0.2em] uppercase transition-all ${
+              className={`group relative flex items-center gap-3 pb-4 text-xs font-black tracking-[0.2em] uppercase transition-all ${
                 activeTab === tab.id
                   ? "text-rose-500"
                   : "text-slate-500 hover:text-slate-300"
               }`}
             >
+              <span
+                className={`flex h-5 min-w-[20px] items-center justify-center rounded-md border px-1.5 text-[9px] font-black tracking-normal transition-all ${
+                  activeTab === tab.id
+                    ? "border-rose-500/30 bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]"
+                    : "border-white/10 bg-slate-900 text-slate-500 group-hover:border-white/20 group-hover:text-slate-300"
+                }`}
+              >
+                {tabCounts[tab.id]}
+              </span>
               <span className="md:hidden">{tab.label}</span>
               <span className="hidden md:inline">{tab.fullLabel}</span>
               {activeTab === tab.id && (

@@ -1,6 +1,15 @@
 "use client";
 import React from "react";
-import { X, Trophy, Target, Shield, Zap } from "lucide-react";
+import {
+  X,
+  Trophy,
+  Target,
+  Shield,
+  Zap,
+  Globe,
+  Clock,
+  MapPin,
+} from "lucide-react";
 import { rankIcons } from "@/assets/images/ranks";
 import { agentIcons } from "@/assets/images/agents";
 
@@ -368,36 +377,56 @@ export default function MatchDetailsModal({ match, isOpen, onClose, puuid }) {
             </div>
           </div>
 
-          {/* Additional info grid */}
+          {/* Redesigned Game Stats Section */}
           <div className="grid gap-6">
-            <div className="space-y-4 rounded-xl border border-white/10 bg-slate-950/30 p-4">
-              <h4 className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                Game Stats
-              </h4>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-500">Server</span>
-                  <p className="text-sm font-medium text-white">
-                    {metadata.cluster || "Unknown"}
-                  </p>
+            <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-slate-950/40 p-1">
+              {/* Background ambient glow */}
+              <div className="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-rose-500/5 blur-[80px]" />
+
+              <div className="relative z-10 grid grid-cols-1 gap-1 md:grid-cols-3">
+                {/* Server info */}
+                <div className="flex items-center gap-4 rounded-xl bg-white/[0.02] p-4 transition-all hover:bg-white/[0.05]">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 shadow-inner">
+                    <Globe className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                      Server
+                    </p>
+                    <p className="text-sm font-bold tracking-tight text-white">
+                      {metadata.cluster || "Unknown"}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-500">Duration</span>
-                  <p className="text-sm font-medium text-white">
-                    {((metadata.game_length || 0) / 60).toFixed(0)} min
-                  </p>
+
+                {/* Duration info */}
+                <div className="flex items-center gap-4 rounded-xl bg-white/[0.02] p-4 transition-all hover:bg-white/[0.05]">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500 shadow-inner">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                      Duration
+                    </p>
+                    <p className="text-sm font-bold tracking-tight text-white">
+                      {((metadata.game_length || 0) / 60).toFixed(0)} min
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-500">Region</span>
-                  <p className="text-sm font-medium text-white uppercase">
-                    {metadata.region || "Unknown"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-500">Match ID</span>
-                  <p className="font-mono text-[10px] break-all text-slate-500">
-                    {metadata.matchid}
-                  </p>
+
+                {/* Region info */}
+                <div className="flex items-center gap-4 rounded-xl bg-white/[0.02] p-4 transition-all hover:bg-white/[0.05]">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 shadow-inner">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                      Region
+                    </p>
+                    <p className="text-sm font-bold tracking-tight text-white uppercase">
+                      {metadata.region || "Unknown"}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
