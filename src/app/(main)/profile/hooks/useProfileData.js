@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   getAccount,
   getMMR,
@@ -23,9 +23,33 @@ export function useProfileData(user, authLoading) {
   const [valProfile, setValProfile] = useState(null);
   const [platformProfile, setPlatformProfile] = useState(null);
   const [mmrData, setMmrData] = useState(null);
-  const [matches, setMatches] = useState([]);
   const [cardData, setCardData] = useState(null);
   const [availableAgents, setAvailableAgents] = useState([]);
+  
+  // Match cache: dictionary of mode -> matches[]
+  const [matchCache, setMatchCache] = useState({});
+
+  // Consolidate matches from all modes into a single sorted list
+  const matches = useMemo(() => {
+    // 1. Flatten all match arrays into one
+    const allMatches = Object.values(matchCache).flat();
+    
+    // 2. Efficient deduplication using a Map
+    const seen = new Map();
+    allMatches.forEach(m => {
+      const id = m?.metadata?.matchid;
+      if (id && !seen.has(id)) {
+        seen.set(id, m);
+      }
+    });
+
+    // 3. Robust chronological sort (newest first)
+    return Array.from(seen.values()).sort((a, b) => {
+      const timeA = Number(a?.metadata?.game_start || 0);
+      const timeB = Number(b?.metadata?.game_start || 0);
+      return timeB - timeA;
+    });
+  }, [matchCache]);
 
   // Loading states
   const [loading, setLoading] = useState(false);
@@ -61,6 +85,63 @@ export function useProfileData(user, authLoading) {
     }
   }, [user]);
 
+  // Function to get cache key
+  const getCacheKey = (mode) => `vra_matches_${valProfile?.puuid}_${mode || "all"}`;
+
+  // Function to load matches with caching
+  const refetchMatches = async (mode = "", force = false, isBackground = false) => {
+    if (!valProfile?.puuid || !region || mode === "all") return;
+
+    const cacheKey = getCacheKey(mode);
+    
+    // 1. Check if we have it in state cache first (unless forced)
+    if (!force && matchCache[mode]) {
+      return; 
+    }
+
+    // 2. Check sessionStorage if not in state
+    if (!force) {
+      const stored = sessionStorage.getItem(cacheKey);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setMatchCache(prev => ({ ...prev, [mode]: parsed }));
+          return;
+        } catch (e) {
+          sessionStorage.removeItem(cacheKey);
+        }
+      }
+    }
+    
+    // Only show loading if not a background prefetch
+    if (!isBackground) setMatchesLoading(true);
+    
+    try {
+      // API limit is 10 for v3, so we use 10
+      const res = await getMatches(valProfile.puuid, region, 10, mode);
+      const newMatches = res.data || [];
+      
+      // Update cache
+      setMatchCache(prev => ({ ...prev, [mode]: newMatches }));
+      
+      // Update persistent session cache with protection
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(newMatches));
+      } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith('vra_matches_')) sessionStorage.removeItem(key);
+          });
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(newMatches)); } catch (retryError) {}
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to fetch ${mode || 'all'} matches:`, err);
+    } finally {
+      if (!isBackground) setMatchesLoading(false);
+    }
+  };
+
   // Load profile data
   useEffect(() => {
     if (authLoading || !user) return;
@@ -75,14 +156,13 @@ export function useProfileData(user, authLoading) {
           setRiotId(profile.ingameName);
           setRiotTag(profile.tag);
           
-          // Mark as linked in localStorage so we don't show the form again on network errors
           if (typeof window !== "undefined") {
             localStorage.setItem(`${LINKED_ACCOUNT_KEY}_${user.$id}`, "true");
             setHasLinkedAccount(true);
           }
-          setRegion(profile.region || "ap");
+          const playerRegion = profile.region || "ap";
+          setRegion(playerRegion);
 
-          // Fetch account data
           const accountDataPromise = profile.puuid
             ? getAccountByPuuid(profile.puuid)
             : getAccount(profile.ingameName, profile.tag);
@@ -92,22 +172,18 @@ export function useProfileData(user, authLoading) {
           if (accountData.data) {
             setValProfile(accountData.data);
 
-            // Fetch Card Data
             if (accountData.data.card) {
               getPlayerCard(accountData.data.card)
                 .then((cardRes) => setCardData(cardRes?.data))
                 .catch((e) => console.error("Card fetch failed:", e));
             }
 
-            // Fetch MMR
-            const playerRegion = profile.region || accountData.data.region || "ap";
             const puuid = accountData.data.puuid;
 
             setMmrLoading(true);
             getMMR(puuid, playerRegion)
               .then((res) => setMmrData(res.data))
               .catch(async () => {
-                console.error("MMR fetch by PUUID failed, trying fallback...");
                 const fallbackRes = await getMMRByName(
                   playerRegion,
                   accountData.data.name,
@@ -116,13 +192,6 @@ export function useProfileData(user, authLoading) {
                 if (fallbackRes) setMmrData(fallbackRes.data);
               })
               .finally(() => setMmrLoading(false));
-
-            // Fetch Matches
-            setMatchesLoading(true);
-            getMatches(puuid, playerRegion)
-              .then((res) => setMatches(res.data))
-              .catch(() => setMatches([]))
-              .finally(() => setMatchesLoading(false));
 
             // Fetch Player Finder Post
             getUserFreeAgentPost(user.$id)
@@ -152,29 +221,28 @@ export function useProfileData(user, authLoading) {
 
     loadProfile();
 
-    // Load Agents
     getAgents()
       .then((res) => setAvailableAgents(res.data))
       .catch(console.error);
   }, [user, authLoading]);
 
-  // Function to refetch matches without reloading the whole page
-  const refetchMatches = async () => {
-    if (!valProfile?.puuid || !region) return;
-    
-    setMatchesLoading(true);
-    try {
-      const res = await getMatches(valProfile.puuid, region);
-      setMatches(res.data || []);
-    } catch (err) {
-      console.error("Failed to refetch matches:", err);
-    } finally {
-      setMatchesLoading(false);
+  // Secondary effect to trigger initial match load and background prefetch others
+  useEffect(() => {
+    if (valProfile?.puuid && region) {
+      const allModes = ["competitive", "unrated", "swiftplay", "deathmatch", "custom"];
+      
+      const loadAllAndPrefetch = async () => {
+        for (const mode of allModes) {
+          const isFirst = mode === allModes[0];
+          await refetchMatches(mode, false, !isFirst);
+        }
+      };
+      
+      loadAllAndPrefetch();
     }
-  };
+  }, [valProfile?.puuid, region]);
 
   return {
-    // Profile data
     valProfile,
     setValProfile,
     platformProfile,
@@ -182,32 +250,23 @@ export function useProfileData(user, authLoading) {
     mmrData,
     setMmrData,
     matches,
-    setMatches,
     cardData,
     setCardData,
     availableAgents,
-
-    // Loading states  
     loading,
     setLoading,
     mmrLoading,
     matchesLoading,
     refetchMatches,
-    
-    // Linked account tracking
     hasLinkedAccount,
     setHasLinkedAccount,
     profileFetchFailed,
-
-    // Form state
     riotId,
     setRiotId,
     riotTag,
     setRiotTag,
     region,
     setRegion,
-
-    // Player Finder
     userPost,
     setUserPost,
     formData,

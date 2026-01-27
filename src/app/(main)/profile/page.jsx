@@ -80,7 +80,6 @@ export default function ProfilePage() {
     mmrData,
     setMmrData,
     matches,
-    setMatches,
     cardData,
     setCardData,
     availableAgents,
@@ -348,9 +347,8 @@ export default function ProfilePage() {
             if (fallbackRes) setMmrData(fallbackRes.data);
           });
 
-        getMatches(puuid, region)
-          .then((res) => setMatches(res.data))
-          .catch(() => setMatches([]));
+        // Match history will be handled by the useProfileData hook's
+        // background prefetch loop once the profile is set.
 
         // 3. Save to Appwrite
         const profileData = {
