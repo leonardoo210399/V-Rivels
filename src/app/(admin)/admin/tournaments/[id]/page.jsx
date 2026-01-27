@@ -31,6 +31,7 @@ import {
   updateMatchDetails,
   parsePlayerStats,
   resetMatch,
+  startMatchVeto,
 } from "@/lib/brackets";
 import { getUserProfile } from "@/lib/users";
 import {
@@ -61,6 +62,7 @@ import {
   ChevronUp,
   AlertCircle,
   CheckCircle2,
+  Map as MapIcon,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import Link from "next/link";
@@ -443,6 +445,20 @@ export default function TournamentControlPage({ params }) {
     }
   };
 
+  const handleStartVeto = async (matchId) => {
+    setUpdating(true);
+    try {
+      await startMatchVeto(matchId);
+      await loadData();
+      alert("Map veto started for this match!");
+    } catch (error) {
+      console.error("Failed to start veto:", error);
+      alert("Failed to start veto: " + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleSaveMatchScore = async (matchId) => {
     const scores = matchScores[matchId];
     // If we haven't touched the inputs, use existing match scores or 0
@@ -773,7 +789,12 @@ export default function TournamentControlPage({ params }) {
     setUpdating(true);
 
     try {
-      await createBracket(id, registrations, tournament.gameType);
+      await createBracket(
+        id,
+        registrations,
+        tournament.gameType,
+        tournament.date,
+      );
       await updateTournament(id, { bracketGenerated: true, status: "ongoing" });
 
       // Reload data to show matches
@@ -1554,15 +1575,19 @@ export default function TournamentControlPage({ params }) {
                                     ) : (
                                       <span className="flex items-center gap-2">
                                         <span className="text-rose-500">
-                                          {participantMap[match.teamA]?.name ||
-                                            "TBD"}
+                                          {!match.teamA && match.round === 1
+                                            ? "BYE"
+                                            : participantMap[match.teamA]
+                                                ?.name || "TBD"}
                                         </span>
                                         <span className="text-slate-600 opacity-40">
                                           VS
                                         </span>
                                         <span className="text-rose-500">
-                                          {participantMap[match.teamB]?.name ||
-                                            "TBD"}
+                                          {!match.teamB && match.round === 1
+                                            ? "BYE"
+                                            : participantMap[match.teamB]
+                                                ?.name || "TBD"}
                                         </span>
                                       </span>
                                     )}
@@ -1661,6 +1686,19 @@ export default function TournamentControlPage({ params }) {
                                   </button>
                                 )}
 
+                                {is5v5 &&
+                                  match.teamA !== "LOBBY" &&
+                                  match.status !== "completed" &&
+                                  !match.vetoStarted && (
+                                    <button
+                                      onClick={() => handleStartVeto(match.$id)}
+                                      className="flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2.5 text-[10px] font-black text-indigo-400 uppercase transition-all hover:bg-indigo-500/20"
+                                    >
+                                      <MapIcon className="h-3.5 w-3.5" />
+                                      Start Veto
+                                    </button>
+                                  )}
+
                                 {/* Reset Match Button */}
                                 {match.teamA !== "LOBBY" && (
                                   <button
@@ -1701,8 +1739,10 @@ export default function TournamentControlPage({ params }) {
                                   <div className="flex flex-1 items-center gap-4">
                                     <div className="flex flex-1 flex-col gap-1">
                                       <label className="ml-1 text-[8px] font-black text-slate-500 uppercase">
-                                        {participantMap[match.teamA]?.name ||
-                                          "TBD"}{" "}
+                                        {!match.teamA && match.round === 1
+                                          ? "BYE"
+                                          : participantMap[match.teamA]?.name ||
+                                            "TBD"}{" "}
                                         Score
                                       </label>
                                       <input
@@ -1735,8 +1775,10 @@ export default function TournamentControlPage({ params }) {
                                     </div>
                                     <div className="flex flex-1 flex-col gap-1">
                                       <label className="ml-1 text-[8px] font-black text-slate-500 uppercase">
-                                        {participantMap[match.teamB]?.name ||
-                                          "TBD"}{" "}
+                                        {!match.teamB && match.round === 1
+                                          ? "BYE"
+                                          : participantMap[match.teamB]?.name ||
+                                            "TBD"}{" "}
                                         Score
                                       </label>
                                       <input

@@ -223,7 +223,20 @@ export default function MatchLobbyPage({ params }) {
     );
 
   const isCompleted = match.status === "completed";
-  const scheduledTime = match.scheduledTime || tournament?.date;
+
+  // Calculate Scheduled Time (Fallback logic matching Admin Panel)
+  let scheduledTime = match.scheduledTime;
+  if (!scheduledTime && tournament?.date) {
+    if (tournament.gameType === "5v5") {
+      const startDate = new Date(tournament.date);
+      const offset = (match.round - 1) * 4 + match.matchIndex;
+      startDate.setHours(startDate.getHours() + offset);
+      scheduledTime = startDate.toISOString();
+    } else {
+      scheduledTime = tournament.date;
+    }
+  }
+
   const vetoProgress =
     (vetoState.bannedMaps.length / (MAP_POOL.length - 1)) * 100;
 
@@ -458,6 +471,24 @@ export default function MatchLobbyPage({ params }) {
                         </div>
                       </div>
                     )}
+                  </div>
+                ) : !match.vetoStarted ? (
+                  /* Veto Not Started State */
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="relative mb-8">
+                      <div className="absolute inset-0 animate-ping rounded-full bg-indigo-500/20" />
+                      <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-slate-900">
+                        <Clock className="h-10 w-10 text-indigo-400" />
+                      </div>
+                    </div>
+                    <h3 className="mb-2 text-xl font-black tracking-tight text-white uppercase italic">
+                      Waiting for Admin
+                    </h3>
+                    <p className="max-w-sm text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      The map veto phase hasn't started yet.
+                      <br />
+                      Please wait for the tournament administrator.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-8">

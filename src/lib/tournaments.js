@@ -2,8 +2,8 @@ import { databases } from "@/lib/appwrite";
 import { ID, Query } from "appwrite";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
-const TOURNAMENTS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID;
-const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
+const TOURNAMENTS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID || "tournaments";
+const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID || "registrations";
 
 export async function getTournaments() {
   const response = await databases.listDocuments(
@@ -15,11 +15,21 @@ export async function getTournaments() {
 }
 
 export async function getTournament(id) {
-  return await databases.getDocument(
-    DATABASE_ID,
-    TOURNAMENTS_COLLECTION_ID,
-    id
-  );
+  if (!id || typeof id !== 'string') {
+    console.error("Invalid tournament ID passed to getTournament:", id);
+    throw new Error("Invalid tournament ID");
+  }
+  
+  try {
+    return await databases.getDocument(
+      DATABASE_ID,
+      TOURNAMENTS_COLLECTION_ID,
+      id
+    );
+  } catch (error) {
+    console.error(`Failed to fetch tournament with ID: ${id}`, error);
+    throw error;
+  }
 }
 
 // Discord Bot Logic removed - Moved to Server Action to prevent 500 Error
@@ -144,7 +154,7 @@ export async function updateRegistrationPaymentStatus(registrationId, status, tr
     );
 }
 
-import { deleteMatches } from "./brackets";
+import { deleteMatches, getMatches } from "./brackets";
 
 export async function deleteTournament(id) {
     try {

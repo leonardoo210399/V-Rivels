@@ -347,7 +347,7 @@
             "name": "matches",
             "enabled": true,
             "rowSecurity": false,
-            "columns": [
+             "columns": [
                 {
                     "key": "tournamentId",
                     "type": "string",
@@ -508,6 +508,13 @@
                     "size": 10000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "vetoStarted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": []
