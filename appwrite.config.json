@@ -347,7 +347,7 @@
             "name": "matches",
             "enabled": true,
             "rowSecurity": false,
-            "columns": [
+             "columns": [
                 {
                     "key": "tournamentId",
                     "type": "string",
@@ -507,6 +507,22 @@
                     "array": false,
                     "size": 10000,
                     "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "vetoStarted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "matchFormat",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": "Auto",
                     "encrypt": false
                 }
             ],
@@ -743,6 +759,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "matchFormat",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": "Auto",
+                    "encrypt": false
                 }
             ],
             "indexes": []

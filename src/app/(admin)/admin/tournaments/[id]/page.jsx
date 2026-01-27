@@ -31,8 +31,10 @@ import {
   updateMatchDetails,
   parsePlayerStats,
   resetMatch,
+  startMatchVeto,
 } from "@/lib/brackets";
 import { getUserProfile } from "@/lib/users";
+import { getMatchV4 } from "@/lib/valorant";
 import {
   Trophy,
   Users,
@@ -61,6 +63,8 @@ import {
   ChevronUp,
   AlertCircle,
   CheckCircle2,
+  Map as MapIcon,
+  Zap,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import Link from "next/link";
@@ -101,6 +105,13 @@ export default function TournamentControlPage({ params }) {
   const [expandedPlayers, setExpandedPlayers] = useState({});
   const [savingMatch, setSavingMatch] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [valMatchId, setValMatchId] = useState("");
+  const [valRegion, setValRegion] = useState("ap");
+  const [isFetchingVal, setIsFetchingVal] = useState(false);
+  const [importStatus, setImportStatus] = useState(null);
+  const [mapMatchIds, setMapMatchIds] = useState({}); // { 0: "matchId1", 1: "matchId2", ... }
+  const [fetchingMapIdx, setFetchingMapIdx] = useState(null); // Track which map is being fetched
+  const [viewingMapIdx, setViewingMapIdx] = useState(-1); // -1 = series total, 0-4 = specific map
 
   // Rejection Modal State
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
@@ -271,15 +282,52 @@ export default function TournamentControlPage({ params }) {
     }
   };
 
+  // Format detection helper
+  const getEffectiveFormat = (match) => {
+    if (tournament?.gameType === "Deathmatch") return "DM";
+    if (match?.matchFormat && match.matchFormat !== "Auto")
+      return match.matchFormat;
+    if (tournament?.matchFormat && tournament.matchFormat !== "Auto")
+      return tournament.matchFormat;
+
+    // Calculate total rounds based on max teams
+    const maxTeams = tournament?.maxTeams || 8;
+    const totalRounds = Math.ceil(Math.log2(maxTeams));
+
+    const currentRound = match?.round;
+    const isFinal = totalRounds > 0 && currentRound === totalRounds;
+    const isSemi = totalRounds > 1 && currentRound === totalRounds - 1;
+    if (isFinal || isSemi) return "BO3";
+    return "BO1";
+  };
+
   // Enhanced Match Editing Functions
   const selectMatchForEdit = async (match) => {
     setSelectedMatch(match);
+
+    // Parse the consolidated stats object
+    const parsedStats = parsePlayerStats(match);
+
     setMatchEditData({
       scheduledTime: formatToLocalISO(match.scheduledTime),
       notes: match.notes || "",
-      playerStats: parsePlayerStats(match) || {},
+      playerStats: parsedStats.players || {},
       scoreA: match.scoreA || 0,
       scoreB: match.scoreB || 0,
+      matchFormat: match.matchFormat || "Auto",
+      // Use parsed values from the consolidated object, falling back to legacy separate fields if needed
+      seriesScores:
+        parsedStats.seriesScores.length > 0
+          ? parsedStats.seriesScores
+          : match.seriesScores
+            ? JSON.parse(match.seriesScores)
+            : [],
+      mapPlayerStats:
+        parsedStats.mapPlayerStats.length > 0
+          ? parsedStats.mapPlayerStats
+          : match.mapPlayerStats
+            ? JSON.parse(match.mapPlayerStats)
+            : [],
     });
     setExpandedPlayers({});
     setSaveStatus(null);
@@ -290,6 +338,29 @@ export default function TournamentControlPage({ params }) {
 
     await fetchTeamPlayers(teamAReg, setTeamAPlayers);
     await fetchTeamPlayers(teamBReg, setTeamBPlayers);
+  };
+
+  const updateMapScore = (index, team, value) => {
+    setMatchEditData((prev) => {
+      const newSeriesScores = [...(prev.seriesScores || [])];
+      if (!newSeriesScores[index]) newSeriesScores[index] = { a: 0, b: 0 };
+      newSeriesScores[index][team] = parseInt(value) || 0;
+
+      // Calculate new series score (map wins)
+      let winsA = 0;
+      let winsB = 0;
+      newSeriesScores.forEach((s) => {
+        if (s.a > s.b) winsA++;
+        else if (s.b > s.a) winsB++;
+      });
+
+      return {
+        ...prev,
+        seriesScores: newSeriesScores,
+        scoreA: winsA,
+        scoreB: winsB,
+      };
+    });
   };
 
   const fetchTeamPlayers = async (team, setPlayers) => {
@@ -349,8 +420,9 @@ export default function TournamentControlPage({ params }) {
             deaths: 0,
             assists: 0,
             acs: 0,
+            agent: null,
           }),
-          [stat]: parseInt(value) || 0,
+          [stat]: stat === "agent" ? value : parseInt(value) || 0,
         },
       },
     }));
@@ -361,6 +433,217 @@ export default function TournamentControlPage({ params }) {
       ...prev,
       [playerKey]: !prev[playerKey],
     }));
+  };
+
+  const handleImportMatchJSON = async (specificMapIdx = null) => {
+    try {
+      // Determine which match ID to use
+      const matchIdToUse =
+        specificMapIdx !== null
+          ? (mapMatchIds[specificMapIdx] || valMatchId).trim()
+          : valMatchId.trim();
+
+      if (!matchIdToUse) return;
+
+      setIsFetchingVal(true);
+      if (specificMapIdx !== null) {
+        setFetchingMapIdx(specificMapIdx);
+      }
+      setImportStatus({
+        type: "info",
+        message:
+          specificMapIdx !== null
+            ? `Fetching map ${specificMapIdx + 1}...`
+            : "Fetching match data...",
+      });
+
+      const jsonData = await getMatchV4(valRegion, matchIdToUse);
+      const matchData = jsonData.data || jsonData;
+
+      if (!matchData || !matchData.players || !matchData.teams) {
+        throw new Error("Invalid match data structure received from the API.");
+      }
+
+      const jsonPlayers = matchData.players;
+      const jsonTeams = matchData.teams;
+      // Total rounds used for ACS calculation
+      const totalRounds =
+        (jsonTeams[0]?.rounds?.won || 0) + (jsonTeams[0]?.rounds?.lost || 0);
+
+      let jsonTeamAId = null;
+      let jsonTeamBId = null;
+
+      console.log("Detecting teams for match...");
+
+      // 1. Map Team A by matching names
+      for (const p of jsonPlayers) {
+        const foundA = teamAPlayers.some(
+          (tp) => tp.ingameName.toLowerCase() === p.name.toLowerCase(),
+        );
+        if (foundA) {
+          jsonTeamAId = p.team_id;
+          console.log(`Detected Json Team ${jsonTeamAId} as Team A`);
+          break;
+        }
+      }
+
+      // 2. Identify Team B
+      if (jsonTeamAId) {
+        jsonTeamBId = jsonTeams.find((t) => t.team_id !== jsonTeamAId)?.team_id;
+      } else {
+        // Try mapping Team B first
+        for (const p of jsonPlayers) {
+          const foundB = teamBPlayers.some(
+            (tp) => tp.ingameName.toLowerCase() === p.name.toLowerCase(),
+          );
+          if (foundB) {
+            jsonTeamBId = p.team_id;
+            console.log(`Detected Json Team ${jsonTeamBId} as Team B`);
+            break;
+          }
+        }
+        if (jsonTeamBId) {
+          jsonTeamAId = jsonTeams.find(
+            (t) => t.team_id !== jsonTeamBId,
+          )?.team_id;
+        }
+      }
+
+      if (!jsonTeamAId || !jsonTeamBId) {
+        throw new Error(
+          "Could not identify teams. Ensure player names in the match result match your registered team members.",
+        );
+      }
+
+      // 3. Extract Scores
+      const scoreA =
+        jsonTeams.find((t) => t.team_id === jsonTeamAId)?.rounds.won || 0;
+      const scoreB =
+        jsonTeams.find((t) => t.team_id === jsonTeamBId)?.rounds.won || 0;
+
+      // 4. Extract Stats for this Map
+      const mapStats = {};
+      const processPlayers = (tournamentPlayers, prefix, targetTeamId) => {
+        tournamentPlayers.forEach((tp, idx) => {
+          const jp = jsonPlayers.find(
+            (p) =>
+              p.team_id === targetTeamId &&
+              p.name.toLowerCase() === tp.ingameName.toLowerCase(),
+          );
+          if (jp) {
+            const playerScore = jp.stats.score || 0;
+            const playerAcs =
+              totalRounds > 0 ? Math.round(playerScore / totalRounds) : 0;
+            mapStats[`${prefix}_${idx}`] = {
+              kills: jp.stats.kills || 0,
+              deaths: jp.stats.deaths || 0,
+              assists: jp.stats.assists || 0,
+              score: playerScore,
+              rounds: totalRounds,
+              acs: playerAcs,
+              agent: jp.agent?.name || null,
+              agentId: jp.agent?.id || null,
+              playerCard: jp.card_id || null,
+            };
+          }
+        });
+      };
+
+      processPlayers(teamAPlayers, "teamA", jsonTeamAId);
+      processPlayers(teamBPlayers, "teamB", jsonTeamBId);
+
+      setMatchEditData((prev) => {
+        const newMapPlayerStats = [...(prev.mapPlayerStats || [])];
+        if (specificMapIdx !== null) {
+          newMapPlayerStats[specificMapIdx] = mapStats;
+        }
+
+        const newSeriesScores = [...(prev.seriesScores || [])];
+        if (specificMapIdx !== null) {
+          newSeriesScores[specificMapIdx] = { a: scoreA, b: scoreB };
+        }
+
+        // Aggregate Totals
+        const aggregatePlayerStats = {};
+        const allMaps =
+          specificMapIdx !== null ? newMapPlayerStats : [mapStats];
+
+        allMaps.forEach((mStats) => {
+          if (!mStats) return;
+          Object.entries(mStats).forEach(([key, stats]) => {
+            if (!aggregatePlayerStats[key]) {
+              aggregatePlayerStats[key] = {
+                kills: 0,
+                deaths: 0,
+                assists: 0,
+                score: 0,
+                rounds: 0,
+                agent: stats.agent,
+                agentId: stats.agentId,
+                playerCard: stats.playerCard,
+              };
+            }
+            aggregatePlayerStats[key].kills += stats.kills;
+            aggregatePlayerStats[key].deaths += stats.deaths;
+            aggregatePlayerStats[key].assists += stats.assists;
+            aggregatePlayerStats[key].score += stats.score;
+            aggregatePlayerStats[key].rounds += stats.rounds;
+            // Keep latest agent/card
+            aggregatePlayerStats[key].agent = stats.agent;
+            aggregatePlayerStats[key].agentId = stats.agentId;
+            aggregatePlayerStats[key].playerCard = stats.playerCard;
+          });
+        });
+
+        // Finalize Aggregate Stats (calculate ACS)
+        Object.keys(aggregatePlayerStats).forEach((key) => {
+          const s = aggregatePlayerStats[key];
+          s.acs = s.rounds > 0 ? Math.round(s.score / s.rounds) : 0;
+        });
+
+        let winsA = scoreA;
+        let winsB = scoreB;
+        if (specificMapIdx !== null) {
+          winsA = 0;
+          winsB = 0;
+          newSeriesScores.forEach((s) => {
+            if (s.a > s.b) winsA++;
+            else if (s.b > s.a) winsB++;
+          });
+        }
+
+        return {
+          ...prev,
+          scoreA: winsA,
+          scoreB: winsB,
+          seriesScores: newSeriesScores,
+          mapPlayerStats: newMapPlayerStats,
+          playerStats: aggregatePlayerStats,
+        };
+      });
+
+      setImportStatus({
+        type: "success",
+        message:
+          specificMapIdx !== null
+            ? `Map ${specificMapIdx + 1} imported!`
+            : "Match data imported!",
+      });
+      // Clear the appropriate match ID field
+      if (specificMapIdx !== null) {
+        setMapMatchIds((prev) => ({ ...prev, [specificMapIdx]: "" }));
+      } else {
+        setValMatchId("");
+      }
+      setTimeout(() => setImportStatus(null), 3000);
+    } catch (e) {
+      console.error("Import Error:", e);
+      setImportStatus({ type: "error", message: e.message });
+      setTimeout(() => setImportStatus(null), 5000);
+    } finally {
+      setIsFetchingVal(false);
+      setFetchingMapIdx(null);
+    }
   };
 
   const handleSaveMatchDetails = async () => {
@@ -378,6 +661,9 @@ export default function TournamentControlPage({ params }) {
         playerStats: matchEditData.playerStats,
         scoreA: parseInt(matchEditData.scoreA),
         scoreB: parseInt(matchEditData.scoreB),
+        matchFormat: matchEditData.matchFormat,
+        seriesScores: matchEditData.seriesScores,
+        mapPlayerStats: matchEditData.mapPlayerStats,
       });
 
       setSaveStatus({ type: "success", message: "Match details saved!" });
@@ -411,6 +697,9 @@ export default function TournamentControlPage({ params }) {
       scoreA: 0,
       scoreB: 0,
     });
+    setMapMatchIds({}); // Reset per-map match IDs
+    setValMatchId(""); // Reset global match ID
+    setViewingMapIdx(-1); // Reset to series total view
   };
 
   const handleResetIndividualMatch = async (matchId) => {
@@ -438,6 +727,20 @@ export default function TournamentControlPage({ params }) {
       console.error("Failed to reset match:", error);
       alert("Failed to reset match: " + error.message);
       setMatchResetSteps((prev) => ({ ...prev, [matchId]: 0 }));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleStartVeto = async (matchId) => {
+    setUpdating(true);
+    try {
+      await startMatchVeto(matchId);
+      await loadData();
+      alert("Map veto started for this match!");
+    } catch (error) {
+      console.error("Failed to start veto:", error);
+      alert("Failed to start veto: " + error.message);
     } finally {
       setUpdating(false);
     }
@@ -773,7 +1076,12 @@ export default function TournamentControlPage({ params }) {
     setUpdating(true);
 
     try {
-      await createBracket(id, registrations, tournament.gameType);
+      await createBracket(
+        id,
+        registrations,
+        tournament.gameType,
+        tournament.date,
+      );
       await updateTournament(id, { bracketGenerated: true, status: "ongoing" });
 
       // Reload data to show matches
@@ -1554,15 +1862,19 @@ export default function TournamentControlPage({ params }) {
                                     ) : (
                                       <span className="flex items-center gap-2">
                                         <span className="text-rose-500">
-                                          {participantMap[match.teamA]?.name ||
-                                            "TBD"}
+                                          {!match.teamA && match.round === 1
+                                            ? "BYE"
+                                            : participantMap[match.teamA]
+                                                ?.name || "TBD"}
                                         </span>
                                         <span className="text-slate-600 opacity-40">
                                           VS
                                         </span>
                                         <span className="text-rose-500">
-                                          {participantMap[match.teamB]?.name ||
-                                            "TBD"}
+                                          {!match.teamB && match.round === 1
+                                            ? "BYE"
+                                            : participantMap[match.teamB]
+                                                ?.name || "TBD"}
                                         </span>
                                       </span>
                                     )}
@@ -1661,6 +1973,19 @@ export default function TournamentControlPage({ params }) {
                                   </button>
                                 )}
 
+                                {is5v5 &&
+                                  match.teamA !== "LOBBY" &&
+                                  match.status !== "completed" &&
+                                  !match.vetoStarted && (
+                                    <button
+                                      onClick={() => handleStartVeto(match.$id)}
+                                      className="flex items-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-4 py-2.5 text-[10px] font-black text-indigo-400 uppercase transition-all hover:bg-indigo-500/20"
+                                    >
+                                      <MapIcon className="h-3.5 w-3.5" />
+                                      Start Veto
+                                    </button>
+                                  )}
+
                                 {/* Reset Match Button */}
                                 {match.teamA !== "LOBBY" && (
                                   <button
@@ -1701,8 +2026,10 @@ export default function TournamentControlPage({ params }) {
                                   <div className="flex flex-1 items-center gap-4">
                                     <div className="flex flex-1 flex-col gap-1">
                                       <label className="ml-1 text-[8px] font-black text-slate-500 uppercase">
-                                        {participantMap[match.teamA]?.name ||
-                                          "TBD"}{" "}
+                                        {!match.teamA && match.round === 1
+                                          ? "BYE"
+                                          : participantMap[match.teamA]?.name ||
+                                            "TBD"}{" "}
                                         Score
                                       </label>
                                       <input
@@ -1735,8 +2062,10 @@ export default function TournamentControlPage({ params }) {
                                     </div>
                                     <div className="flex flex-1 flex-col gap-1">
                                       <label className="ml-1 text-[8px] font-black text-slate-500 uppercase">
-                                        {participantMap[match.teamB]?.name ||
-                                          "TBD"}{" "}
+                                        {!match.teamB && match.round === 1
+                                          ? "BYE"
+                                          : participantMap[match.teamB]?.name ||
+                                            "TBD"}{" "}
                                         Score
                                       </label>
                                       <input
@@ -1939,443 +2268,711 @@ export default function TournamentControlPage({ params }) {
                 </div>
 
                 {/* Modal Content - Scrollable */}
-                <div className="flex-1 space-y-6 overflow-y-auto p-6">
-                  {/* Schedule Section */}
-                  <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-4">
-                    <div className="mb-4 flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-indigo-400" />
-                      <span className="text-[10px] font-black tracking-widest text-indigo-400 uppercase">
-                        Match Schedule
-                      </span>
+                <div className="scrollbar-thin scrollbar-track-slate-900 scrollbar-thumb-rose-500/20 flex-1 space-y-6 overflow-y-auto p-6">
+                  {/* Modern Auto-Fill Toolbar - Only show for BO1 or DM */}
+                  {(getEffectiveFormat(selectedMatch) === "BO1" ||
+                    getEffectiveFormat(selectedMatch) === "DM") && (
+                    <div className="group relative overflow-hidden rounded-2xl border border-rose-500/20 bg-slate-950/50 p-5 transition-all hover:bg-slate-950/80">
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-rose-500/[0.03] to-transparent" />
+                      <div className="relative">
+                        <div className="mb-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
+                              <RotateCcw className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-black tracking-widest text-white uppercase">
+                                Quick Import (BO1 / Single Match)
+                              </span>
+                              <p className="text-[8px] font-bold text-slate-500 uppercase">
+                                For series use per-map inputs below
+                              </p>
+                            </div>
+                          </div>
+                          {importStatus && (
+                            <div
+                              className={`rounded-lg px-3 py-1 text-[9px] font-black tracking-widest uppercase shadow-lg transition-all ${
+                                importStatus.type === "success"
+                                  ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30"
+                                  : importStatus.type === "info"
+                                    ? "bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/30"
+                                    : "bg-rose-500/20 text-rose-400 ring-1 ring-rose-500/30"
+                              }`}
+                            >
+                              {importStatus.message}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-3">
+                          <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/5 bg-slate-900/50 p-1.5 focus-within:border-rose-500/30">
+                            <select
+                              value={valRegion}
+                              onChange={(e) => setValRegion(e.target.value)}
+                              className="h-9 w-24 rounded-lg bg-slate-950 px-2 text-[10px] font-black text-rose-500 transition-all outline-none hover:bg-slate-900"
+                            >
+                              <option value="ap">ASIA (AP)</option>
+                              <option value="eu">EUROPE (EU)</option>
+                              <option value="na">N.AMERICA (NA)</option>
+                              <option value="kr">KOREA (KR)</option>
+                              <option value="latam">LATAM</option>
+                              <option value="br">BRAZIL (BR)</option>
+                            </select>
+                            <div className="h-4 w-[1px] bg-white/5" />
+                            <input
+                              type="text"
+                              value={valMatchId}
+                              onChange={(e) => setValMatchId(e.target.value)}
+                              placeholder="Enter Match ID (e.g. 1a2b3c...)"
+                              className="h-9 flex-1 bg-transparent px-2 text-xs font-bold text-white outline-none placeholder:text-slate-700"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleImportMatchJSON(null)}
+                            disabled={!valMatchId.trim() || isFetchingVal}
+                            className="group/btn relative flex h-10 w-32 items-center justify-center gap-2 overflow-hidden rounded-xl bg-rose-600 text-[10px] font-black tracking-widest text-white uppercase transition-all hover:bg-rose-500 disabled:opacity-30 disabled:grayscale"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                            {isFetchingVal ? (
+                              <LoaderIcon className="relative h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <Zap className="relative h-3.5 w-3.5 fill-current" />
+                                <span>Fetch All</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <input
-                      type="datetime-local"
-                      value={matchEditData.scheduledTime}
-                      onChange={(e) =>
-                        setMatchEditData((prev) => ({
-                          ...prev,
-                          scheduledTime: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm font-medium text-white transition-colors outline-none focus:border-indigo-500/50"
-                    />
-                    <p className="mt-2 text-[10px] text-slate-500">
-                      This updates the countdown timer and match schedule
-                      display.
-                    </p>
-                  </div>
+                  )}
 
-                  {/* Scores Section */}
-                  <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-4">
-                    <div className="mb-4 flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-amber-400" />
-                      <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase">
-                        Team Scores
-                      </span>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {/* Team A Score */}
-                      <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
-                        <label className="mb-2 block text-[10px] font-black tracking-widest text-rose-500 uppercase">
-                          {participantMap[selectedMatch.teamA]?.name ||
-                            "Team A"}
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                    {/* Left Column: Match Config & Scores */}
+                    <div className="space-y-6 lg:col-span-5">
+                      {/* Series Breakdown Section */}
+                      <div className="overflow-hidden rounded-2xl border border-white/5 bg-slate-950/50">
+                        <div className="flex items-center justify-between bg-slate-900/50 p-4">
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-4 w-4 text-emerald-400" />
+                            <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">
+                              {getEffectiveFormat(selectedMatch) === "BO1" ||
+                              getEffectiveFormat(selectedMatch) === "DM"
+                                ? "Match Score"
+                                : "Series Score"}
+                            </span>
+                          </div>
+                          {getEffectiveFormat(selectedMatch) !== "BO1" && (
+                            <div className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[8px] font-black tracking-widest text-emerald-500 uppercase ring-1 ring-emerald-500/20">
+                              {getEffectiveFormat(selectedMatch)}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-6 p-5">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="relative rounded-2xl border border-rose-500/20 bg-rose-500/[0.02] p-4 text-center">
+                              <span className="mb-2 block truncate text-[9px] font-black tracking-widest text-rose-500 uppercase">
+                                {participantMap[selectedMatch.teamA]?.name ||
+                                  "Team A"}
+                              </span>
+                              <input
+                                type="number"
+                                value={matchEditData.scoreA}
+                                readOnly={
+                                  getEffectiveFormat(selectedMatch) !== "BO1" &&
+                                  getEffectiveFormat(selectedMatch) !== "DM"
+                                }
+                                onChange={(e) =>
+                                  setMatchEditData((prev) => ({
+                                    ...prev,
+                                    scoreA: parseInt(e.target.value) || 0,
+                                  }))
+                                }
+                                className="w-full bg-transparent text-center text-4xl font-black text-white outline-none"
+                              />
+                              {getEffectiveFormat(selectedMatch) !== "BO1" && (
+                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-rose-500/10 px-2 py-0.5 text-[7px] font-bold text-rose-400 ring-1 ring-rose-500/20">
+                                  MAP WINS
+                                </div>
+                              )}
+                            </div>
+                            <div className="relative rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.02] p-4 text-center">
+                              <span className="mb-2 block truncate text-[9px] font-black tracking-widest text-cyan-400 uppercase">
+                                {participantMap[selectedMatch.teamB]?.name ||
+                                  "Team B"}
+                              </span>
+                              <input
+                                type="number"
+                                value={matchEditData.scoreB}
+                                readOnly={
+                                  getEffectiveFormat(selectedMatch) !== "BO1" &&
+                                  getEffectiveFormat(selectedMatch) !== "DM"
+                                }
+                                onChange={(e) =>
+                                  setMatchEditData((prev) => ({
+                                    ...prev,
+                                    scoreB: parseInt(e.target.value) || 0,
+                                  }))
+                                }
+                                className="w-full bg-transparent text-center text-4xl font-black text-white outline-none"
+                              />
+                              {getEffectiveFormat(selectedMatch) !== "BO1" && (
+                                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-cyan-400/10 px-2 py-0.5 text-[7px] font-bold text-cyan-400 ring-1 ring-cyan-400/20">
+                                  MAP WINS
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {getEffectiveFormat(selectedMatch) !== "BO1" && (
+                            <div className="space-y-3 border-t border-white/5 pt-6">
+                              <div className="mb-3 flex items-center justify-between">
+                                <p className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                                  Map Breakdown
+                                </p>
+                                <span className="text-[8px] text-slate-600 italic">
+                                  Paste Match ID for each map
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 gap-3">
+                                {Array.from({
+                                  length:
+                                    getEffectiveFormat(selectedMatch) === "BO5"
+                                      ? 5
+                                      : 3,
+                                }).map((_, idx) => {
+                                  const hasData =
+                                    matchEditData.seriesScores?.[idx]?.a > 0 ||
+                                    matchEditData.seriesScores?.[idx]?.b > 0;
+                                  const isFetchingThis =
+                                    fetchingMapIdx === idx && isFetchingVal;
+
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className={`group relative overflow-hidden rounded-xl border transition-all ${
+                                        hasData
+                                          ? "border-emerald-500/30 bg-emerald-500/[0.02]"
+                                          : "border-white/5 bg-slate-900/50 hover:bg-slate-900"
+                                      }`}
+                                    >
+                                      {/* Map Header */}
+                                      <div className="flex items-center justify-between p-3">
+                                        <div className="flex items-center gap-3">
+                                          <div
+                                            className={`flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-black ${
+                                              hasData
+                                                ? "bg-emerald-500/20 text-emerald-400"
+                                                : "bg-slate-950 text-slate-500 group-hover:bg-rose-500/20 group-hover:text-rose-500"
+                                            }`}
+                                          >
+                                            M{idx + 1}
+                                          </div>
+                                          {/* Score Inputs */}
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              type="number"
+                                              value={
+                                                matchEditData.seriesScores?.[
+                                                  idx
+                                                ]?.a || 0
+                                              }
+                                              onChange={(e) =>
+                                                updateMapScore(
+                                                  idx,
+                                                  "a",
+                                                  e.target.value,
+                                                )
+                                              }
+                                              className="w-12 rounded-lg border border-rose-500/20 bg-slate-950 p-1.5 text-center text-sm font-black text-rose-500 outline-none focus:border-rose-500/50"
+                                            />
+                                            <span className="font-bold text-slate-600">
+                                              :
+                                            </span>
+                                            <input
+                                              type="number"
+                                              value={
+                                                matchEditData.seriesScores?.[
+                                                  idx
+                                                ]?.b || 0
+                                              }
+                                              onChange={(e) =>
+                                                updateMapScore(
+                                                  idx,
+                                                  "b",
+                                                  e.target.value,
+                                                )
+                                              }
+                                              className="w-12 rounded-lg border border-cyan-400/20 bg-slate-950 p-1.5 text-center text-sm font-black text-cyan-400 outline-none focus:border-cyan-400/50"
+                                            />
+                                          </div>
+                                          {/* Winner Badge */}
+                                          {hasData && (
+                                            <span
+                                              className={`rounded-full px-2 py-0.5 text-[8px] font-black uppercase ${
+                                                matchEditData.seriesScores?.[
+                                                  idx
+                                                ]?.a >
+                                                matchEditData.seriesScores?.[
+                                                  idx
+                                                ]?.b
+                                                  ? "bg-rose-500/20 text-rose-400"
+                                                  : "bg-cyan-400/20 text-cyan-400"
+                                              }`}
+                                            >
+                                              {matchEditData.seriesScores?.[idx]
+                                                ?.a >
+                                              matchEditData.seriesScores?.[idx]
+                                                ?.b
+                                                ? participantMap[
+                                                    selectedMatch.teamA
+                                                  ]?.name?.split(" ")[0] || "A"
+                                                : participantMap[
+                                                    selectedMatch.teamB
+                                                  ]?.name?.split(" ")[0] ||
+                                                  "B"}{" "}
+                                              WIN
+                                            </span>
+                                          )}
+                                        </div>
+                                        {hasData && (
+                                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                        )}
+                                      </div>
+
+                                      {/* Match ID Input Row */}
+                                      <div className="flex items-center gap-2 border-t border-white/5 bg-slate-950/50 px-3 py-2">
+                                        <input
+                                          type="text"
+                                          value={mapMatchIds[idx] || ""}
+                                          onChange={(e) =>
+                                            setMapMatchIds((prev) => ({
+                                              ...prev,
+                                              [idx]: e.target.value,
+                                            }))
+                                          }
+                                          placeholder={`Map ${idx + 1} Match ID...`}
+                                          className="flex-1 bg-transparent text-[11px] font-medium text-white outline-none placeholder:text-slate-700"
+                                        />
+                                        <button
+                                          onClick={() =>
+                                            handleImportMatchJSON(idx)
+                                          }
+                                          disabled={
+                                            !mapMatchIds[idx]?.trim() ||
+                                            isFetchingVal
+                                          }
+                                          className={`flex h-7 items-center gap-1.5 rounded-lg px-3 text-[9px] font-black uppercase transition-all disabled:opacity-30 ${
+                                            isFetchingThis
+                                              ? "bg-rose-500/20 text-rose-400"
+                                              : "bg-rose-600 text-white hover:bg-rose-500"
+                                          }`}
+                                        >
+                                          {isFetchingThis ? (
+                                            <>
+                                              <LoaderIcon className="h-3 w-3 animate-spin" />
+                                              <span>Fetching</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Zap className="h-3 w-3 fill-current" />
+                                              <span>Fetch</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <p className="mt-3 text-center text-[8px] text-slate-600 uppercase">
+                                Each map uses a unique Valorant Match ID • Fetch
+                                maps as series progresses
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Config Cards */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-4">
+                          <label className="mb-3 block text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                            Format Override
+                          </label>
+                          <select
+                            value={matchEditData.matchFormat}
+                            onChange={(e) =>
+                              setMatchEditData((prev) => ({
+                                ...prev,
+                                matchFormat: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-white/10 bg-slate-900/50 p-2.5 text-xs font-bold text-white transition-all outline-none focus:border-rose-500/30"
+                          >
+                            <option value="Auto">AUTO</option>
+                            <option value="BO1">BO1</option>
+                            <option value="BO3">BO3</option>
+                            <option value="BO5">BO5</option>
+                          </select>
+                        </div>
+                        <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-4">
+                          <label className="mb-3 block text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                            Start Time
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={matchEditData.scheduledTime}
+                            onChange={(e) =>
+                              setMatchEditData((prev) => ({
+                                ...prev,
+                                scheduledTime: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-white/10 bg-slate-900/50 p-2.5 text-[10px] font-bold text-white transition-all outline-none focus:border-indigo-500/30"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-4">
+                        <label className="mb-3 block text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                          Admin Private Notes
                         </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="13"
-                          value={matchEditData.scoreA}
+                        <textarea
+                          placeholder="Type notes here..."
+                          value={matchEditData.notes}
                           onChange={(e) =>
                             setMatchEditData((prev) => ({
                               ...prev,
-                              scoreA: parseInt(e.target.value) || 0,
+                              notes: e.target.value,
                             }))
                           }
-                          className="w-full rounded-lg border border-rose-500/30 bg-slate-900/50 px-4 py-3 text-center text-2xl font-black text-white transition-colors outline-none focus:border-rose-500"
-                        />
-                      </div>
-
-                      {/* Team B Score */}
-                      <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-4">
-                        <label className="mb-2 block text-[10px] font-black tracking-widest text-cyan-400 uppercase">
-                          {participantMap[selectedMatch.teamB]?.name ||
-                            "Team B"}
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="13"
-                          value={matchEditData.scoreB}
-                          onChange={(e) =>
-                            setMatchEditData((prev) => ({
-                              ...prev,
-                              scoreB: parseInt(e.target.value) || 0,
-                            }))
-                          }
-                          className="w-full rounded-lg border border-cyan-400/30 bg-slate-900/50 px-4 py-3 text-center text-2xl font-black text-white transition-colors outline-none focus:border-cyan-400"
+                          className="h-20 w-full resize-none rounded-xl border border-white/10 bg-slate-900/50 p-3 text-xs font-medium text-white transition-all outline-none placeholder:text-slate-700 focus:border-amber-500/30"
                         />
                       </div>
                     </div>
-                  </div>
 
-                  {/* Player Stats Section */}
-                  <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-purple-400" />
-                        <span className="text-[10px] font-black tracking-widest text-purple-400 uppercase">
-                          Player Stats
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-slate-900/50 px-3 py-1.5 text-[9px] font-bold text-slate-500 uppercase">
-                        <Target className="h-3 w-3" />K / D / A / ACS
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      {/* Team A Players */}
-                      {teamAPlayers.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 rounded-lg bg-rose-500/5 px-3 py-2">
-                            <div className="h-2 w-2 rounded-full bg-rose-500" />
-                            <span className="text-xs font-black tracking-widest text-rose-500 uppercase">
-                              {participantMap[selectedMatch.teamA]?.name ||
-                                "Team A"}
-                            </span>
+                    {/* Right Column: Player Stats */}
+                    <div className="lg:col-span-7">
+                      <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-slate-950/50">
+                        <div className="bg-slate-900/50 p-4">
+                          <div className="mb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-purple-400" />
+                              <span className="text-[10px] font-black tracking-widest text-purple-400 uppercase">
+                                Performances
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-md bg-purple-500/10 px-2 py-1">
+                              <Target className="h-3 w-3 text-purple-400" />
+                              <span className="text-[8px] font-black tracking-widest text-purple-500 uppercase">
+                                K / D / A / ACS
+                              </span>
+                            </div>
                           </div>
-                          {teamAPlayers.map((player, idx) => {
-                            const playerKey = `teamA_${idx}`;
-                            const stats = matchEditData.playerStats[
-                              playerKey
-                            ] || { kills: 0, deaths: 0, assists: 0, acs: 0 };
-                            const isExpanded = expandedPlayers[playerKey];
-
-                            return (
-                              <div
-                                key={playerKey}
-                                className="rounded-xl border border-rose-500/20 bg-slate-900/40"
-                              >
+                          {/* Map Selector for BO3/BO5 */}
+                          {getEffectiveFormat(selectedMatch) !== "BO1" &&
+                            getEffectiveFormat(selectedMatch) !== "DM" && (
+                              <div className="flex items-center gap-1 rounded-lg bg-slate-950/50 p-1">
                                 <button
-                                  onClick={() => togglePlayerExpand(playerKey)}
-                                  className="flex w-full items-center justify-between p-3"
+                                  onClick={() => setViewingMapIdx(-1)}
+                                  className={`flex-1 rounded-md px-2 py-1.5 text-[9px] font-black uppercase transition-all ${
+                                    viewingMapIdx === -1
+                                      ? "bg-purple-600 text-white shadow-lg"
+                                      : "text-slate-500 hover:bg-white/5 hover:text-white"
+                                  }`}
                                 >
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-500/30 bg-slate-950/50">
-                                      <Target className="h-4 w-4 text-rose-500" />
-                                    </div>
-                                    <div className="text-left">
-                                      <p className="text-sm font-bold text-white">
-                                        {player.ingameName}
-                                      </p>
-                                      {player.tag && (
-                                        <p className="text-[10px] font-bold text-rose-500">
-                                          #{player.tag}
-                                        </p>
+                                  Series Total
+                                </button>
+                                {Array.from({
+                                  length:
+                                    getEffectiveFormat(selectedMatch) === "BO5"
+                                      ? 5
+                                      : 3,
+                                }).map((_, idx) => {
+                                  const hasData =
+                                    matchEditData.seriesScores?.[idx]?.a > 0 ||
+                                    matchEditData.seriesScores?.[idx]?.b > 0;
+                                  return (
+                                    <button
+                                      key={idx}
+                                      onClick={() => setViewingMapIdx(idx)}
+                                      disabled={!hasData}
+                                      className={`flex-1 rounded-md px-2 py-1.5 text-[9px] font-black uppercase transition-all ${
+                                        viewingMapIdx === idx
+                                          ? "bg-purple-600 text-white shadow-lg"
+                                          : hasData
+                                            ? "text-slate-400 hover:bg-white/5 hover:text-white"
+                                            : "cursor-not-allowed text-slate-700"
+                                      }`}
+                                    >
+                                      M{idx + 1}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                        </div>
+
+                        <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-purple-500/10 flex-1 space-y-4 overflow-y-auto p-4">
+                          {/* Team A Stats */}
+                          {teamAPlayers.length > 0 && (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 px-1">
+                                <div className="h-3 w-1 rounded-full bg-rose-500" />
+                                <span className="text-[9px] font-black tracking-wider text-rose-500 uppercase">
+                                  {participantMap[selectedMatch.teamA]?.name}
+                                </span>
+                              </div>
+                              <div className="grid gap-2">
+                                {teamAPlayers.map((player, idx) => {
+                                  const playerKey = `teamA_${idx}`;
+                                  // Use per-map stats if viewing specific map, otherwise use series total
+                                  const stats =
+                                    viewingMapIdx >= 0
+                                      ? matchEditData.mapPlayerStats?.[
+                                          viewingMapIdx
+                                        ]?.[playerKey] || {
+                                          kills: 0,
+                                          deaths: 0,
+                                          assists: 0,
+                                          acs: 0,
+                                          score: 0,
+                                          rounds: 0,
+                                        }
+                                      : matchEditData.playerStats?.[
+                                          playerKey
+                                        ] || {
+                                          kills: 0,
+                                          deaths: 0,
+                                          assists: 0,
+                                          acs: 0,
+                                        };
+                                  const isExpanded = expandedPlayers[playerKey];
+
+                                  return (
+                                    <div
+                                      key={playerKey}
+                                      className="group overflow-hidden rounded-xl border border-white/5 bg-slate-900/30 transition-all hover:bg-slate-900/60"
+                                    >
+                                      <button
+                                        onClick={() =>
+                                          togglePlayerExpand(playerKey)
+                                        }
+                                        className="flex w-full items-center justify-between p-3"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 grayscale transition-all group-hover:grayscale-0">
+                                            <Target className="h-3.5 w-3.5" />
+                                          </div>
+                                          <div className="text-left">
+                                            <p className="text-xs font-black text-white">
+                                              {player.ingameName}
+                                            </p>
+                                            <p className="text-[8px] font-bold text-rose-500/50 uppercase transition-colors group-hover:text-rose-500">
+                                              #{player.tag || "VAL"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                          <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
+                                            <span className="text-emerald-500/80">
+                                              {stats.kills}
+                                            </span>
+                                            <span className="text-slate-700">
+                                              /
+                                            </span>
+                                            <span className="text-rose-500/80">
+                                              {stats.deaths}
+                                            </span>
+                                            <span className="text-slate-700">
+                                              /
+                                            </span>
+                                            <span className="text-amber-500/80">
+                                              {stats.assists}
+                                            </span>
+                                            <span className="mx-1 text-slate-800">
+                                              |
+                                            </span>
+                                            <span className="text-purple-400">
+                                              {stats.acs}
+                                            </span>
+                                          </div>
+                                          {isExpanded ? (
+                                            <ChevronUp className="h-3.5 w-3.5 text-slate-600" />
+                                          ) : (
+                                            <ChevronDown className="h-3.5 w-3.5 text-slate-600" />
+                                          )}
+                                        </div>
+                                      </button>
+                                      {isExpanded && (
+                                        <div className="grid grid-cols-4 gap-2 border-t border-white/5 bg-slate-950/50 p-3">
+                                          {[
+                                            "kills",
+                                            "deaths",
+                                            "assists",
+                                            "acs",
+                                          ].map((stat) => (
+                                            <div
+                                              key={stat}
+                                              className="space-y-1"
+                                            >
+                                              <label className="text-[7px] font-black tracking-tighter text-slate-600 uppercase">
+                                                {stat}
+                                              </label>
+                                              <input
+                                                type="number"
+                                                value={stats[stat]}
+                                                onChange={(e) =>
+                                                  updatePlayerStat(
+                                                    playerKey,
+                                                    stat,
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className="w-full rounded-lg bg-slate-900 p-2 text-center text-xs font-black text-white ring-1 ring-white/5 outline-none focus:ring-rose-500/30"
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
                                       )}
                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                                      <span className="text-emerald-400">
-                                        {stats.kills}
-                                      </span>
-                                      /
-                                      <span className="text-red-400">
-                                        {stats.deaths}
-                                      </span>
-                                      /
-                                      <span className="text-amber-400">
-                                        {stats.assists}
-                                      </span>
-                                      <span className="text-slate-600">|</span>
-                                      <span className="text-purple-400">
-                                        {stats.acs}
-                                      </span>
-                                    </div>
-                                    {isExpanded ? (
-                                      <ChevronUp className="h-4 w-4 text-slate-500" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4 text-slate-500" />
-                                    )}
-                                  </div>
-                                </button>
-                                {isExpanded && (
-                                  <div className="border-t border-white/5 p-4">
-                                    <div className="grid grid-cols-4 gap-3">
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 uppercase">
-                                          <Target className="h-3 w-3" />
-                                          Kills
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.kills}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "kills",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-red-400 uppercase">
-                                          <Skull className="h-3 w-3" />
-                                          Deaths
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.deaths}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "deaths",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-amber-400 uppercase">
-                                          <Swords className="h-3 w-3" />
-                                          Assists
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.assists}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "assists",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-purple-400 uppercase">
-                                          <Medal className="h-3 w-3" />
-                                          ACS
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.acs}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "acs",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-purple-500/30 bg-purple-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                            </div>
+                          )}
 
-                      {/* Team B Players */}
-                      {teamBPlayers.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 rounded-lg bg-cyan-500/5 px-3 py-2">
-                            <div className="h-2 w-2 rounded-full bg-cyan-400" />
-                            <span className="text-xs font-black tracking-widest text-cyan-400 uppercase">
-                              {participantMap[selectedMatch.teamB]?.name ||
-                                "Team B"}
-                            </span>
-                          </div>
-                          {teamBPlayers.map((player, idx) => {
-                            const playerKey = `teamB_${idx}`;
-                            const stats = matchEditData.playerStats[
-                              playerKey
-                            ] || { kills: 0, deaths: 0, assists: 0, acs: 0 };
-                            const isExpanded = expandedPlayers[playerKey];
+                          {/* Team B Stats */}
+                          {teamBPlayers.length > 0 && (
+                            <div className="space-y-3 pt-4">
+                              <div className="flex items-center gap-2 px-1">
+                                <div className="h-3 w-1 rounded-full bg-cyan-400" />
+                                <span className="text-[9px] font-black tracking-wider text-cyan-400 uppercase">
+                                  {participantMap[selectedMatch.teamB]?.name}
+                                </span>
+                              </div>
+                              <div className="grid gap-2">
+                                {teamBPlayers.map((player, idx) => {
+                                  const playerKey = `teamB_${idx}`;
+                                  // Use per-map stats if viewing specific map, otherwise use series total
+                                  const stats =
+                                    viewingMapIdx >= 0
+                                      ? matchEditData.mapPlayerStats?.[
+                                          viewingMapIdx
+                                        ]?.[playerKey] || {
+                                          kills: 0,
+                                          deaths: 0,
+                                          assists: 0,
+                                          acs: 0,
+                                          score: 0,
+                                          rounds: 0,
+                                        }
+                                      : matchEditData.playerStats?.[
+                                          playerKey
+                                        ] || {
+                                          kills: 0,
+                                          deaths: 0,
+                                          assists: 0,
+                                          acs: 0,
+                                        };
+                                  const isExpanded = expandedPlayers[playerKey];
 
-                            return (
-                              <div
-                                key={playerKey}
-                                className="rounded-xl border border-cyan-400/20 bg-slate-900/40"
-                              >
-                                <button
-                                  onClick={() => togglePlayerExpand(playerKey)}
-                                  className="flex w-full items-center justify-between p-3"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-slate-950/50">
-                                      <Target className="h-4 w-4 text-cyan-400" />
-                                    </div>
-                                    <div className="text-left">
-                                      <p className="text-sm font-bold text-white">
-                                        {player.ingameName}
-                                      </p>
-                                      {player.tag && (
-                                        <p className="text-[10px] font-bold text-cyan-400">
-                                          #{player.tag}
-                                        </p>
+                                  return (
+                                    <div
+                                      key={playerKey}
+                                      className="group overflow-hidden rounded-xl border border-white/5 bg-slate-900/30 transition-all hover:bg-slate-900/60"
+                                    >
+                                      <button
+                                        onClick={() =>
+                                          togglePlayerExpand(playerKey)
+                                        }
+                                        className="flex w-full items-center justify-between p-3"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-400 grayscale transition-all group-hover:grayscale-0">
+                                            <Target className="h-3.5 w-3.5" />
+                                          </div>
+                                          <div className="text-left">
+                                            <p className="text-xs font-black text-white">
+                                              {player.ingameName}
+                                            </p>
+                                            <p className="text-[8px] font-bold text-cyan-400/50 uppercase transition-colors group-hover:text-cyan-400">
+                                              #{player.tag || "VAL"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                          <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
+                                            <span className="text-emerald-500/80">
+                                              {stats.kills}
+                                            </span>
+                                            <span className="text-slate-700">
+                                              /
+                                            </span>
+                                            <span className="text-rose-500/80">
+                                              {stats.deaths}
+                                            </span>
+                                            <span className="text-slate-700">
+                                              /
+                                            </span>
+                                            <span className="text-amber-500/80">
+                                              {stats.assists}
+                                            </span>
+                                            <span className="mx-1 text-slate-800">
+                                              |
+                                            </span>
+                                            <span className="text-purple-400">
+                                              {stats.acs}
+                                            </span>
+                                          </div>
+                                          {isExpanded ? (
+                                            <ChevronUp className="h-3.5 w-3.5 text-slate-600" />
+                                          ) : (
+                                            <ChevronDown className="h-3.5 w-3.5 text-slate-600" />
+                                          )}
+                                        </div>
+                                      </button>
+                                      {isExpanded && (
+                                        <div className="grid grid-cols-4 gap-2 border-t border-white/5 bg-slate-950/50 p-3">
+                                          {[
+                                            "kills",
+                                            "deaths",
+                                            "assists",
+                                            "acs",
+                                          ].map((stat) => (
+                                            <div
+                                              key={stat}
+                                              className="space-y-1"
+                                            >
+                                              <label className="text-[7px] font-black tracking-tighter text-slate-600 uppercase">
+                                                {stat}
+                                              </label>
+                                              <input
+                                                type="number"
+                                                value={stats[stat]}
+                                                onChange={(e) =>
+                                                  updatePlayerStat(
+                                                    playerKey,
+                                                    stat,
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className="w-full rounded-lg bg-slate-900 p-2 text-center text-xs font-black text-white ring-1 ring-white/5 outline-none focus:ring-cyan-400/30"
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
                                       )}
                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                                      <span className="text-emerald-400">
-                                        {stats.kills}
-                                      </span>
-                                      /
-                                      <span className="text-red-400">
-                                        {stats.deaths}
-                                      </span>
-                                      /
-                                      <span className="text-amber-400">
-                                        {stats.assists}
-                                      </span>
-                                      <span className="text-slate-600">|</span>
-                                      <span className="text-purple-400">
-                                        {stats.acs}
-                                      </span>
-                                    </div>
-                                    {isExpanded ? (
-                                      <ChevronUp className="h-4 w-4 text-slate-500" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4 text-slate-500" />
-                                    )}
-                                  </div>
-                                </button>
-                                {isExpanded && (
-                                  <div className="border-t border-white/5 p-4">
-                                    <div className="grid grid-cols-4 gap-3">
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 uppercase">
-                                          <Target className="h-3 w-3" />
-                                          Kills
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.kills}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "kills",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-red-400 uppercase">
-                                          <Skull className="h-3 w-3" />
-                                          Deaths
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.deaths}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "deaths",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-amber-400 uppercase">
-                                          <Swords className="h-3 w-3" />
-                                          Assists
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.assists}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "assists",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="flex items-center gap-1 text-[9px] font-bold text-purple-400 uppercase">
-                                          <Medal className="h-3 w-3" />
-                                          ACS
-                                        </label>
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={stats.acs}
-                                          onChange={(e) =>
-                                            updatePlayerStat(
-                                              playerKey,
-                                              "acs",
-                                              e.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-purple-500/30 bg-purple-500/5 px-3 py-2 text-center text-lg font-bold text-white outline-none"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
+                            </div>
+                          )}
                         </div>
-                      )}
-
-                      {teamAPlayers.length === 0 &&
-                        teamBPlayers.length === 0 && (
-                          <div className="rounded-xl border border-white/5 bg-slate-900/30 p-8 text-center">
-                            <Users className="mx-auto mb-3 h-8 w-8 text-slate-600" />
-                            <p className="text-sm text-slate-500">
-                              No players available
-                            </p>
-                          </div>
-                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Notes Section */}
-                  <div className="rounded-2xl border border-white/5 bg-slate-950/50 p-4">
-                    <div className="mb-4 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-amber-400" />
-                      <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase">
-                        Admin Notes
-                      </span>
-                    </div>
-                    <textarea
-                      value={matchEditData.notes}
-                      onChange={(e) =>
-                        setMatchEditData((prev) => ({
-                          ...prev,
-                          notes: e.target.value,
-                        }))
-                      }
-                      placeholder="Add private notes about this match..."
-                      rows={4}
-                      className="w-full resize-none rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-white placeholder-slate-600 transition-colors outline-none focus:border-amber-500/50"
-                    />
-                    <p className="mt-2 text-[10px] text-slate-500">
-                      Notes are only visible to tournament administrators.
-                    </p>
                   </div>
                 </div>
               </div>

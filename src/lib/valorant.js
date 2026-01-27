@@ -53,6 +53,14 @@ export async function getMatch(matchId) {
     return response.json();
 }
 
+export async function getMatchV4(region, matchId) {
+    const response = await fetch(`${HENRIK_API_BASE}/v4/match/${region}/${matchId}`);
+    if (!response.ok) {
+        throw new Error("Failed to fetch match details (v4)");
+    }
+    return response.json();
+}
+
 export async function getPlayerCard(cardUuid) {
     if (!cardUuid) return null;
     const response = await fetch(`https://valorant-api.com/v1/playercards/${cardUuid}`);

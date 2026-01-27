@@ -2,8 +2,7 @@ import { databases } from "@/lib/appwrite";
 import { ID, Query } from "appwrite";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
-// NOTE: User must create this collection and add ID to .env or here
-const MATCHES_COLLECTION_ID = "matches"; 
+const MATCHES_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_MATCHES_COLLECTION_ID || "matches"; 
 
 export async function getMatches(tournamentId) {
     try {
@@ -19,14 +18,12 @@ export async function getMatches(tournamentId) {
     }
 }
 
-export async function createBracket(tournamentId, registrations, gameType = "5v5") {
+export async function createBracket(tournamentId, registrations, gameType = "5v5", tournamentDate = null) {
     if (!registrations || registrations.length < 2) {
         throw new Error("Need at least 2 participants to start.");
     }
 
     if (gameType === "Deathmatch") {
-        // For Deathmatch, we create a single "Lobby" match document
-        // that represents the entire FFA match. 
         return await databases.createDocument(
             DATABASE_ID,
             MATCHES_COLLECTION_ID,
@@ -35,10 +32,8 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
                 tournamentId,
                 round: 1,
                 matchIndex: 0,
-                teamA: "LOBBY", // Marker for DM
+                teamA: "LOBBY",
                 status: "scheduled",
-                // For DM, we can store the participant list in metadata if needed,
-                // but for now the UI uses registrations list filtered by tournamentId.
             }
         );
     }
@@ -47,7 +42,18 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
     const matches = generateSingleEliminationBracket(registrations);
     
     // 2. Save each match to the database
+    // We do this sequentially or carefully because some matches might depend on others
+    // though for initial creation, all data is in the 'matches' array from generateSingleEliminationBracket
     const promises = matches.map(match => {
+        let scheduledTime = null;
+        if (tournamentDate && gameType === "5v5") {
+            const startDate = new Date(tournamentDate);
+            // Calculation matching Admin Panel: (Round-1)*4 hours + MatchIndex
+            const offset = (match.round - 1) * 4 + match.matchIndex;
+            startDate.setHours(startDate.getHours() + offset);
+            scheduledTime = startDate.toISOString();
+        }
+
         return databases.createDocument(
             DATABASE_ID,
             MATCHES_COLLECTION_ID,
@@ -61,7 +67,9 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
                 winner: match.winner ? match.winner.$id : null,
                 scoreA: 0,
                 scoreB: 0,
-                status: match.status,
+                status: match.status || "scheduled",
+                vetoStarted: false,
+                scheduledTime: scheduledTime
             }
         );
     });
@@ -85,7 +93,7 @@ function shuffle(array) {
 
 /**
  * Generates a single-elimination bracket structure.
- * @param {Array} participants - Array of registration objects/IDs.
+ * @param {Array} participants - Array of registration objects.
  * @returns {Array} Array of match objects for the entire tournament.
  */
 export function generateSingleEliminationBracket(participants) {
@@ -100,101 +108,95 @@ export function generateSingleEliminationBracket(participants) {
         size *= 2;
     }
 
-    // Number of byes needed
     const byes = size - totalTeams;
-    
-    // Round 1 matches
-    const matches = [];
     const round1MatchesCount = size / 2;
     
-    // We will structure matches by Round.
-    // Round 1 is the first round played. 
-    // If byes exist, they technically "win" round 1 automatically, but standard brackets usually visualize byes in Round 1.
+    const allMatches = [];
+    let currentRoundMatches = [];
     
-    // Let's create the leaf nodes (Round 1)
-    let currentRound = [];
-    
-    // In a standard seeded bracket:
-    // Match 1: Seed 1 vs Seed 8
-    // Match 2: Seed 4 vs Seed 5
-    // etc.
-    // Since we are random, we just pair them up.
-    // We place "Byes" effectively. A bye is typically matched against the highest seeds.
-    // Here we just treat the end of the array as 'bye' slots if we filled with nulls.
-    
-    // Pad the array with nulls for byes
+    // Pad for byes
     const paddedParticipants = [...shuffled];
     for (let i = 0; i < byes; i++) {
-        paddedParticipants.push(null); // 'null' represents a Bye
+        paddedParticipants.push(null);
     }
 
     // Create Round 1
-    // Pairing: 0 vs 1, 2 vs 3, etc. isn't ideal for byes. 
-    // Standard bye placement usually pairs index i with index (size - 1 - i).
-    // Let's use the standard "fold" method for pairing if we treated them as seeds.
-    // But since it's random shuffle, linear pairing is fine: (0 vs 1), (2 vs 3)...
-    // IF we put all nulls at the end, then the last N matches will be (Player vs Bye).
-    // However, (Player vs Bye) means Player advances.
-    // If we have (Bye vs Bye), that shouldn't happen if byes < totalTeams.
-    
-    // Better shuffle: Distribute byes.
-    // Actually, pairing (Top vs Bottom) is safer to distribute byes if they are at the end.
-    // 0 vs 15, 1 vs 14... 
-    // If we put byes at the end of the list, 0 plays a Bye, 1 plays a Bye... 
-    // This gives top seeds (first in shuffled) the byes.
-    
     for (let i = 0; i < round1MatchesCount; i++) {
         const teamA = paddedParticipants[i];
         const teamB = paddedParticipants[size - 1 - i];
         
-        // If teamB is null, teamA gets a bye (automatically wins).
-        // If teamA is null (shouldn't happen with this sort), it's a bye.
+        const winner = teamB === null ? teamA : (teamA === null ? teamB : null);
         
-        currentRound.push({
+        currentRoundMatches.push({
             round: 1,
             matchIndex: i,
             teamA: teamA,
             teamB: teamB,
-            winner: teamB === null ? teamA : (teamA === null ? teamB : null), // Auto-advance if bye
-            status: (teamB === null || teamA === null) ? 'completed' : 'scheduled'
+            winner: winner,
+            status: winner ? 'completed' : 'scheduled'
         });
     }
 
-    matches.push(...currentRound);
+    allMatches.push(...currentRoundMatches);
 
     // Generate subsequent rounds
-    let activeMatchCount = round1MatchesCount;
+    let prevRoundMatches = currentRoundMatches;
     let roundNum = 2;
+    let activeMatchCount = round1MatchesCount;
     
     while (activeMatchCount > 1) {
         activeMatchCount /= 2;
-        const nextRound = [];
+        const nextRoundMatches = [];
         for (let i = 0; i < activeMatchCount; i++) {
-            nextRound.push({
+            // Match in next round depends on two matches from previous round
+            const match1 = prevRoundMatches[i * 2];
+            const match2 = prevRoundMatches[i * 2 + 1];
+            
+            // Advance winners if available (Byes)
+            const teamA = match1.winner;
+            const teamB = match2.winner;
+            
+            // If both teams advanced via byes, this match might also be completed
+            // (Unlikely in standard seeding but possible in random)
+            const winner = (teamA && teamB === null) ? teamA : (teamA === null && teamB ? teamB : null);
+
+            nextRoundMatches.push({
                 round: roundNum,
                 matchIndex: i,
-                teamA: null, // To be determined by previous round
-                teamB: null,
-                winner: null,
+                teamA: teamA,
+                teamB: teamB,
+                winner: null, // Subseq round winner must be determined by playing
                 status: 'scheduled'
             });
         }
-        matches.push(...nextRound);
+        allMatches.push(...nextRoundMatches);
+        prevRoundMatches = nextRoundMatches;
         roundNum++;
     }
 
-    return matches;
+    return allMatches;
 }
 
 export async function getMatch(matchId) {
-    return await databases.getDocument(
-        DATABASE_ID,
-        MATCHES_COLLECTION_ID,
-        matchId
-    );
+    if (!matchId) {
+        console.error("getMatch called without matchId");
+        throw new Error("matchId is required");
+    }
+    try {
+        return await databases.getDocument(
+            DATABASE_ID,
+            MATCHES_COLLECTION_ID,
+            matchId
+        );
+    } catch (error) {
+        console.error(`Failed to fetch match with ID: ${matchId}`, error);
+        throw error;
+    }
 }
 
 export async function updateMatchScore(matchId, scoreA, scoreB, winnerId) {
+    if (!matchId) throw new Error("matchId is required for updateMatchScore");
+    
     return await databases.updateDocument(
         DATABASE_ID,
         MATCHES_COLLECTION_ID,
@@ -215,6 +217,17 @@ export async function updateMatchStatus(matchId, status) {
         matchId,
         {
             status
+        }
+    );
+}
+
+export async function startMatchVeto(matchId) {
+    return await databases.updateDocument(
+        DATABASE_ID,
+        MATCHES_COLLECTION_ID,
+        matchId,
+        {
+            vetoStarted: true
         }
     );
 }
@@ -548,6 +561,8 @@ export async function updateMatchNotes(matchId, notes) {
 
 /**
  * Update complete match details (for admin panel)
+ * Note: seriesScores and mapPlayerStats are stored INSIDE playerStats JSON
+ * to avoid exceeding Appwrite's attribute limit on the matches collection
  */
 export async function updateMatchDetails(matchId, details) {
     const updateData = {};
@@ -558,14 +573,24 @@ export async function updateMatchDetails(matchId, details) {
     if (details.notes !== undefined) {
         updateData.notes = details.notes;
     }
-    if (details.playerStats !== undefined) {
-        updateData.playerStats = JSON.stringify(details.playerStats);
-    }
+    
+    // Consolidate all player/match stats into a single playerStats JSON field
+    // This avoids needing separate seriesScores and mapPlayerStats columns
+    const consolidatedStats = {
+        players: details.playerStats || {},
+        seriesScores: details.seriesScores || [],
+        mapPlayerStats: details.mapPlayerStats || [],
+    };
+    updateData.playerStats = JSON.stringify(consolidatedStats);
+    
     if (details.scoreA !== undefined) {
         updateData.scoreA = details.scoreA;
     }
     if (details.scoreB !== undefined) {
         updateData.scoreB = details.scoreB;
+    }
+    if (details.matchFormat !== undefined) {
+        updateData.matchFormat = details.matchFormat;
     }
     
     return await databases.updateDocument(
@@ -578,16 +603,36 @@ export async function updateMatchDetails(matchId, details) {
 
 /**
  * Parse player stats from match document
+ * Handles both legacy format (flat player stats) and new consolidated format
+ * Returns: { players: {}, seriesScores: [], mapPlayerStats: [] }
  */
 export function parsePlayerStats(match) {
-    if (!match.playerStats) return {};
+    if (!match.playerStats) {
+        return { players: {}, seriesScores: [], mapPlayerStats: [] };
+    }
     try {
-        return typeof match.playerStats === 'string' 
+        const parsed = typeof match.playerStats === 'string' 
             ? JSON.parse(match.playerStats) 
             : match.playerStats;
+        
+        // Check if it's the new consolidated format
+        if (parsed.players !== undefined) {
+            return {
+                players: parsed.players || {},
+                seriesScores: parsed.seriesScores || [],
+                mapPlayerStats: parsed.mapPlayerStats || [],
+            };
+        }
+        
+        // Legacy format: playerStats is just the player stats object
+        return {
+            players: parsed,
+            seriesScores: [],
+            mapPlayerStats: [],
+        };
     } catch (e) {
         console.error("Failed to parse player stats:", e);
-        return {};
+        return { players: {}, seriesScores: [], mapPlayerStats: [] };
     }
 }
 
@@ -607,6 +652,7 @@ export async function resetMatch(matchId) {
                 winner: null,
                 status: 'scheduled',
                 vetoData: null,
+                vetoStarted: false,
                 playerStats: null,
                 notes: null
             }

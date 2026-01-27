@@ -9,6 +9,7 @@ export default function MapCard3D({
   onBan,
   disabled,
   isBanning,
+  isPicked,
 }) {
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -61,9 +62,11 @@ export default function MapCard3D({
       className={`group relative overflow-hidden rounded-xl border transition-all duration-300 md:rounded-2xl ${
         isBanned
           ? "cursor-not-allowed border-transparent opacity-40 grayscale"
-          : isBanning
-            ? "scale-95 border-red-500/50"
-            : "border-white/10 shadow-xl hover:scale-105 hover:shadow-2xl hover:shadow-rose-500/20"
+          : isPicked
+            ? "border-emerald-500/50 shadow-lg shadow-emerald-500/20"
+            : isBanning
+              ? "scale-95 border-red-500/50"
+              : "border-white/10 shadow-xl hover:scale-105 hover:shadow-2xl hover:shadow-rose-500/20"
       }`}
       style={{
         height: "140px",
@@ -84,9 +87,11 @@ export default function MapCard3D({
         className={`absolute inset-0 transition-all duration-300 ${
           isBanned
             ? "bg-slate-950/90"
-            : isBanning
-              ? "bg-red-950/80"
-              : "bg-slate-950/60 group-hover:bg-red-950/60"
+            : isPicked
+              ? "bg-emerald-950/40 group-hover:bg-emerald-900/60"
+              : isBanning
+                ? "bg-red-950/80"
+                : "bg-slate-950/60 group-hover:bg-red-950/60"
         }`}
       />
 
@@ -110,12 +115,17 @@ export default function MapCard3D({
           className={`text-center text-sm font-black tracking-wider uppercase transition-all md:text-base ${
             isBanned
               ? "text-slate-600 line-through"
-              : isBanning
-                ? "text-red-400"
-                : "text-white group-hover:scale-110 group-hover:text-rose-400"
+              : isPicked
+                ? "text-emerald-400"
+                : isBanning
+                  ? "text-red-400"
+                  : "text-white group-hover:scale-110 group-hover:text-rose-400"
           }`}
         >
           {map.name}
+          {isPicked && (
+            <span className="ml-2 block text-[8px] italic">Picked</span>
+          )}
         </span>
       </div>
 
@@ -128,7 +138,13 @@ export default function MapCard3D({
 
       {/* Border Glow on Hover */}
       {!isBanned && !isBanning && (
-        <div className="absolute inset-0 rounded-xl border border-rose-500/0 transition-all duration-300 group-hover:border-rose-500/50 md:rounded-2xl" />
+        <div
+          className={`absolute inset-0 rounded-xl border transition-all duration-300 md:rounded-2xl ${
+            isPicked
+              ? "border-emerald-500/50"
+              : "border-rose-500/0 group-hover:border-rose-500/50"
+          }`}
+        />
       )}
     </button>
   );

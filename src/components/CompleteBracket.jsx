@@ -38,11 +38,12 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
     ? new Date(displayTime).toLocaleString([], dateOptions)
     : null;
 
-  return (
-    <Link
-      href={`/tournaments/${match.tournamentId}/match/${match.$id}`}
-      className={`group relative flex w-64 cursor-pointer flex-col gap-3 overflow-hidden rounded-xl border p-4 backdrop-blur-md transition-all hover:translate-x-1 hover:border-rose-500/30 ${getStatusColor(match.status)} ${isFinal ? "border-yellow-500/40 shadow-[0_0_20px_rgba(234,179,8,0.05)] ring-1 ring-yellow-500/10" : ""} `}
-    >
+  const isBye = match.round === 1 && (!match.teamA || !match.teamB);
+
+  const containerClasses = `group relative flex w-64 flex-col gap-3 overflow-hidden rounded-xl border p-4 backdrop-blur-md transition-all ${getStatusColor(match.status)} ${isFinal ? "border-yellow-500/40 shadow-[0_0_20px_rgba(234,179,8,0.05)] ring-1 ring-yellow-500/10" : ""} ${isBye ? "cursor-default opacity-80" : "cursor-pointer hover:translate-x-1 hover:border-rose-500/30"}`;
+
+  const content = (
+    <>
       {/* Team A */}
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex max-w-[170px] items-center gap-2">
@@ -50,15 +51,21 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
             className={`h-6 w-1 rounded-full transition-colors duration-500 ${isWinnerA ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-slate-800"}`}
           />
           <span
-            className={`truncate text-sm font-bold tracking-tight uppercase transition-colors ${isWinnerA ? "text-white" : "text-slate-400"}`}
+            className={`truncate text-sm font-bold tracking-tight uppercase transition-colors ${isWinnerA ? "text-white" : !match.teamA && match.round === 1 ? "text-slate-600/50 italic" : "text-slate-400"}`}
           >
-            {teamA?.teamName || teamA?.name || "TBD"}
+            {!match.teamA && match.round === 1
+              ? "BYE"
+              : teamA?.teamName || teamA?.name || "TBD"}
           </span>
         </div>
         <span
           className={`text-sm font-black italic ${isWinnerA ? "text-emerald-400" : "text-slate-600"}`}
         >
-          {match.scoreA !== null ? match.scoreA : "-"}
+          {match.scoreA !== null
+            ? match.scoreA
+            : match.round === 1 && !match.teamA
+              ? ""
+              : "-"}
         </span>
       </div>
 
@@ -76,19 +83,25 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
             className={`h-6 w-1 rounded-full transition-colors duration-500 ${isWinnerB ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-slate-800"}`}
           />
           <span
-            className={`truncate text-sm font-bold tracking-tight uppercase transition-colors ${isWinnerB ? "text-white" : "text-slate-400"}`}
+            className={`truncate text-sm font-bold tracking-tight uppercase transition-colors ${isWinnerB ? "text-white" : !match.teamB && match.round === 1 ? "text-slate-600/50 italic" : "text-slate-400"}`}
           >
-            {teamB?.teamName || teamB?.name || "TBD"}
+            {!match.teamB && match.round === 1
+              ? "BYE"
+              : teamB?.teamName || teamB?.name || "TBD"}
           </span>
         </div>
         <span
           className={`text-sm font-black italic ${isWinnerB ? "text-emerald-400" : "text-slate-600"}`}
         >
-          {match.scoreB !== null ? match.scoreB : "-"}
+          {match.scoreB !== null
+            ? match.scoreB
+            : match.round === 1 && !match.teamB
+              ? ""
+              : "-"}
         </span>
       </div>
 
-      {formattedTime && match.status !== "completed" && (
+      {formattedTime && match.status !== "completed" && !isBye && (
         <div className="mt-1 flex items-center gap-1.5 border-t border-white/5 pt-2 opacity-50 transition-opacity group-hover:opacity-100">
           <Clock className="h-3 w-3 text-rose-500" />
           <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
@@ -96,6 +109,19 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
           </span>
         </div>
       )}
+    </>
+  );
+
+  if (isBye) {
+    return <div className={containerClasses}>{content}</div>;
+  }
+
+  return (
+    <Link
+      href={`/tournaments/${match.tournamentId}/match/${match.$id}`}
+      className={containerClasses}
+    >
+      {content}
     </Link>
   );
 };

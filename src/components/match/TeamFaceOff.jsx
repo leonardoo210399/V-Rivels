@@ -144,6 +144,51 @@ export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
                     </span>
                   </div>
                 )}
+
+                {/* Series Breakdown */}
+                {match?.seriesScores &&
+                  JSON.parse(match.seriesScores).length > 0 && (
+                    <div className="mt-2 flex flex-col items-center gap-2">
+                      <p className="text-[8px] font-black tracking-widest text-slate-500 uppercase">
+                        Series Breakdown
+                      </p>
+                      <div className="flex gap-1.5">
+                        {JSON.parse(match.seriesScores).map((score, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex flex-col items-center rounded-lg border border-white/5 bg-slate-950/50 px-3 py-1.5 ${
+                              score.a === 0 && score.b === 0 ? "opacity-30" : ""
+                            }`}
+                          >
+                            <span className="mb-1 text-[7px] font-bold text-slate-600 uppercase">
+                              Map {idx + 1}
+                            </span>
+                            <div className="flex items-center gap-2 font-mono text-xs font-black">
+                              <span
+                                className={
+                                  score.a > score.b
+                                    ? "text-rose-500"
+                                    : "text-slate-400"
+                                }
+                              >
+                                {score.a}
+                              </span>
+                              <span className="text-slate-700">-</span>
+                              <span
+                                className={
+                                  score.b > score.a
+                                    ? "text-cyan-400"
+                                    : "text-slate-400"
+                                }
+                              >
+                                {score.b}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </div>
             ) : (
               <>

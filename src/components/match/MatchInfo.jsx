@@ -8,8 +8,9 @@ import { Info, Clock, Globe, Gamepad2, ScrollText } from "lucide-react";
  * @param {Object} props
  * @param {Object} props.tournament - Tournament object with game settings
  * @param {Object} props.match - Match object with specific match details
+ * @param {number} props.totalRounds - Total number of rounds in the tournament
  */
-export default function MatchInfo({ tournament, match }) {
+export default function MatchInfo({ tournament, match, totalRounds }) {
   if (!tournament || !match) {
     return null;
   }
@@ -17,18 +18,33 @@ export default function MatchInfo({ tournament, match }) {
   // Determine match format based on game type and round
   const getMatchFormat = () => {
     if (tournament.gameType === "Deathmatch") {
-      return "Free-for-All";
+      return "Solo Deathmatch";
     }
 
-    // For 5v5, determine BO format based on round
-    // Finals and semi-finals are typically BO3, earlier rounds are BO1
-    if (match.round === 1) {
-      return "Best of 3 (BO3)"; // Finals
-    } else if (match.round === 2) {
-      return "Best of 3 (BO3)"; // Semi-finals
-    } else {
-      return "Best of 1 (BO1)"; // Earlier rounds
+    // Individual match format override (highest priority)
+    if (match.matchFormat && match.matchFormat !== "Auto") {
+      if (match.matchFormat === "BO1") return "Best of 1 (BO1)";
+      if (match.matchFormat === "BO3") return "Best of 3 (BO3)";
+      if (match.matchFormat === "BO5") return "Best of 5 (BO5)";
     }
+
+    // Explicit format from tournament settings
+    if (tournament.matchFormat === "BO1") return "Best of 1 (BO1)";
+    if (tournament.matchFormat === "BO3") return "Best of 3 (BO3)";
+    if (tournament.matchFormat === "BO5") return "Best of 5 (BO5)";
+
+    // Default dynamic logic:
+    // Final round = Finals
+    // Final round - 1 = Semi-finals
+    const currentRound = match.round;
+    const isFinal = totalRounds > 0 && currentRound === totalRounds;
+    const isSemi = totalRounds > 1 && currentRound === totalRounds - 1;
+
+    if (isFinal || isSemi) {
+      return "Best of 3 (BO3)";
+    }
+
+    return "Best of 1 (BO1)";
   };
 
   // Get server region from tournament location
@@ -100,8 +116,9 @@ export default function MatchInfo({ tournament, match }) {
               </p>
               {tournament.gameType === "5v5" && (
                 <p className="mt-1 text-[10px] text-slate-600">
-                  {match.round === 1 || match.round === 2
-                    ? "First to win 2 maps advances"
+                  {getMatchFormat().includes("BO3") ||
+                  getMatchFormat().includes("BO5")
+                    ? "First to win multiple maps advances"
                     : "Winner advances to next round"}
                 </p>
               )}
