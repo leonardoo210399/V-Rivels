@@ -11,7 +11,7 @@ const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
  * @param {object} details - Extra info like prizePool, date, rules, etc.
  */
 export async function createTournamentChannel(tournamentName, details = {}) {
-  console.log(`[DiscordBot] Starting for: ${tournamentName}`);
+
   if (!BOT_TOKEN) {
     console.error("DISCORD_BOT_TOKEN is missing in .env");
     return { error: "Bot token missing" };
@@ -50,14 +50,14 @@ export async function createTournamentChannel(tournamentName, details = {}) {
     let role = null;
     try {
       const roleName = `Tournament: ${tournamentName.substring(0, 30)}`;
-      console.log(`[DiscordBot] Attempting to create role: ${roleName}`);
+
       role = await guild.roles.create({
         name: roleName,
         color: "#ff4757", // Rose color
         reason: `Tournament role for ${tournamentName}`,
         permissions: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
       });
-      console.log(`[DiscordBot] Role created successfully: ${role.id}`);
+
     } catch (roleErr) {
       console.error("[DiscordBot] Role Creation FAILED:", roleErr.message);
       // We continue because we want the channels to be created anyway, 
@@ -71,7 +71,7 @@ export async function createTournamentChannel(tournamentName, details = {}) {
       .replace(/^-+|-+$/g, "")
       .substring(0, 30);
 
-    console.log(`[DiscordBot] Creating text channel: ${sanitizedName}`);
+
     
     // Prepare permission overwrites
     const textOverwrites = [
@@ -103,7 +103,7 @@ export async function createTournamentChannel(tournamentName, details = {}) {
     let voiceChannelId = null;
     try {
       const voiceName = `🔊 Lobby: ${tournamentName}`;
-      console.log(`[DiscordBot] Creating private voice channel: ${voiceName}`);
+
       
       const voiceOverwrites = [
         {
@@ -130,7 +130,7 @@ export async function createTournamentChannel(tournamentName, details = {}) {
         permissionOverwrites: voiceOverwrites,
       });
       voiceChannelId = voiceChannel.id;
-      console.log(`[DiscordBot] Voice channel created successfully: ${voiceChannelId}`);
+
     } catch (voiceError) {
       console.error("[DiscordBot] Voice Channel Creation Failed:", voiceError.message);
     }
@@ -232,8 +232,8 @@ export async function assignTournamentRole(roleId, discordUserId) {
     const sanitizedUserId = String(discordUserId).replace(/[^0-9]/g, "");
     const sanitizedRoleId = String(roleId).replace(/[^0-9]/g, "");
 
-    console.log(`[DiscordBot] AssignRole Request - Original User: "${discordUserId}", Sanitized: "${sanitizedUserId}"`);
-    console.log(`[DiscordBot] AssignRole Request - Role: "${sanitizedRoleId}"`);
+
+
     
     if (!BOT_TOKEN) return { error: "Bot token missing" };
     if (!sanitizedRoleId || !sanitizedUserId) return { error: "Invalid RoleID or UserID format" };
@@ -256,20 +256,20 @@ export async function assignTournamentRole(roleId, discordUserId) {
           throw new Error(`Discord Server (Guild) not found. Check VRIVALS_SERVER_ID in discord.js`);
         }
         
-        console.log(`[DiscordBot] Connected to Guild: ${guild.name} (${guild.id})`);
+
 
         // Hierarchy Check
         const botMember = await guild.members.fetch(client.user.id);
         const botHighestRole = botMember.roles.highest;
         
-        console.log(`[DiscordBot] Bot Hierarchy: "${botHighestRole.name}" (Position: ${botHighestRole.position})`);
+
 
         // Fetch User
         let member = null;
         try {
-            console.log(`[DiscordBot] Fetching member: ${sanitizedUserId}...`);
+
             member = await guild.members.fetch(sanitizedUserId);
-            console.log(`[DiscordBot] Member found: ${member.user.tag}`);
+
         } catch (fetchErr) {
             console.error(`[DiscordBot] Member fetch failed for ${sanitizedUserId}: ${fetchErr.message}`);
             throw new Error(`Member not found in "${guild.name}". Ensure the user has joined the server.`);
@@ -283,7 +283,7 @@ export async function assignTournamentRole(roleId, discordUserId) {
               throw new Error("Tournament role no longer exists in your server.");
             }
 
-            console.log(`[DiscordBot] Found Role: "${role.name}" (ID: ${role.id}, Position: ${role.position})`);
+
 
             // Final Hierarchy Check
             if (botHighestRole.position <= role.position) {
@@ -293,7 +293,7 @@ export async function assignTournamentRole(roleId, discordUserId) {
 
             try {
                 await member.roles.add(sanitizedRoleId);
-                console.log(`[DiscordBot] SUCCESS: Assigned "${role.name}" to ${member.user.tag}`);
+
             } catch (addError) {
                 console.error(`[DiscordBot] FAILED to add role: ${addError.message}`);
                 throw new Error(`Discord Error: ${addError.message}`);
@@ -402,7 +402,7 @@ export async function deleteTournamentChannels(channelIds, roleId = null) {
                 const role = await guild.roles.fetch(roleId);
                 if (role) {
                     await role.delete(`Tournament closed.`);
-                    console.log(`[DiscordBot] Role deleted: ${roleId}`);
+
                 }
             } catch (roleError) {
                 console.warn(`Discord Role Delete Error for ${roleId}:`, roleError.message);
@@ -528,7 +528,7 @@ function getTeaser(description) {
  * Announce a new tournament to the configured Discord channel
  */
 export async function announceNewTournament(tournament) {
-  const channelId = process.env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID;
+  const channelId = process.env.DISCORD_TOURNAMENT_INFO_CHANNEL_ID;
   if (!BOT_TOKEN || !channelId) return { error: "Missing config" };
 
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -558,11 +558,14 @@ export async function announceNewTournament(tournament) {
         { name: "📅 DATE", value: `\`${formatDate(tournament.date)}\``, inline: true },
         { name: "🕐 TIME", value: `\`${formatTime(tournament.date)} IST\``, inline: true },
         { name: `${gameModeEmoji} MODE`, value: `\`${gameModeText}\``, inline: true },
+        
         { name: "💰 PRIZE POOL", value: `\`${prizeDisplay}\``, inline: true },
         { name: "🎟️ ENTRY FEE", value: `\`${entryFeeDisplay}\``, inline: true },
         { name: "👥 SLOTS", value: `\`${tournament.maxTeams || "∞"} ${tournament.gameType === "Deathmatch" ? "players" : "teams"}\``, inline: true },
-        { name: "🏅 PRIZES", value: `> 🥇 **1st:** ${tournament.firstPrize || "TBA"}\n> 🥈 **2nd:** ${tournament.secondPrize || "TBA"}`, inline: false },
-        { name: "🔗 QUICK LINKS", value: `**[🎯 Register Now](${tournamentUrl})** • **[📋 View Details](${tournamentUrl})** • **[🏆 All Tournaments](${siteUrl}/tournaments)**`, inline: false },
+        
+        { name: "🏅 PRIZES", value: `> 🥇 **1st:** ${tournament.firstPrize || "TBA"}\n> 🥈 **2nd:** ${tournament.secondPrize || "TBA"}\n`, inline: false },
+        
+        { name: "🔗 QUICK LINKS", value: `>>> **[🎯 Register Now](${tournamentUrl})**\n**[📋 View Details](${tournamentUrl})**\n**[🏆 All Tournaments](${siteUrl}/tournaments)**`, inline: false },
       ],
       image: { url: "https://cdn.discordapp.com/attachments/1000433438148534415/1463524436308131945/image.png" },
       thumbnail: { url: `${siteUrl}/vrivals_logo.png` },

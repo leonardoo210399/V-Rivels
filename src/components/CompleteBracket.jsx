@@ -102,13 +102,30 @@ const MatchCard = ({ match, teamA, teamB, isFinal }) => {
       </div>
 
       {formattedTime && match.status !== "completed" && !isBye && (
-        <div className="mt-1 flex items-center gap-1.5 border-t border-white/5 pt-2 opacity-50 transition-opacity group-hover:opacity-100">
-          <Clock className="h-3 w-3 text-rose-500" />
-          <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
-            Scheduled: {formattedTime}
-          </span>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2 opacity-50 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3 w-3 text-rose-500" />
+            <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
+              {formattedTime}
+            </span>
+          </div>
+          {match.matchFormat && (
+            <span className="rounded bg-slate-800 px-1 py-0.5 text-[8px] font-black tracking-widest text-emerald-400 uppercase">
+              {match.matchFormat === "Auto" ? "BO1" : match.matchFormat}
+            </span>
+          )}
         </div>
       )}
+      {!formattedTime &&
+        match.matchFormat &&
+        match.status !== "completed" &&
+        !isBye && (
+          <div className="mt-1 flex items-center justify-end border-t border-white/5 pt-2 opacity-50 transition-opacity group-hover:opacity-100">
+            <span className="rounded bg-slate-800 px-1 py-0.5 text-[8px] font-black tracking-widest text-emerald-400 uppercase">
+              {match.matchFormat === "Auto" ? "BO1" : match.matchFormat}
+            </span>
+          </div>
+        )}
     </>
   );
 
