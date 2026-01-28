@@ -835,31 +835,79 @@ export default function TournamentDetailPage({ params }) {
 
               {activeTab === "participants" && (
                 <div className="animate-in fade-in space-y-4 duration-500">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
                     {registrations.length > 0 ? (
-                      registrations.map((reg) => (
-                        <div
-                          key={reg.$id}
-                          className="rounded-xl border border-white/5 bg-slate-950/50 p-3 transition-all hover:border-rose-500/20 md:rounded-2xl md:p-4"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="rounded-lg bg-rose-500/10 p-1.5 md:p-2">
-                              <Users className="h-3.5 w-3.5 text-rose-500 md:h-4 md:w-4" />
+                      registrations.map((reg) => {
+                        const meta = parseMetadata(reg.metadata);
+                        const is5v5 = tournament.gameType === "5v5";
+                        const members = meta?.members || meta?.roster || [];
+
+                        return (
+                          <div
+                            key={reg.$id}
+                            className="group flex flex-col gap-4 rounded-xl border border-white/5 bg-slate-950/50 p-4 transition-all hover:border-rose-500/20 md:rounded-2xl md:p-5"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="rounded-lg bg-rose-500/10 p-2 md:p-2.5">
+                                <Users className="h-4 w-4 text-rose-500 md:h-5 md:w-5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-bold tracking-tight text-white uppercase md:text-base">
+                                  {reg.teamName ||
+                                    meta?.playerName ||
+                                    "Unknown"}
+                                </p>
+                                <p className="text-[9px] font-medium tracking-[0.1em] text-slate-500 uppercase md:text-[10px]">
+                                  Registered{" "}
+                                  {new Date(
+                                    reg.$createdAt,
+                                  ).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-bold tracking-tight text-white uppercase md:text-sm">
-                                {reg.teamName ||
-                                  parseMetadata(reg.metadata)?.playerName ||
-                                  "Unknown"}
-                              </p>
-                              <p className="text-[9px] font-medium tracking-[0.1em] text-slate-500 uppercase md:text-[10px]">
-                                Registered{" "}
-                                {new Date(reg.$createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
+
+                            {is5v5 && members.length > 0 && (
+                              <div className="mt-1 border-t border-white/5 pt-3">
+                                <p className="mb-2 text-[8px] font-black tracking-widest text-slate-600 uppercase">
+                                  Roster
+                                </p>
+                                <div className="grid grid-cols-1 gap-2 text-xs text-slate-400">
+                                  {members.map((m, idx) => {
+                                    let name = "";
+                                    let tag = "";
+
+                                    if (typeof m === "string") {
+                                      const parts = m.split("#");
+                                      name = parts[0];
+                                      tag = parts[1] || "";
+                                    } else {
+                                      name =
+                                        m.name || m.playerName || "Unknown";
+                                      tag = m.tag || "";
+                                    }
+
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="flex items-center justify-between rounded bg-slate-900/40 px-2 py-1.5"
+                                      >
+                                        <span className="font-bold text-slate-300">
+                                          {name}
+                                        </span>
+                                        {tag && (
+                                          <span className="font-mono text-[10px] text-slate-600">
+                                            #{tag}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="col-span-full py-8 text-center text-[10px] font-black tracking-widest text-slate-600 uppercase md:py-12">
                         No participants yet

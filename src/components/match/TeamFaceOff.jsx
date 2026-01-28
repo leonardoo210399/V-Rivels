@@ -202,9 +202,18 @@ export default function TeamFaceOff({ teamA, teamB, match, isCompleted }) {
                 </div>
 
                 <div className="flex flex-col items-center gap-2">
-                  <p className="text-center text-sm font-bold tracking-wider text-slate-400 uppercase">
-                    Match Pending
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-center text-sm font-bold tracking-wider text-slate-400 uppercase">
+                      Match Pending
+                    </p>
+                    {match?.matchFormat && (
+                      <span className="rounded-md border border-white/10 bg-slate-900 px-1.5 py-0.5 text-[8px] font-black tracking-widest text-emerald-400 uppercase">
+                        {match.matchFormat === "Auto"
+                          ? "BO1"
+                          : match.matchFormat}
+                      </span>
+                    )}
+                  </div>
                   {formattedTime && (
                     <div className="flex items-center gap-1.5 rounded-full border border-white/5 bg-slate-900/50 px-3 py-1 opacity-60">
                       <Clock className="h-3 w-3 text-rose-500" />

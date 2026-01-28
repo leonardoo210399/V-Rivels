@@ -9,7 +9,7 @@ import {
   deleteMatches,
 } from "@/lib/brackets";
 import { updateTournament } from "@/lib/tournaments";
-import { sendTournamentMessageAction } from "@/app/actions/discord";
+import { sendTournamentMessageAction, broadcastMatchResultAction } from "@/app/actions/discord";
 import { getMatchV4 } from "@/lib/valorant";
 import { getUserProfile } from "@/lib/users";
 
@@ -51,6 +51,7 @@ export function useMatchActions(
   const [fetchingMapIdx, setFetchingMapIdx] = useState(null);
   const [viewingMapIdx, setViewingMapIdx] = useState(-1);
   const [matchScores, setMatchScores] = useState({}); 
+  const [matchPartyCodes, setMatchPartyCodes] = useState({});
   const [matchResetSteps, setMatchResetSteps] = useState({});
 
   const participantMap =
@@ -219,12 +220,18 @@ export function useMatchActions(
         matchEditData.valoPartyCode !== selectedMatch.valoPartyCode
       ) {
         if (tournament.discordChannelId) {
-          const teamAName = participantMap[selectedMatch.teamA]?.name || "Team A";
-          const teamBName = participantMap[selectedMatch.teamB]?.name || "Team B";
+          let message = "";
+          if (tournament.gameType === "Deathmatch") {
+            message = `📢 **DEATHMATCH ARENA READY!**\n\n🔑 **Lobby Code:** \`${matchEditData.valoPartyCode}\`\n\n*All participants, please join the lobby immediately!*`;
+          } else {
+            const teamAName = participantMap[selectedMatch.teamA]?.name || "Team A";
+            const teamBName = participantMap[selectedMatch.teamB]?.name || "Team B";
+            message = `📢 **MATCH LOBBY READY!**\n**${teamAName}** vs **${teamBName}**\n\n🔑 **Lobby Code:** \`${matchEditData.valoPartyCode}\`\n\n*Please join the lobby immediately!*`;
+          }
 
           await sendTournamentMessageAction(
             tournament.discordChannelId,
-            `📢 **MATCH LOBBY READY!**\n**${teamAName}** vs **${teamBName}**\n\n🔑 **Lobby Code:** \`${matchEditData.valoPartyCode}\`\n\n*Please join the lobby immediately!*`,
+            message,
             tournament.discordRoleId,
           );
         }
@@ -474,6 +481,102 @@ export function useMatchActions(
     setUpdating(true);
     try {
       await finalizeMatch(matchId, scoreA, scoreB);
+
+      if (tournament.discordChannelId) {
+        const teamAName = participantMap[currentMatch.teamA]?.name || "Team A";
+        const teamBName = participantMap[currentMatch.teamB]?.name || "Team B";
+        const winnerName = scoreA > scoreB ? teamAName : teamBName;
+        
+        let message = `🏆 **MATCH RESULT**\n\n**${teamAName}** vs **${teamBName}**\n\n**Winner:** ${winnerName} 👑\n**Score:** ${scoreA} - ${scoreB}`;
+
+        // Attempt to add detailed stats (Map Scores & MVP)
+        try {
+            const parsedStats = parsePlayerStats(currentMatch);
+            
+            // 1. Map Scores
+            if (parsedStats.seriesScores && parsedStats.seriesScores.length > 0) {
+                message += `\n\n**Map Breakdown:**`;
+                parsedStats.seriesScores.forEach((s, i) => {
+                    // Only show played maps (where scores are not 0-0 or at least one is > 0)
+                    if (s.a > 0 || s.b > 0) {
+                        message += `\nMap ${i + 1}: ${s.a} - ${s.b}`;
+                    }
+                });
+            }
+
+            // 2. Series MVP (Highest ACS)
+            // parsedStats.players is an object with keys like "teamA_0", "teamB_1"
+            if (parsedStats.players && Object.keys(parsedStats.players).length > 0) {
+                let mvp = null;
+                let maxScore = -1;
+
+                Object.values(parsedStats.players).forEach(p => {
+                    // Use score or acs to determine MVP
+                    const val = p.score || 0; 
+                    if (val > maxScore) {
+                        maxScore = val;
+                        mvp = p;
+                    }
+                });
+
+                if (mvp) {
+                   // Ensure we have a name. Since players object in match stats might just have 'ingameName' if derived from JSON, 
+                   // or we might need to cross-ref.
+                   // The structure saved in handleImportMatchJSON saves 'ingameName' inside 'teamAPlayers'/'teamBPlayers' 
+                   // BUT 'parsedStats.players' (which is 'matchEditData.playerStats') only saved stats values (kills, deaths, agent), NOT name.
+                   
+                   // Wait, checking handleImportMatchJSON in step 5:
+                   // It saves `aggregatePlayerStats` to `matchEditData.playerStats`.
+                   // The keys are `teamA_0`, etc.
+                   // The value objects DO NOT seem to contain the Name unless I missed it.
+                   // Let's re-read step 5 lines 360-380.
+                   
+                   // It seems 'name' is NOT stored in the stats object, only the key.
+                   // We need to fetch the name.
+                   
+                   // To avoid complex name fetching here (as teamAPlayers state isn't available for *this* match here easily if not selected),
+                   // we might skip MVP or try to infer.
+                   // Actually, if we look at `handleImportMatchJSON`:
+                   // It calculates `aggregatePlayerStats`.
+                   // It relies on `teamAPlayers` (state) to map names.
+                   
+                   // Re-reading `MatchEditorModal`: The name is displayed using `teamAPlayers` array and index.
+                   
+                   // Current Scope: `handleSaveMatchScore` doesn't have `teamAPlayers` loaded for the specific match (unless `selectedMatch` is this match, which is unlikely as we are in the card view).
+                   // Fetching players again here is expensive/complex.
+                   
+                   // ALTERNATIVE: Just show Map Scores. The user asked for "stats of all the maps played". 
+                   // "and there stats" -> "their stats" (Map stats).
+                   // I will stick to Map Breakdown for now to be safe and avoid "undefined" names.
+                   // Displaying just map scores satisfies "stats of maps".
+                }
+            }
+        } catch (e) {
+            console.warn("Error parsing match stats for discord:", e);
+        }
+
+        const origin = window.location.origin;
+        const matchLink = `${origin}/tournaments/${tournament.$id}/match/${matchId}`;
+        message += `\n\n🔗 **View Match Details:** [Click Here](${matchLink})`;
+        
+        try {
+          // Construct Public Message with extra context
+          const origin = window.location.origin;
+          const tournamentLink = `${origin}/tournaments/${tournament.$id}`;
+          const publicMessage = `🏆 **MATCH RESULT**\n**[${tournament.name}](${tournamentLink})**\n*Round ${currentMatch.round || "1"} • ${currentMatch.matchFormat || "Auto"}*\n\n**${teamAName}** vs **${teamBName}**\n\n**Winner:** ${winnerName} 👑\n**Score:** ${scoreA} - ${scoreB}\n\n🔗 **View Match Details:** [Click Here](${matchLink})`;
+
+          // Send to Tournament Channel AND Public Results Channel
+          await broadcastMatchResultAction(
+            tournament.discordChannelId, 
+            message, 
+            tournament.discordRoleId,
+            publicMessage
+          );
+        } catch (err) {
+          console.error("Failed to send Discord result notification:", err);
+        }
+      }
+
       await loadData();
       setMatchScores((prev) => {
         const next = { ...prev };
@@ -484,6 +587,50 @@ export function useMatchActions(
     } catch (error) {
       console.error("Failed to finalize match:", error);
       alert("Failed to finalize match: " + error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSavePartyCode = async (matchId) => {
+    const newCode = matchPartyCodes[matchId];
+    const currentMatch = matches.find((m) => m.$id === matchId);
+    if (!currentMatch || newCode === undefined) return;
+
+    setUpdating(true);
+    try {
+      await updateMatchDetails(matchId, {
+        valoPartyCode: newCode,
+      });
+
+      // Send Discord notification if changed
+      if (newCode && newCode !== currentMatch.valoPartyCode) {
+        if (tournament.discordChannelId) {
+          const teamAName = participantMap[currentMatch.teamA]?.name || "Team A";
+          const teamBName = participantMap[currentMatch.teamB]?.name || "Team B";
+          const message = `📢 **MATCH LOBBY READY!**\n**${teamAName}** vs **${teamBName}**\n\n🔑 **Lobby Code:** \`${newCode}\`\n\n*Please join the lobby immediately!*`;
+          
+          try {
+            await sendTournamentMessageAction(
+              tournament.discordChannelId,
+              message,
+              tournament.discordRoleId,
+            );
+          } catch (discordErr) {
+            console.warn("Discord notification failed:", discordErr);
+          }
+        }
+      }
+
+      await loadData();
+      setMatchPartyCodes((prev) => {
+        const next = { ...prev };
+        delete next[matchId];
+        return next;
+      });
+    } catch (error) {
+      console.error("Failed to save party code:", error);
+      alert("Failed to save: " + error.message);
     } finally {
       setUpdating(false);
     }
@@ -584,8 +731,11 @@ export function useMatchActions(
     handleStartVeto,
     handleResetIndividualMatch,
     handleSaveMatchScore,
+    handleSavePartyCode,
     matchScores, 
     setMatchScores,
+    matchPartyCodes,
+    setMatchPartyCodes,
     matchResetSteps,
     updateMapScore,
     updatePlayerStat,

@@ -408,38 +408,49 @@ export default function SettingsTab({
             </button>
           </div>
 
-          <div className="flex items-center gap-4 border-t border-white/5 pt-8">
-            <button
-              type="submit"
-              disabled={isWorking}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-4 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-500 disabled:opacity-50"
-            >
-              {isWorking ? (
-                <LoaderIcon className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save Changes
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={isWorking}
-              className={`flex h-14 w-14 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-500 transition-all ${
-                deleteStep === 1
-                  ? "animate-pulse border-rose-500 bg-rose-500 text-white"
-                  : "hover:bg-rose-500 hover:text-white"
-              }`}
-            >
-              {deleteStep === 2 ? (
-                <LoaderIcon className="h-5 w-5 animate-spin" />
-              ) : (
-                <Trash2 className="h-5 w-5" />
-              )}
-            </button>
+          <div className="border-t border-white/5 pt-12">
+            <h4 className="mb-6 text-[10px] font-black tracking-[0.3em] text-rose-500 uppercase">
+              Danger Zone
+            </h4>
+            <div className="flex flex-col items-center gap-4 md:flex-row">
+              <button
+                type="submit"
+                disabled={isWorking}
+                className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 py-4 text-xs font-black tracking-[0.2em] text-white uppercase shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] hover:bg-emerald-500 active:scale-95 disabled:opacity-50 md:flex-1"
+              >
+                {isWorking ? (
+                  <LoaderIcon className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Changes
+              </button>
+
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={isWorking}
+                className={`flex w-full items-center justify-center gap-3 rounded-2xl px-6 py-4 text-xs font-black tracking-[0.2em] uppercase transition-all hover:scale-[1.02] active:scale-95 md:w-auto ${
+                  deleteStep === 1
+                    ? "animate-pulse bg-rose-600 text-white shadow-lg shadow-rose-900/40"
+                    : "border border-rose-500/20 bg-rose-500/5 text-rose-500 hover:bg-rose-500/10"
+                } disabled:opacity-50`}
+              >
+                {deleteStep === 2 ? (
+                  <LoaderIcon className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                <span className="whitespace-nowrap">
+                  {deleteStep === 1
+                    ? "Click to Confirm Deletion"
+                    : "Delete Tournament"}
+                </span>
+              </button>
+            </div>
           </div>
           {deleteError && (
-            <p className="text-center text-xs font-bold text-rose-500 uppercase">
+            <p className="mt-4 text-center text-[10px] font-bold tracking-widest text-rose-500 uppercase">
               {deleteError}
             </p>
           )}

@@ -7,7 +7,9 @@ import {
   Clock,
   Edit2,
   Map as MapIcon,
+  Check,
 } from "lucide-react";
+import { useState } from "react";
 
 export default function BracketView({
   tournament,
@@ -17,6 +19,7 @@ export default function BracketView({
   actions, // from useMatchActions
   tournamentActions, // from useTournamentActions
 }) {
+  const [selectedFormat, setSelectedFormat] = useState("BO1");
   const {
     handleUpdateMatchStatus,
     handleSaveMatchScore,
@@ -25,6 +28,8 @@ export default function BracketView({
     selectMatchForEdit,
     matchScores,
     setMatchScores,
+    matchPartyCodes,
+    setMatchPartyCodes,
     matchResetSteps,
     updating: matchUpdating,
   } = actions;
@@ -113,27 +118,76 @@ export default function BracketView({
               this tournament.
             </p>
 
-            <button
-              onClick={handleStartTournament}
-              disabled={
-                isWorking || registrations.length < 2 || startStep === 2
-              }
-              className={`mx-auto flex items-center gap-3 rounded-2xl px-8 py-4 text-xs font-black tracking-[0.2em] uppercase shadow-xl transition-all ${
-                startStep === 1
-                  ? "animate-pulse bg-amber-500 text-slate-950"
-                  : startStep === 2
-                    ? "bg-slate-900 text-slate-600"
-                    : "bg-emerald-600 text-white shadow-emerald-900/20 hover:bg-emerald-700"
-              } disabled:opacity-30`}
-            >
-              {startStep === 2 ? (
-                <LoaderIcon className="h-4 w-4 animate-spin" />
-              ) : (
-                <Swords className="h-4 w-4" />
+            <div className="mx-auto flex max-w-2xl flex-col items-center gap-6">
+              {startStep === 0 && (
+                <div className="flex flex-wrap justify-center gap-3">
+                  {[
+                    { id: "BO1", label: "All BO1" },
+                    { id: "BO3", label: "All BO3" },
+                    { id: "BO5", label: "All BO5" },
+                    { id: "BO1_FINAL_BO3", label: "BO1 + Final BO3" },
+                    { id: "BO1_FINAL_BO5", label: "BO1 + Final BO5" },
+                    {
+                      id: "BO1_SEMI_BO3_FINAL_BO5",
+                      label: "BO1 + Semis BO3 + Final BO5",
+                    },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setSelectedFormat(option.id)}
+                      className={`rounded-xl px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all ${
+                        selectedFormat === option.id
+                          ? "bg-rose-500 text-white shadow-lg ring-2 shadow-rose-900/40 ring-rose-500 ring-offset-2 ring-offset-slate-950"
+                          : "border border-white/5 bg-slate-900 text-slate-500 hover:bg-slate-800 hover:text-white"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               )}
-              {startStep === 0 && "Generate Bracket"}
-              {startStep === 1 && "Click to Confirm Start"}
-            </button>
+
+              <button
+                onClick={() => handleStartTournament(selectedFormat)}
+                disabled={
+                  isWorking || registrations.length < 2 || startStep === 2
+                }
+                className={`flex w-full items-center justify-center gap-3 rounded-2xl px-8 py-4 text-xs font-black tracking-[0.2em] uppercase shadow-xl transition-all md:w-auto ${
+                  startStep === 1
+                    ? "animate-pulse bg-amber-500 text-slate-950"
+                    : startStep === 2
+                      ? "bg-slate-900 text-slate-600"
+                      : "bg-emerald-600 text-white shadow-emerald-900/20 hover:bg-emerald-700"
+                } disabled:opacity-30`}
+              >
+                {startStep === 2 ? (
+                  <LoaderIcon className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Swords className="h-4 w-4" />
+                )}
+                {startStep === 0 && (
+                  <span>
+                    Generate{" "}
+                    <span className="text-emerald-200">
+                      {[
+                        { id: "BO1", label: "All BO1" },
+                        { id: "BO3", label: "All BO3" },
+                        { id: "BO5", label: "All BO5" },
+                        { id: "BO1_FINAL_BO3", label: "Mixed" },
+                        { id: "BO1_FINAL_BO5", label: "Mixed" },
+                        {
+                          id: "BO1_SEMI_BO3_FINAL_BO5",
+                          label: "Mixed",
+                        },
+                      ].find((o) => o.id === selectedFormat)?.label ||
+                        selectedFormat}
+                    </span>{" "}
+                    Bracket
+                  </span>
+                )}
+                {startStep === 1 && "Click to Confirm Start"}
+              </button>
+            </div>
 
             {startError && (
               <p className="mt-4 text-[10px] font-bold tracking-widest text-rose-500 uppercase">
@@ -225,11 +279,63 @@ export default function BracketView({
                                 </p>
                               ) : null;
                             })()}
+                            {match.matchFormat && (
+                              <p className="ml-2 rounded-md bg-slate-800 px-1.5 py-0.5 text-[8px] font-black tracking-widest text-emerald-400 uppercase">
+                                {match.matchFormat === "Auto"
+                                  ? "BO1"
+                                  : match.matchFormat}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-4">
+                        {/* Inline Party Code Input */}
+                        {is5v5 && match.teamA !== "LOBBY" && (
+                          <div className="mr-2 flex flex-col gap-1">
+                            <label className="ml-1 text-[8px] font-black tracking-widest text-rose-500/60 uppercase">
+                              Party Code
+                            </label>
+                            <div className="group/party relative">
+                              <input
+                                type="text"
+                                placeholder="PARTY-123"
+                                className="w-32 rounded-xl border border-white/10 bg-slate-950 px-3 py-2 font-mono text-[10px] font-bold text-white transition-all outline-none focus:border-rose-500"
+                                value={
+                                  matchPartyCodes[match.$id] ??
+                                  match.valoPartyCode ??
+                                  ""
+                                }
+                                onChange={(e) =>
+                                  setMatchPartyCodes({
+                                    ...matchPartyCodes,
+                                    [match.$id]: e.target.value.toUpperCase(),
+                                  })
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    actions.handleSavePartyCode(match.$id);
+                                  }
+                                }}
+                              />
+                              {matchPartyCodes[match.$id] !== undefined &&
+                                matchPartyCodes[match.$id] !==
+                                  match.valoPartyCode && (
+                                  <button
+                                    onClick={() =>
+                                      actions.handleSavePartyCode(match.$id)
+                                    }
+                                    disabled={isWorking}
+                                    className="animate-in zoom-in absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg duration-200"
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </button>
+                                )}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="mr-4 flex flex-col items-end gap-1">
                           <p className="text-[8px] font-black tracking-tighter text-slate-700 uppercase">
                             Current Status

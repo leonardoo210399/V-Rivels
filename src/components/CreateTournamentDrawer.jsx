@@ -150,7 +150,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
     description: "",
     gameType: "5v5",
     location: "Online",
-    checkInEnabled: false,
+    checkInEnabled: true,
     checkInStart: "",
     entryFee: "",
     firstPrize: "",
@@ -280,7 +280,6 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
               discordVoiceChannelId: botResult.voiceChannelId,
               discordRoleId: botResult.roleId,
               discordInviteUrl: botResult.inviteUrl,
-              valoPartyCode: null,
             });
           } catch (dbError) {
             console.error("Failed to save Discord ID to DB:", dbError);
@@ -318,7 +317,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         description: "",
         gameType: "5v5",
         location: "Online",
-        checkInEnabled: false,
+        checkInEnabled: true,
         checkInStart: "",
         entryFee: "",
         firstPrize: "",

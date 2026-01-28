@@ -9,8 +9,16 @@ import {
   Clock,
   Medal,
 } from "lucide-react";
-import { updateParticipantScore, finalizeDeathmatch } from "@/lib/brackets";
+import {
+  updateParticipantScore,
+  finalizeDeathmatch,
+  updateMatchDetails,
+} from "@/lib/brackets";
 import { updateTournament } from "@/lib/tournaments";
+import {
+  sendTournamentMessageAction,
+  broadcastMatchResultAction,
+} from "@/app/actions/discord";
 
 export default function DeathmatchView({
   tournament,
@@ -27,10 +35,15 @@ export default function DeathmatchView({
   const [editing, setEditing] = useState(false);
   const [bulkEditValues, setBulkEditValues] = useState({});
 
-  const {
-    handleUpdateMatchStatus,
-    selectMatchForEdit, // For editing lobby match details
-  } = actions;
+  const [editingArena, setEditingArena] = useState(false);
+  const [arenaForm, setArenaForm] = useState({
+    valoPartyCode: "",
+    scheduledTime: "",
+    notes: "",
+    matchFormat: "Auto",
+  });
+
+  const { handleUpdateMatchStatus } = actions;
 
   const {
     handleStartTournament,
@@ -43,6 +56,78 @@ export default function DeathmatchView({
     resetError,
     updating: tournamentUpdating,
   } = tournamentActions;
+
+  const formatToLocalISO = (isoString) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  };
+
+  const startEditingArena = () => {
+    const match = matches[0];
+    if (!match) return;
+
+    setArenaForm({
+      valoPartyCode: match.valoPartyCode || "",
+      scheduledTime: formatToLocalISO(match.scheduledTime || tournament.date),
+      notes: match.notes || "",
+      matchFormat: match.matchFormat || "Auto",
+    });
+    setEditingArena(true);
+  };
+
+  const handleSaveArenaDetails = async () => {
+    const match = matches[0];
+    if (!match) return;
+
+    setUpdating(true);
+    try {
+      const scheduledTimeISO = arenaForm.scheduledTime
+        ? new Date(arenaForm.scheduledTime).toISOString()
+        : null;
+
+      // Update Match Details (Lobby code, specific time)
+      await updateMatchDetails(match.$id, {
+        valoPartyCode: arenaForm.valoPartyCode,
+        scheduledTime: scheduledTimeISO,
+        notes: arenaForm.notes,
+        matchFormat: arenaForm.matchFormat,
+      });
+
+      // SYNC: Also update the Tournament date so public page reflects it
+      if (scheduledTimeISO) {
+        await updateTournament(tournament.$id, { date: scheduledTimeISO });
+        setTournament((prev) => ({ ...prev, date: scheduledTimeISO }));
+      }
+
+      // Send Discord notification if party code changed
+      if (
+        arenaForm.valoPartyCode &&
+        arenaForm.valoPartyCode !== match.valoPartyCode &&
+        tournament.discordChannelId
+      ) {
+        const message = `📢 **DEATHMATCH ARENA READY!**\n\n🔑 **Lobby Code:** \`${arenaForm.valoPartyCode}\`\n\n*All participants, please join the lobby immediately!*`;
+        try {
+          await sendTournamentMessageAction(
+            tournament.discordChannelId,
+            message,
+            tournament.discordRoleId,
+          );
+        } catch (discordErr) {
+          console.warn("Discord notification failed in DM view:", discordErr);
+        }
+      }
+
+      // Update local state by reloading
+      await loadData();
+      setEditingArena(false);
+    } catch (e) {
+      alert("Failed to save arena details: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const parseMetadata = (metadata) => {
     try {
@@ -83,6 +168,54 @@ export default function DeathmatchView({
 
         try {
           await finalizeDeathmatch(tournament.$id, winnerId, runnerUpId);
+
+          if (tournament.discordChannelId) {
+            const winnerReg = registrations.find((r) => r.$id === winnerId);
+            const winnerMeta = winnerReg
+              ? parseMetadata(winnerReg.metadata)
+              : {};
+            const winnerName =
+              winnerMeta?.playerName || winnerReg?.teamName || "Winner";
+            const winnerKills = sortedEntries[0][1].kills;
+            const winnerDeaths = sortedEntries[0][1].deaths;
+
+            let message = `🏆 **DEATHMATCH RESULT**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths`;
+
+            if (runnerUpId) {
+              const runnerReg = registrations.find((r) => r.$id === runnerUpId);
+              const runnerMeta = runnerReg
+                ? parseMetadata(runnerReg.metadata)
+                : {};
+              const runnerName =
+                runnerMeta?.playerName || runnerReg?.teamName || "Runner Up";
+
+              const runnerKills = sortedEntries[1]?.[1]?.kills || 0;
+              const runnerDeaths = sortedEntries[1]?.[1]?.deaths || 0;
+
+              message += `\n**Runner Up:** ${runnerName} 🥈\n**Stats:** ${runnerKills} Kills / ${runnerDeaths} Deaths`;
+            }
+
+            const origin = window.location.origin;
+            const tournamentLink = `${origin}/tournaments/${tournament.$id}`;
+            message += `\n\n🔗 **View Full Leaderboard:** [Click Here](${tournamentLink})`;
+
+            try {
+              // Construct Public Message with extra context
+              const publicMessage = `🏆 **DEATHMATCH RESULT**\n**[${tournament.name}](${tournamentLink})**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths${runnerUpId ? `\n**Runner Up:** ${runnerName} 🥈` : ""}\n\n🔗 **View Full Leaderboard:** [Click Here](${tournamentLink})`;
+
+              await broadcastMatchResultAction(
+                tournament.discordChannelId,
+                message,
+                tournament.discordRoleId,
+                publicMessage,
+              );
+            } catch (discordErr) {
+              console.warn(
+                "Discord notification failed for DM result:",
+                discordErr,
+              );
+            }
+          }
         } catch (err) {
           console.error(
             "Failed to update leaderboard stats for DM winner",
@@ -160,7 +293,7 @@ export default function DeathmatchView({
                 ) : (
                   <button
                     onClick={startBulkEdit}
-                    disabled={isWorking}
+                    disabled={isWorking || editingArena}
                     className="flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-3 text-[10px] font-black text-white uppercase shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-700"
                   >
                     <Edit2 className="h-4 w-4" />
@@ -169,7 +302,7 @@ export default function DeathmatchView({
                 )}
                 <button
                   onClick={handleResetBracket}
-                  disabled={isWorking || resetStep === 2}
+                  disabled={isWorking || resetStep === 2 || editingArena}
                   className={`flex items-center gap-2 rounded-xl px-4 py-3 text-[10px] font-black uppercase transition-all ${
                     resetStep === 1
                       ? "animate-pulse bg-amber-500 text-slate-950"
@@ -190,64 +323,193 @@ export default function DeathmatchView({
           </div>
         </div>
 
-        {/* Arena Status & Party Code */}
+        {/* Arena Status & Details (Always visible or in edit mode) */}
         {matches.length > 0 && matches[0] && (
-          <div className="mt-6 flex items-center gap-6 border-t border-white/5 pt-6">
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-3 w-3 rounded-full ${
-                  matches[0].status === "ongoing"
-                    ? "animate-pulse bg-emerald-500"
-                    : matches[0].status === "completed"
-                      ? "bg-slate-600"
-                      : "bg-amber-500"
-                }`}
-              />
-              <span className="text-xs font-black text-slate-400 uppercase">
-                {matches[0].status === "ongoing"
-                  ? "Live Now"
-                  : matches[0].status === "completed"
-                    ? "Finished"
-                    : "Scheduled"}
-              </span>
-              <select
-                value={matches[0].status}
-                onChange={(e) =>
-                  handleUpdateMatchStatus(matches[0].$id, e.target.value)
-                }
-                disabled={isWorking}
-                className="ml-2 cursor-pointer rounded-lg border border-white/10 bg-slate-950 px-3 py-1.5 text-[10px] font-black text-white uppercase outline-none hover:bg-slate-900"
-              >
-                <option value="scheduled">Scheduled</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-            <div className="h-4 w-px bg-white/10" />
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-600 uppercase">
-                Party Code:
-              </span>
-              <span className="font-mono text-sm font-black tracking-widest text-rose-500">
-                {matches[0].valoPartyCode || "—"}
-              </span>
-              <button
-                onClick={() => selectMatchForEdit(matches[0])}
-                className="ml-2 flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[9px] font-black text-emerald-400 uppercase transition-all hover:bg-emerald-500/20"
-              >
-                <Edit2 className="h-3 w-3" />
-                Edit
-              </button>
-            </div>
-            <div className="h-4 w-px bg-white/10" />
-            <div className="flex items-center gap-2" suppressHydrationWarning>
-              <Clock className="h-3.5 w-3.5 text-slate-600" />
-              <span className="text-xs text-slate-500">
-                {matches[0].scheduledTime
-                  ? new Date(matches[0].scheduledTime).toLocaleString()
-                  : new Date(tournament.date).toLocaleString()}
-              </span>
-            </div>
+          <div className="mt-8 border-t border-white/5 pt-8">
+            {editingArena ? (
+              <div className="animate-in fade-in slide-in-from-top-4 grid grid-cols-1 gap-6 duration-300 md:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <label className="ml-1 text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    Valorant Party Code
+                  </label>
+                  <input
+                    type="text"
+                    value={arenaForm.valoPartyCode}
+                    onChange={(e) =>
+                      setArenaForm({
+                        ...arenaForm,
+                        valoPartyCode: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-sm font-bold text-white outline-none focus:border-rose-500"
+                    placeholder="Enter code..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="ml-1 text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    Match Format
+                  </label>
+                  <select
+                    value={arenaForm.matchFormat}
+                    onChange={(e) =>
+                      setArenaForm({
+                        ...arenaForm,
+                        matchFormat: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-sm font-bold text-white outline-none focus:border-rose-500"
+                  >
+                    <option value="Auto">Auto (Default)</option>
+                    <option value="BO1">Best of 1</option>
+                    <option value="BO3">Best of 3</option>
+                    <option value="BO5">Best of 5</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="ml-1 text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    Scheduled Start
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={arenaForm.scheduledTime}
+                    onChange={(e) =>
+                      setArenaForm({
+                        ...arenaForm,
+                        scheduledTime: e.target.value,
+                      })
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-sm font-bold text-white [color-scheme:dark] outline-none focus:border-rose-500"
+                  />
+                </div>
+                <div className="space-y-2 lg:col-span-1">
+                  <label className="ml-1 text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    Actions
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveArenaDetails}
+                      disabled={updating}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-[10px] font-black text-white uppercase hover:bg-emerald-700"
+                    >
+                      {updating ? (
+                        <LoaderIcon className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingArena(false)}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-800 py-3 text-[10px] font-black text-slate-400 uppercase hover:bg-slate-700"
+                    >
+                      <X className="h-3 w-3" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2 lg:col-span-4">
+                  <label className="ml-1 text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    Admin Private Notes
+                  </label>
+                  <textarea
+                    value={arenaForm.notes}
+                    onChange={(e) =>
+                      setArenaForm({ ...arenaForm, notes: e.target.value })
+                    }
+                    className="min-h-[80px] w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white outline-none focus:border-rose-500"
+                    placeholder="Add internal notes for match admins..."
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-3 w-3 rounded-full ${
+                      matches[0].status === "ongoing"
+                        ? "animate-pulse bg-emerald-500"
+                        : matches[0].status === "completed"
+                          ? "bg-slate-600"
+                          : "bg-amber-500"
+                    }`}
+                  />
+                  <span className="text-xs font-black text-slate-400 uppercase">
+                    {matches[0].status === "ongoing"
+                      ? "Live Now"
+                      : matches[0].status === "completed"
+                        ? "Finished"
+                        : "Scheduled"}
+                  </span>
+                  <select
+                    value={matches[0].status}
+                    onChange={(e) =>
+                      handleUpdateMatchStatus(matches[0].$id, e.target.value)
+                    }
+                    disabled={isWorking}
+                    className="ml-2 cursor-pointer rounded-lg border border-white/10 bg-slate-950 px-3 py-1.5 text-[10px] font-black text-white uppercase outline-none hover:bg-slate-900"
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+
+                <div className="hidden h-6 w-px bg-white/10 md:block" />
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black tracking-widest text-slate-600 uppercase">
+                    Party Code:
+                  </span>
+                  <span className="font-mono text-sm font-black tracking-widest text-rose-500">
+                    {matches[0].valoPartyCode || "—"}
+                  </span>
+                  <button
+                    onClick={startEditingArena}
+                    className="ml-2 flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-[9px] font-black text-rose-400 uppercase transition-all hover:bg-rose-500/20"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                    Edit Arena
+                  </button>
+                </div>
+
+                <div className="hidden h-6 w-px bg-white/10 md:block" />
+
+                <div
+                  className="flex items-center gap-2"
+                  suppressHydrationWarning
+                >
+                  <Clock className="h-4 w-4 text-slate-600" />
+                  <span className="text-xs font-bold text-slate-400">
+                    {matches[0].scheduledTime
+                      ? new Date(matches[0].scheduledTime).toLocaleString([], {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
+                      : new Date(tournament.date).toLocaleString([], {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                  </span>
+                </div>
+
+                {matches[0].notes && (
+                  <>
+                    <div className="hidden h-6 w-px bg-white/10 lg:block" />
+                    <div
+                      className="flex max-w-xs items-center gap-2 truncate"
+                      title={matches[0].notes}
+                    >
+                      <span className="text-[10px] font-black text-slate-600 uppercase">
+                        Notes:
+                      </span>
+                      <span className="truncate text-[11px] text-slate-500 italic">
+                        {matches[0].notes}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

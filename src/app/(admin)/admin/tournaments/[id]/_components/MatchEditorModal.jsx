@@ -113,61 +113,65 @@ export default function MatchEditorModal({
 
         {/* Modal Content - Scrollable */}
         <div className="scrollbar-thin scrollbar-track-slate-900 scrollbar-thumb-rose-500/20 flex-1 space-y-6 overflow-y-auto p-6">
-          {/* Quick Import - Only for non-lobby matches */}
-          {match.teamA !== "LOBBY" && tournament.gameType === "5v5" && (
-            <div className="mb-8 rounded-3xl border border-white/5 bg-slate-950/40 p-6 backdrop-blur-sm">
-              <div className="relative">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
-                      <RotateCcw className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-black tracking-widest text-white uppercase">
-                        Quick Import (BO1 / Single Match)
-                      </span>
-                      <p className="text-[8px] font-bold text-slate-500 uppercase">
-                        For series use per-map inputs below
-                      </p>
+          {/* Quick Import - Only for non-lobby matches AND (BO1 or Auto) */}
+          {match.teamA !== "LOBBY" &&
+            tournament.gameType === "5v5" &&
+            (!matchEditData.matchFormat ||
+              matchEditData.matchFormat === "Auto" ||
+              matchEditData.matchFormat === "BO1") && (
+              <div className="mb-8 rounded-3xl border border-white/5 bg-slate-950/40 p-6 backdrop-blur-sm">
+                <div className="relative">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
+                        <RotateCcw className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black tracking-widest text-white uppercase">
+                          Quick Import (BO1 / Single Match)
+                        </span>
+                        <p className="text-[8px] font-bold text-slate-500 uppercase">
+                          For series use per-map inputs below
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/5 bg-slate-900/50 p-1.5 focus-within:border-rose-500/30">
-                    <select
-                      value={valRegion}
-                      onChange={(e) => setValRegion(e.target.value)}
-                      className="h-9 w-24 rounded-lg bg-slate-950 px-2 text-[10px] font-black text-rose-500 outline-none hover:bg-slate-900"
+                  <div className="flex gap-3">
+                    <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/5 bg-slate-900/50 p-1.5 focus-within:border-rose-500/30">
+                      <select
+                        value={valRegion}
+                        onChange={(e) => setValRegion(e.target.value)}
+                        className="h-9 w-24 rounded-lg bg-slate-950 px-2 text-[10px] font-black text-rose-500 outline-none hover:bg-slate-900"
+                      >
+                        <option value="ap">ASIA (AP)</option>
+                        <option value="eu">EUROPE (EU)</option>
+                        <option value="na">N.AMERICA (NA)</option>
+                        <option value="kr">KOREA (KR)</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={valMatchId}
+                        onChange={(e) => setValMatchId(e.target.value)}
+                        placeholder="Match ID..."
+                        className="h-9 flex-1 bg-transparent px-2 text-xs font-bold text-white outline-none"
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleImportMatchJSON(null)}
+                      disabled={!valMatchId.trim() || isFetchingVal}
+                      className="flex h-10 w-32 items-center justify-center gap-2 rounded-xl bg-rose-600 text-[10px] font-black text-white uppercase transition-all hover:bg-rose-500 disabled:opacity-30"
                     >
-                      <option value="ap">ASIA (AP)</option>
-                      <option value="eu">EUROPE (EU)</option>
-                      <option value="na">N.AMERICA (NA)</option>
-                      <option value="kr">KOREA (KR)</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={valMatchId}
-                      onChange={(e) => setValMatchId(e.target.value)}
-                      placeholder="Match ID..."
-                      className="h-9 flex-1 bg-transparent px-2 text-xs font-bold text-white outline-none"
-                    />
+                      {isFetchingVal ? (
+                        <LoaderIcon className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Zap className="h-3 w-3" />
+                      )}
+                      <span>Fetch All</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleImportMatchJSON(null)}
-                    disabled={!valMatchId.trim() || isFetchingVal}
-                    className="flex h-10 w-32 items-center justify-center gap-2 rounded-xl bg-rose-600 text-[10px] font-black text-white uppercase transition-all hover:bg-rose-500 disabled:opacity-30"
-                  >
-                    {isFetchingVal ? (
-                      <LoaderIcon className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Zap className="h-3 w-3" />
-                    )}
-                    <span>Fetch All</span>
-                  </button>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           <div
             className={`grid grid-cols-1 gap-8 ${match.teamA === "LOBBY" ? "mx-auto max-w-xl" : "lg:grid-cols-12"}`}
@@ -176,26 +180,6 @@ export default function MatchEditorModal({
             <div
               className={`space-y-6 ${match.teamA === "LOBBY" ? "" : "lg:col-span-5"}`}
             >
-              {/* Valorant Party Code */}
-              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-6 shadow-xl shadow-rose-900/5">
-                <label className="mb-3 flex items-center gap-2 text-[10px] font-black tracking-widest text-rose-500 uppercase">
-                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
-                  Valorant Party Code
-                </label>
-                <input
-                  type="text"
-                  value={matchEditData.valoPartyCode}
-                  onChange={(e) =>
-                    setMatchEditData({
-                      ...matchEditData,
-                      valoPartyCode: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. PARTY-123"
-                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-5 py-4 font-mono text-xl font-black tracking-widest text-white transition-all outline-none focus:border-rose-500"
-                />
-              </div>
-
               {/* Manual Score Entry */}
               {match.teamA !== "LOBBY" && (
                 <div className="overflow-hidden rounded-2xl border border-white/5 bg-slate-950/50">
@@ -321,23 +305,35 @@ export default function MatchEditorModal({
                         </span>
                       </div>
 
-                      <div className="flex gap-1 rounded-lg bg-slate-950 p-1">
-                        <button
-                          onClick={() => setViewingMapIdx(-1)}
-                          className={`rounded px-3 py-1 text-[10px] font-bold transition-all ${viewingMapIdx === -1 ? "bg-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
-                        >
-                          Series
-                        </button>
-                        {Array.from({ length: 3 }).map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setViewingMapIdx(i)}
-                            className={`rounded px-3 py-1 text-[10px] font-bold transition-all ${viewingMapIdx === i ? "bg-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
-                          >
-                            Map {i + 1}
-                          </button>
-                        ))}
-                      </div>
+                      {(() => {
+                        const fmt = matchEditData.matchFormat || "Auto";
+                        let mapCount = 1;
+                        if (fmt === "BO3") mapCount = 3;
+                        if (fmt === "BO5") mapCount = 5;
+
+                        if (mapCount > 1) {
+                          return (
+                            <div className="flex gap-1 rounded-lg bg-slate-950 p-1">
+                              <button
+                                onClick={() => setViewingMapIdx(-1)}
+                                className={`rounded px-3 py-1 text-[10px] font-bold transition-all ${viewingMapIdx === -1 ? "bg-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                              >
+                                Series
+                              </button>
+                              {Array.from({ length: mapCount }).map((_, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => setViewingMapIdx(i)}
+                                  className={`rounded px-3 py-1 text-[10px] font-bold transition-all ${viewingMapIdx === i ? "bg-rose-500 text-white" : "text-slate-500 hover:text-white"}`}
+                                >
+                                  Map {i + 1}
+                                </button>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null; // BO1 or Auto -> No tabs needed (viewingMapIdx stays -1 default, or handled by single import)
+                      })()}
                     </div>
 
                     {/* Per Map Fetches */}

@@ -128,6 +128,11 @@ export default function ParticipantsTab({
                       Registered{" "}
                       {new Date(reg.registeredAt).toLocaleDateString()}
                     </p>
+                    {reg.checkedIn && (
+                      <div className="mt-2 flex w-fit items-center gap-1.5 rounded-full border border-teal-500/20 bg-teal-500/10 px-2 py-0.5 text-[9px] font-black tracking-widest text-teal-400 uppercase">
+                        <Check className="h-2.5 w-2.5" /> Checked In
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -233,24 +238,53 @@ export default function ParticipantsTab({
                     </h4>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-                    {meta?.members?.map((m, i) => (
-                      <div
-                        key={i}
-                        className="flex flex-col rounded-xl border border-white/5 bg-slate-900/50 p-3 transition-all hover:border-rose-500/30"
-                      >
-                        <span className="mb-1 text-[10px] font-bold text-slate-600 uppercase">
-                          Member {i + 1}
-                        </span>
-                        <span className="truncate text-xs font-bold text-white">
-                          {m.name}
-                        </span>
-                        <span className="font-mono text-[10px] text-rose-500 italic">
-                          #{m.tag}
-                        </span>
+                  {(() => {
+                    const members = meta?.members || meta?.roster || [];
+                    if (!members || members.length === 0) {
+                      return (
+                        <p className="text-[10px] text-slate-500 italic">
+                          No roster information available for this team.
+                        </p>
+                      );
+                    }
+
+                    return (
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+                        {members.map((m, i) => {
+                          let name = "";
+                          let tag = "";
+
+                          if (typeof m === "string") {
+                            const parts = m.split("#");
+                            name = parts[0];
+                            tag = parts[1] || "";
+                          } else {
+                            name = m.name || m.playerName || "Unknown";
+                            tag = m.tag || "";
+                          }
+
+                          return (
+                            <div
+                              key={i}
+                              className="flex flex-col rounded-xl border border-white/5 bg-slate-900/50 p-3 transition-all hover:border-rose-500/30"
+                            >
+                              <span className="mb-1 text-[10px] font-bold text-slate-600 uppercase">
+                                Member {i + 1}
+                              </span>
+                              <span className="truncate text-xs font-bold text-white">
+                                {name}
+                              </span>
+                              {tag && (
+                                <span className="font-mono text-[10px] text-rose-500 italic">
+                                  #{tag}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

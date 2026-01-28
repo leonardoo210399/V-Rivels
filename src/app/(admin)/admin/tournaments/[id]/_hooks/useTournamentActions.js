@@ -4,7 +4,10 @@ import {
   updateTournament,
   deleteTournament,
 } from "@/lib/tournaments";
-import { deleteTournamentChannelsAction } from "@/app/actions/discord";
+import { 
+  deleteTournamentChannelsAction, 
+  sendTournamentMessageAction 
+} from "@/app/actions/discord";
 import { createBracket, deleteMatches, revertTournamentStats } from "@/lib/brackets";
 
 export function useTournamentActions(id, tournament, setTournament, registrations, matches, loadData) {
@@ -22,7 +25,7 @@ export function useTournamentActions(id, tournament, setTournament, registration
   // DM Party Code is often used when starting the tournament
   const [dmPartyCode, setDmPartyCode] = useState("");
 
-  const handleStartTournament = async () => {
+  const handleStartTournament = async (matchFormat = "BO1") => {
     if (tournament.bracketGenerated || matches.length > 0) {
       alert("Bracket already exists. Reset it first if you want to regenerate.");
       return;
@@ -45,8 +48,29 @@ export function useTournamentActions(id, tournament, setTournament, registration
         tournament.gameType,
         tournament.date,
         dmPartyCode,
+        matchFormat,
       );
       await updateTournament(id, { bracketGenerated: true, status: "ongoing" });
+
+      // Send Discord notification if party code exists
+      if (dmPartyCode && tournament.discordChannelId) {
+        let message = "";
+        if (tournament.gameType === "Deathmatch") {
+          message = `📢 **DEATHMATCH ARENA READY!**\n\n🔑 **Lobby Code:** \`${dmPartyCode}\`\n\n*All participants, please join the lobby immediately!*`;
+        } else {
+          message = `📢 **MATCH LOBBY READY!**\n\n🔑 **Lobby Code:** \`${dmPartyCode}\`\n\n*Please join the lobby immediately!*`;
+        }
+        
+        try {
+          await sendTournamentMessageAction(
+            tournament.discordChannelId,
+            message,
+            tournament.discordRoleId
+          );
+        } catch (discordErr) {
+          console.warn("Discord notification failed:", discordErr);
+        }
+      }
 
       await loadData();
       setStartStep(0);

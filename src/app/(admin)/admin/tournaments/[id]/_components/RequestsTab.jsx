@@ -6,7 +6,10 @@ import {
 } from "@/lib/tournaments";
 import { updatePaymentRequestStatus } from "@/lib/payment_requests";
 import { getUserProfile } from "@/lib/users";
-import { assignTournamentRoleAction } from "@/app/actions/discord";
+import {
+  assignTournamentRoleAction,
+  announceRegistrationApprovedAction,
+} from "@/app/actions/discord";
 import RejectionModal from "./RejectionModal";
 
 export default function RequestsTab({
@@ -99,6 +102,22 @@ export default function RequestsTab({
         }
       } catch (discordErr) {
         console.warn("Failed to assign Discord role:", discordErr);
+      }
+
+      // 4. Announce Registration
+      const meta = parseMetadata(request.metadata);
+      const registrantName = is5v5
+        ? request.teamName
+        : meta?.playerName || request.teamName;
+
+      try {
+        await announceRegistrationApprovedAction(
+          tournament.name,
+          registrantName,
+          request.transactionId,
+        );
+      } catch (announceErr) {
+        console.warn("Failed to announce registration:", announceErr);
       }
 
       await loadData(false);
