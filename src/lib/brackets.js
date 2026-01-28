@@ -18,7 +18,7 @@ export async function getMatches(tournamentId) {
     }
 }
 
-export async function createBracket(tournamentId, registrations, gameType = "5v5", tournamentDate = null) {
+export async function createBracket(tournamentId, registrations, gameType = "5v5", tournamentDate = null, initialValoPartyCode = null) {
     if (!registrations || registrations.length < 2) {
         throw new Error("Need at least 2 participants to start.");
     }
@@ -34,6 +34,7 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
                 matchIndex: 0,
                 teamA: "LOBBY",
                 status: "scheduled",
+                valoPartyCode: initialValoPartyCode,
             }
         );
     }
@@ -42,13 +43,10 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
     const matches = generateSingleEliminationBracket(registrations);
     
     // 2. Save each match to the database
-    // We do this sequentially or carefully because some matches might depend on others
-    // though for initial creation, all data is in the 'matches' array from generateSingleEliminationBracket
     const promises = matches.map(match => {
         let scheduledTime = null;
         if (tournamentDate && gameType === "5v5") {
             const startDate = new Date(tournamentDate);
-            // Calculation matching Admin Panel: (Round-1)*4 hours + MatchIndex
             const offset = (match.round - 1) * 4 + match.matchIndex;
             startDate.setHours(startDate.getHours() + offset);
             scheduledTime = startDate.toISOString();
@@ -73,6 +71,8 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
             }
         );
     });
+
+
 
     await Promise.all(promises);
     return matches;
@@ -572,6 +572,9 @@ export async function updateMatchDetails(matchId, details) {
     }
     if (details.notes !== undefined) {
         updateData.notes = details.notes;
+    }
+    if (details.valoPartyCode !== undefined) {
+        updateData.valoPartyCode = details.valoPartyCode;
     }
     
     // Consolidate all player/match stats into a single playerStats JSON field

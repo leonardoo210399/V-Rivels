@@ -244,6 +244,9 @@ export default function TournamentDetailPage({ params }) {
     loadData();
   }, [id, user]);
 
+  const lobbyMatch = matches?.find((m) => m.teamA === "LOBBY");
+  const lobbyCode = lobbyMatch?.valoPartyCode;
+
   // Check Discord membership function (can be called manually)
   const refreshStatus = async () => {
     if (!user) return;
@@ -1133,10 +1136,12 @@ export default function TournamentDetailPage({ params }) {
                   )}
 
                   {/* Valorant Party Code */}
-                  {tournament.valoPartyCode && (isRegistered || isAdmin) && (
+                  {lobbyCode && (isRegistered || isAdmin) && (
                     <div className="flex flex-col gap-2">
                       <p className="mt-4 text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
-                        Valorant Party Code
+                        {tournament.gameType === "5v5"
+                          ? "Tournament Main Lobby Code"
+                          : "Valorant Party Code"}
                         {isAdmin && !isRegistered && (
                           <span className="ml-2 text-rose-500">
                             (ADMIN PREVIEW)
@@ -1147,14 +1152,12 @@ export default function TournamentDetailPage({ params }) {
                         <div className="flex items-center gap-2 overflow-hidden">
                           <div className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" />
                           <p className="truncate font-mono text-sm font-black text-white md:text-base">
-                            {tournament.valoPartyCode}
+                            {lobbyCode}
                           </p>
                         </div>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(
-                              tournament.valoPartyCode,
-                            );
+                            navigator.clipboard.writeText(lobbyCode);
                             alert("Party code copied to clipboard!");
                           }}
                           className="shrink-0 rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-[9px] font-black tracking-widest text-slate-300 uppercase transition-all hover:bg-white/10 hover:text-white"
@@ -1163,7 +1166,9 @@ export default function TournamentDetailPage({ params }) {
                         </button>
                       </div>
                       <p className="px-1 text-[8px] font-bold text-slate-500 uppercase md:text-[9px]">
-                        Use this and join in Valorant
+                        {tournament.gameType === "5v5"
+                          ? "Use this for the general lobby. Match-specific codes are in the Match Lobby."
+                          : "Use this and join in Valorant"}
                       </p>
                     </div>
                   )}

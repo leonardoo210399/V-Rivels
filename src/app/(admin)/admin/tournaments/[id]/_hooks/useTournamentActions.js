@@ -1,0 +1,229 @@
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  updateTournament,
+  deleteTournament,
+} from "@/lib/tournaments";
+import { deleteTournamentChannelsAction } from "@/app/actions/discord";
+import { createBracket, deleteMatches, revertTournamentStats } from "@/lib/brackets";
+
+export function useTournamentActions(id, tournament, setTournament, registrations, matches, loadData) {
+  const router = useRouter();
+  const [updating, setUpdating] = useState(false);
+  const [startStep, setStartStep] = useState(0);
+  const [startError, setStartError] = useState(null);
+  const [resetStep, setResetStep] = useState(0);
+  const [resetError, setResetError] = useState(null);
+  const [deleteStep, setDeleteStep] = useState(0);
+  const [deleteError, setDeleteError] = useState(null);
+  const [discordDeleteStep, setDiscordDeleteStep] = useState(0);
+  const [discordDeleteError, setDiscordDeleteError] = useState(null);
+  
+  // DM Party Code is often used when starting the tournament
+  const [dmPartyCode, setDmPartyCode] = useState("");
+
+  const handleStartTournament = async () => {
+    if (tournament.bracketGenerated || matches.length > 0) {
+      alert("Bracket already exists. Reset it first if you want to regenerate.");
+      return;
+    }
+
+    if (startStep === 0) {
+      setStartStep(1);
+      setTimeout(() => setStartStep(0), 3000);
+      return;
+    }
+
+    setStartStep(2);
+    setStartError(null);
+    setUpdating(true);
+
+    try {
+      await createBracket(
+        id,
+        registrations,
+        tournament.gameType,
+        tournament.date,
+        dmPartyCode,
+      );
+      await updateTournament(id, { bracketGenerated: true, status: "ongoing" });
+
+      await loadData();
+      setStartStep(0);
+    } catch (e) {
+      console.error("Start failed", e);
+      setStartError(e.message);
+      setStartStep(0);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleResetBracket = async () => {
+    if (resetStep === 0) {
+      setResetStep(1);
+      setTimeout(() => setResetStep(0), 3000); 
+      return;
+    }
+
+    setResetStep(2);
+    setResetError(null);
+    setUpdating(true);
+
+    try {
+      await revertTournamentStats(id);
+      await deleteMatches(id);
+      await updateTournament(id, { bracketGenerated: false, status: "scheduled" });
+      await loadData();
+      setResetStep(0);
+    } catch (e) {
+      console.error("Reset failed", e);
+      setResetError(e.message);
+      setResetStep(0);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDelete = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (deleteStep === 0) {
+      setDeleteStep(1);
+      setTimeout(() => setDeleteStep(0), 3000);
+      return;
+    }
+
+    setDeleteStep(2);
+    setDeleteError(null);
+    setUpdating(true);
+
+    // Delete Discord Channels if they exist
+    if (tournament.discordChannelId || tournament.discordVoiceChannelId) {
+      try {
+        const result = await deleteTournamentChannelsAction(
+          [tournament.discordChannelId, tournament.discordVoiceChannelId],
+          tournament.discordRoleId,
+        );
+        if (result && result.error) {
+          const proceed = confirm(
+            `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway?`
+          );
+          if (!proceed) {
+            setDeleteStep(0);
+            setUpdating(false);
+            return;
+          }
+        }
+      } catch (discordErr) {
+        console.warn("Failed to delete discord channels:", discordErr);
+      }
+    }
+
+    try {
+      await deleteTournament(id);
+      router.replace("/admin/tournaments");
+    } catch (error) {
+      setDeleteError(error.message);
+      setDeleteStep(0);
+      setUpdating(false);
+    }
+  };
+
+  const handleManualDiscordDelete = async () => {
+    if (!tournament.discordChannelId && !tournament.discordVoiceChannelId) {
+      alert("No Discord channel IDs found for this tournament.");
+      return;
+    }
+
+    if (discordDeleteStep === 0) {
+      setDiscordDeleteStep(1);
+      setTimeout(() => setDiscordDeleteStep(0), 3000);
+      return;
+    }
+
+    setDiscordDeleteStep(2);
+    setDiscordDeleteError(null);
+    setUpdating(true);
+
+    try {
+      const result = await deleteTournamentChannelsAction(
+        [tournament.discordChannelId, tournament.discordVoiceChannelId],
+        tournament.discordRoleId,
+      );
+      if (result && result.error) {
+        setDiscordDeleteError(result.error);
+        setDiscordDeleteStep(0);
+      } else {
+        const updateData = {};
+        if (tournament.discordChannelId) updateData.discordChannelId = null;
+        if (tournament.discordVoiceChannelId) updateData.discordVoiceChannelId = null;
+        if (tournament.discordRoleId) updateData.discordRoleId = null;
+
+        await updateTournament(id, updateData);
+        setTournament((prev) => ({
+          ...prev,
+          discordChannelId: null,
+          discordVoiceChannelId: null,
+          discordRoleId: null,
+        }));
+        alert("Discord Channels Deleted successfully!");
+        setDiscordDeleteStep(0);
+      }
+    } catch (error) {
+      setDiscordDeleteError(error.message);
+      setDiscordDeleteStep(0);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSaveSettings = async (editFormData) => {
+    setUpdating(true);
+    try {
+      const dataToUpdate = {
+        ...editFormData,
+        date: editFormData.date ? new Date(editFormData.date).toISOString() : null,
+        checkInStart: editFormData.checkInStart ? new Date(editFormData.checkInStart).toISOString() : null,
+        additionalPrizes: JSON.stringify(editFormData.additionalPrizes),
+      };
+
+      if (dataToUpdate.checkInStart !== tournament.checkInStart) {
+        dataToUpdate.checkInAlertSent = false;
+      }
+
+      await updateTournament(id, dataToUpdate);
+
+      setTournament((prev) => ({ ...prev, ...dataToUpdate }));
+      alert("Tournament updated successfully!");
+    } catch (e) {
+      alert("Failed to update tournament: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return {
+    updating,
+    setUpdating,
+    startStep,
+    startError,
+    resetStep,
+    resetError,
+    deleteStep,
+    deleteError,
+    discordDeleteStep,
+    discordDeleteError,
+    dmPartyCode,
+    setDmPartyCode,
+    
+    handleStartTournament,
+    handleResetBracket,
+    handleDelete,
+    handleManualDiscordDelete,
+    handleSaveSettings,
+  };
+}

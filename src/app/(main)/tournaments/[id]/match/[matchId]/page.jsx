@@ -22,6 +22,7 @@ import {
   XCircle,
   Zap,
   Users,
+  Gamepad2,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 import { mapImages } from "@/assets/images/maps";
@@ -198,6 +199,10 @@ export default function MatchLobbyPage({ params }) {
       setLoading(false);
     }
   };
+
+  const isParticipant =
+    user &&
+    (teamA?.userId === user.$id || teamB?.userId === user.$id || isAdmin);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -519,6 +524,46 @@ export default function MatchLobbyPage({ params }) {
                 />
               </div>
             </div>
+
+            {/* Valorant Party Code */}
+            {match.valoPartyCode && isParticipant && (
+              <div className="mx-auto w-full max-w-2xl">
+                <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 backdrop-blur-xl md:rounded-3xl md:p-6">
+                  <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-emerald-500/10 blur-2xl" />
+                  <div className="relative flex flex-col items-center justify-between gap-4 sm:flex-row">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                        <Gamepad2 className="h-6 w-6 text-emerald-500" />
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-black tracking-[0.2em] text-emerald-500 uppercase">
+                          Valorant Party Code
+                        </h4>
+                        <p className="font-mono text-xl font-black tracking-wider text-white md:text-2xl">
+                          {match.valoPartyCode}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(match.valoPartyCode);
+                        showToast("Party code copied!", "success");
+                      }}
+                      className="group flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-[10px] font-black tracking-widest text-white uppercase transition-all hover:bg-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                    >
+                      <Zap className="h-3.5 w-3.5 fill-current transition-transform group-hover:scale-125" />
+                      Copy Code
+                    </button>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2 border-t border-white/5 pt-4">
+                    <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                    <p className="text-[9px] font-bold text-slate-500 uppercase">
+                      Lobby is active • Join via Valorant "Open Party"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Map Veto & Selection Stage */}
             <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/60 p-1 shadow-2xl backdrop-blur-xl">
