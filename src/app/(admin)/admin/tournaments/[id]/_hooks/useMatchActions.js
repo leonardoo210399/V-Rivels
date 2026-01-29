@@ -7,6 +7,7 @@ import {
   finalizeMatch,
   parsePlayerStats,
   deleteMatches,
+  updateMatchVeto,
 } from "@/lib/brackets";
 import { updateTournament } from "@/lib/tournaments";
 import { sendTournamentMessageAction, broadcastMatchResultAction } from "@/app/actions/discord";
@@ -246,6 +247,30 @@ export function useMatchActions(
     } finally {
       setSavingMatch(false);
       setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
+
+  const handleFinalizeMatch = async () => {
+    if (!selectedMatch) return;
+    // Basic validation
+    if (matchEditData.scoreA === matchEditData.scoreB) {
+      alert("Cannot finalize a draw. Please ensure there is a winner.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to finalize this match? This will advance the winner to the next round and award stats.")) return;
+
+    setSavingMatch(true);
+    try {
+        await finalizeMatch(selectedMatch.$id, parseInt(matchEditData.scoreA), parseInt(matchEditData.scoreB));
+        await loadData(); // Reload to see bracket update
+        alert("Match finalized and winner advanced!");
+        closeMatchEditor();
+    } catch (e) {
+        console.error("Finalize Error:", e);
+        alert("Failed to finalize: " + e.message);
+    } finally {
+        setSavingMatch(false);
     }
   };
   
@@ -599,6 +624,33 @@ export function useMatchActions(
     setValMatchId("");
     setViewingMapIdx(-1);
   };
+
+  const handleSkirmishLottery = async (matchId) => {
+    setUpdating(true);
+    try {
+      const SKIRMISH_MAPS = ["Skirmish A", "Skirmish B", "Skirmish C"];
+      const randomMap =
+        SKIRMISH_MAPS[Math.floor(Math.random() * SKIRMISH_MAPS.length)];
+      console.log("Lottery selected:", randomMap); // log for debugging
+
+      const vetoData = JSON.stringify({
+        map: randomMap,
+        status: "completed",
+        logs: [
+          { action: "lottery_win", map: randomMap, timestamp: Date.now() },
+        ],
+      });
+
+      await updateMatchVeto(matchId, vetoData, true);
+
+      await loadData();
+    } catch (e) {
+      console.error("Skirmish lottery failed", e);
+      alert("Failed to run map lottery: " + e.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
   
   const updateMapScore = (index, team, value) => {
       setMatchEditData((prev) => {
@@ -623,19 +675,39 @@ export function useMatchActions(
       });
   };
 
-  const updatePlayerStat = (playerKey, stat, value) => {
-    setMatchEditData((prev) => ({
-      ...prev,
-      playerStats: {
-        ...prev.playerStats,
-        [playerKey]: {
-          ...(prev.playerStats[playerKey] || {
-            kills: 0, deaths: 0, assists: 0, acs: 0, agent: null,
-          }),
+  const updatePlayerStat = (playerKey, stat, value, mapIndex = -1) => {
+    setMatchEditData((prev) => {
+      if (mapIndex !== -1) {
+        // Update Map Players Stats
+        const newMapPlayerStats = { ...prev.mapPlayerStats };
+        if (!newMapPlayerStats[mapIndex]) newMapPlayerStats[mapIndex] = {};
+        
+        const currentStats = newMapPlayerStats[mapIndex][playerKey] || {
+          kills: 0, deaths: 0, assists: 0, acs: 0, agent: null,
+        };
+
+        newMapPlayerStats[mapIndex][playerKey] = {
+          ...currentStats,
           [stat]: stat === "agent" ? value : parseInt(value) || 0,
-        },
-      },
-    }));
+        };
+
+        return { ...prev, mapPlayerStats: newMapPlayerStats };
+      } else {
+        // Update Aggregate Stats
+        return {
+          ...prev,
+          playerStats: {
+            ...prev.playerStats,
+            [playerKey]: {
+              ...(prev.playerStats[playerKey] || {
+                kills: 0, deaths: 0, assists: 0, acs: 0, agent: null,
+              }),
+              [stat]: stat === "agent" ? value : parseInt(value) || 0,
+            },
+          },
+        };
+      }
+    });
   };
 
   const togglePlayerExpand = (playerKey) => {
@@ -687,5 +759,7 @@ export function useMatchActions(
     updateMapScore,
     updatePlayerStat,
     togglePlayerExpand,
+    handleSkirmishLottery,
+    handleFinalizeMatch,
   };
 }

@@ -181,17 +181,22 @@ export default function SettingsTab({
                 onChange={(e) =>
                   setEditForm({ ...editForm, gameType: e.target.value })
                 }
-                disabled
-                className="w-full cursor-not-allowed rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm font-bold text-slate-500 outline-none"
+                className="w-full cursor-pointer rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm font-bold text-white outline-none focus:border-rose-500 focus:bg-slate-900"
               >
                 <option value="5v5">5v5 Tournament</option>
-                <option value="Deathmatch">Deathmatch (FFA)</option>
+                <option value="Deathmatch">Deathmatch</option>
+                <option value="1v1">Skirmish (1v1)</option>
+                <option value="2v2">Skirmish (2v2)</option>
+                <option value="3v3">Skirmish (3v3)</option>
               </select>
             </div>
 
             <div className="space-y-2">
               <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                Max {editForm.gameType === "5v5" ? "Teams" : "Players"}
+                Max{" "}
+                {["5v5", "2v2", "3v3"].includes(editForm.gameType)
+                  ? "Teams"
+                  : "Players"}
               </label>
               <input
                 type="number"

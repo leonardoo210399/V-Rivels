@@ -11,6 +11,8 @@ import {
   Users,
   Info,
   Gamepad2,
+  Swords,
+  Skull,
   Bold,
   List,
   Heading2,
@@ -24,35 +26,10 @@ import {
 import Loader from "@/components/Loader";
 
 // Import the same parser logic used in the detail page
-const DEFAULT_DM_DESCRIPTION = `**The Deathmatch Arena: Maximum Velocity**
-
-MISSION STATEMENT:
-Witness the rawest form of Valorant skill. The Deathmatch Arena is where agents are pushed to their mechanical limits. No abilities, no utility—just aim, movement, and pure tactical instinct. This isn't just about winning; it's about dominating the field and proving who has the sharpest crosshair in the community.
-
-COMPETITIVE DYNAMICS:
-- **The Goal**: First player to reach 40 kills or the highest scorer at the 10-minute mark.
-- **Standings**: Real-time tracking of kills and deaths. Only the most consistent slayers will climb the official leaderboard.
-- **Spawn Mastery**: Players must adapt to rapid re-spawns and maintain map awareness to avoid being caught in crossfires.
-
-LOBBY PROCEDURE:
-1. **Check-in**: Confirm your presence on the site 15 minutes before start.
-2. **Get Code**: Retrieve the Party Code from our Discord server's tournament channel.
-3. **Join**: Enter the code in-game to join the lobby immediately.
-
-PRIZE DISTRIBUTION:
-- **Method**: All winnings are transferred via UPI immediately after tournament completion.
-- **Coordination**: Winners will be contacted via a private Discord channel to confirm details.
-
-EVENT RULES & ETIQUETTE:
-- **Mandatory Check-in**: All participants must check-in via the portal 15 minutes before the match to secure their slot.
-- **Fair Play**: We maintain a zero-tolerance policy for any third-party software or exploits. Our marshals monitor live standings for statistical anomalies.
-
-FINAL WORD:
-The lobby is waiting. Your rivals are practicing. Every corner is a potential duel and every shot counts towards your legacy. Do you have the composure to maintain a streak, or will you fall in the chaos of the arena?
-
-**Aim True. Kill Fast. Rule the Lobby.**`;
-
-const DEFAULT_5V5_DESCRIPTION = `**The Ultimate Valorant Showdown: Elite Series**
+// Import the same parser logic used in the detail page
+// Import the same parser logic used in the detail page
+const DESCRIPTION_TEMPLATES = {
+  "5v5": `**The Ultimate Valorant Showdown: Elite Series**
 
 MISSION STATEMENT:
 Welcome to the frontier of competitive community Valorant. The Elite Series is more than just a tournament; it’s a proving ground for the next generation of tactical masterminds. Our mission is to provide an uncompromising, professional-grade platform where skill is the only currency and strategy is the ultimate weapon.
@@ -81,7 +58,108 @@ EVENT GUIDELINES:
 FINAL WORD:
 Prepare your executes, refine your aim, and ensure your comms are crisp. The server is waiting, and the community is watching. Do you have the composure to clutch the win, or will you fall to the pressure of the big stage?
 
-**Lock in. Step up. Reign supreme.**`;
+**Lock in. Step up. Reign supreme.**`,
+
+  Deathmatch: `**The Deathmatch Arena: Maximum Velocity**
+
+MISSION STATEMENT:
+Witness the rawest form of Valorant skill. The Deathmatch Arena is where agents are pushed to their mechanical limits. No abilities, no utility—just aim, movement, and pure tactical instinct. This isn't just about winning; it's about dominating the field and proving who has the sharpest crosshair in the community.
+
+COMPETITIVE DYNAMICS:
+- **The Goal**: First player to reach 40 kills or the highest scorer at the 10-minute mark.
+- **Standings**: Real-time tracking of kills and deaths. Only the most consistent slayers will climb the official leaderboard.
+- **Spawn Mastery**: Players must adapt to rapid re-spawns and maintain map awareness to avoid being caught in crossfires.
+
+LOBBY PROCEDURE:
+1. **Check-in**: Confirm your presence on the site 15 minutes before start.
+2. **Get Code**: Retrieve the Party Code from our Discord server's tournament channel.
+3. **Join**: Enter the code in-game to join the lobby immediately.
+
+PRIZE DISTRIBUTION:
+- **Method**: All winnings are transferred via UPI immediately after tournament completion.
+- **Coordination**: Winners will be contacted via a private Discord channel to confirm details.
+
+EVENT RULES & ETIQUETTE:
+- **Mandatory Check-in**: All participants must check-in via the portal 15 minutes before the match to secure their slot.
+- **Fair Play**: We maintain a zero-tolerance policy for any third-party software or exploits. Our marshals monitor live standings for statistical anomalies.
+
+FINAL WORD:
+The lobby is waiting. Your rivals are practicing. Every corner is a potential duel and every shot counts towards your legacy. Do you have the composure to maintain a streak, or will you fall in the chaos of the arena?
+
+**Aim True. Kill Fast. Rule the Lobby.**`,
+
+  "1v1": `**The Duelist's Gauntlet: 1v1 Showdown**
+
+MISSION STATEMENT:
+Step into the ultimate test of individual prowess. The 1v1 Gauntlet strips away the team, the trades, and the excuses. It's just you, your opponent, and the map. This mode is designed for the sharpest aimers and the smartest duelists to prove who truly reigns supreme in a head-to-head battle.
+
+COMPETITIVE DYNAMICS:
+- **The Format**: Single Elimination. Lose and go home.
+- **The Objective**: First to 13 kills or highest score when time expires.
+- **Rules of Engagement**: No abilities (unless agreed otherwise). Pure gunplay focus. Agent selection is typically mirrored (e.g., Reyna vs Reyna) to ensure parity.
+
+LOBBY PROCEDURE:
+1. **Check-in**: Both players must check-in 15 minutes prior to match time.
+2. **Get Code**: Exchange lobby details in the designated Discord channel.
+3. **Duel**: Enter the custom game and fight for your honor.
+
+PRIZE DISTRIBUTION:
+- **Method**: Immediate UPI transfer to the victor.
+- **Coordination**: Winner confirms details with admin on Discord.
+
+FINAL WORD:
+There is no one to trade you. There is no one to heal you. It's kill or be killed. Do you have the mechanics to out-duel anyone who steps in your path?
+
+**One Map. Two Players. One Victor.**`,
+
+  "2v2": `**Wingman Warfare: 2v2 Tactical Cup**
+
+MISSION STATEMENT:
+Grab your duo and prepare for synchronized chaos. The Wingman Warfare series tests the chemistry between two players. It's about trading effectively, double-peeking perfectly, and clutching up when your partner goes down. This is the perfect middle ground between individual skill and team strategy.
+
+COMPETITIVE DYNAMICS:
+- **The Format**: Single Elimination Bracket.
+- **Map Pool**: Compact "Wingman" style sites on Skirmish maps.
+- **Strategy**: Plant or Defuse. Economy management is simplified but crucial. Coordination is key.
+
+LOBBY PROCEDURE:
+1. **Check-in**: Team captain check-in required 15 minutes prior.
+2. **Get Code**: Party Code provided in match channel.
+3. **Join**: Both duos join the lobby and commence the series.
+
+PRIZE DISTRIBUTION:
+- **Method**: Prize pool split and sent to the team captain via UPI.
+- **Coordination**: Captain handles distribution to their teammate.
+
+FINAL WORD:
+You and your partner against the world. Trust your teammate, play your angles, and prove you're the deadliest duo in the server.
+
+**Play Together. Win Together.**`,
+
+  "3v3": `**The Trinity Skirmish: 3v3 Battle**
+
+MISSION STATEMENT:
+Fast, frantic, and tactical. The Trinity Skirmish brings the intensity of full 5v5 into a condensed, high-octane 3v3 format. Perfect for small squads who want to execute strategies without the complexity of a full roster. Rotations are faster, punishments are harsher, and every kill impacts the round significantly.
+
+COMPETITIVE DYNAMICS:
+- **The Format**: Single Elimination Bracket.
+- **Tactical Depth**: 3 players per team allows for a balanced composition (e.g., 1 Duelist, 1 Smoker, 1 Initiator).
+- **Economy**: Standard competitive economy rules apply.
+
+LOBBY PROCEDURE:
+1. **Check-in**: Captains check-in 15 minutes early.
+2. **Get Code**: Retrieve code from Discord.
+3. **Battle**: Teams join the lobby and compete on Skirmish maps.
+
+PRIZE DISTRIBUTION:
+- **Method**: Sent to team captain via UPI.
+- **Coordination**: Captain distributes to the squad.
+
+FINAL WORD:
+Three is the magic number. It's enough for strategy, but small enough for individual brilliance to shine. Assemble your trinity and dominate the bracket.
+
+**Execute. Rotate. Dominate.**`,
+};
 
 const RichPreview = ({ text }) => {
   if (!text)
@@ -164,18 +242,56 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    const isDefault5v5 = formData.description === DEFAULT_5V5_DESCRIPTION;
-    const isDefaultDM = formData.description === DEFAULT_DM_DESCRIPTION;
-    const isEmpty =
-      !formData.description || formData.description.trim().length < 5;
+    // For description updates
+    const isSkirmish = ["1v1", "2v2", "3v3"].includes(formData.gameType);
 
-    if (isEmpty || isDefault5v5 || isDefaultDM) {
-      if (formData.gameType === "Deathmatch" && !isDefaultDM) {
-        updateDescription(DEFAULT_DM_DESCRIPTION);
-      } else if (formData.gameType === "5v5" && !isDefault5v5) {
-        updateDescription(DEFAULT_5V5_DESCRIPTION);
+    // Check if the current description is one of the defaults (or empty)
+    // If it is, we can safely switch it to the new mode's default.
+    // If it's custom text, we leave it alone.
+    const isDefaultDescription =
+      !formData.description ||
+      Object.values(DESCRIPTION_TEMPLATES).includes(formData.description) ||
+      // Keep legacy checks for a moment just in case, or simpler: just trust strict equality?
+      // Strict equality is better for the new system.
+      // But purely for transition, let's just use the strict check.
+      // If the user has "old" default text, it might not update, but that's acceptable edge case.
+      // Actually, let's include the old checks just to be safe if they trigger "clearing" to new defaults.
+      formData.description.includes("standard 5v5 tournament") ||
+      formData.description.includes("deathmatch tournament") ||
+      formData.description.includes("Skirmish mode");
+
+    if (isDefaultDescription) {
+      if (formData.gameType === "Deathmatch") {
+        setFormData((prev) => ({
+          ...prev,
+          description: DESCRIPTION_TEMPLATES.Deathmatch,
+        }));
+      } else if (isSkirmish) {
+        setFormData((prev) => ({
+          ...prev,
+          description:
+            DESCRIPTION_TEMPLATES[formData.gameType] ||
+            DESCRIPTION_TEMPLATES["1v1"],
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          description: DESCRIPTION_TEMPLATES["5v5"],
+        }));
       }
     }
+
+    // Update maxTeams based on mode
+    if (formData.gameType === "1v1")
+      setFormData((prev) => ({ ...prev, maxTeams: 16 }));
+    else if (formData.gameType === "2v2")
+      setFormData((prev) => ({ ...prev, maxTeams: 16 }));
+    else if (formData.gameType === "3v3")
+      setFormData((prev) => ({ ...prev, maxTeams: 8 }));
+    else if (formData.gameType === "5v5")
+      setFormData((prev) => ({ ...prev, maxTeams: 16 }));
+    else if (formData.gameType === "Deathmatch")
+      setFormData((prev) => ({ ...prev, maxTeams: 40 }));
   }, [formData.gameType]);
 
   const updateDescription = (newText) => {
@@ -370,51 +486,88 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
               id="create-tournament-form"
               className="space-y-6"
             >
-              {/* Game Settings First */}
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-2 block flex items-center gap-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                    <Gamepad2 className="h-3 w-3" /> Game Mode
-                  </label>
-                  <div className="relative flex h-[46px] rounded-xl border border-white/5 bg-slate-950 p-1">
-                    {/* Sliding Background */}
-                    <div
-                      className={`absolute inset-y-1 w-[calc(50%-4px)] rounded-lg bg-rose-600 shadow-lg shadow-rose-900/40 transition-all duration-300 ease-out ${
-                        formData.gameType === "Deathmatch"
-                          ? "translate-x-full"
-                          : "translate-x-0"
-                      }`}
-                    />
+              {/* GAME TYPE SELECTION */}
+              <div>
+                <label className="mb-3 block text-xs font-bold tracking-wider text-slate-500 uppercase">
+                  Game Mode
+                </label>
 
-                    {/* Options */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData({ ...formData, gameType: "5v5" })
-                      }
-                      className={`relative flex flex-1 items-center justify-center text-[10px] font-black tracking-widest uppercase transition-colors duration-300 ${
-                        formData.gameType === "5v5"
-                          ? "text-white"
-                          : "text-slate-500 hover:text-slate-300"
-                      }`}
-                    >
-                      5v5
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData({ ...formData, gameType: "Deathmatch" })
-                      }
-                      className={`relative flex flex-1 items-center justify-center text-[10px] font-black tracking-widest uppercase transition-colors duration-300 ${
-                        formData.gameType === "Deathmatch"
-                          ? "text-white"
-                          : "text-slate-500 hover:text-slate-300"
-                      }`}
-                    >
-                      Deathmatch
-                    </button>
-                  </div>
+                {/* Primary Mode Selector */}
+                <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/5 bg-slate-900/50 p-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, gameType: "5v5" })
+                    }
+                    className={`group relative flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold uppercase transition-all ${
+                      formData.gameType === "5v5"
+                        ? "bg-rose-600 text-white shadow-lg shadow-rose-900/20"
+                        : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+                    }`}
+                  >
+                    <Swords className="h-4 w-4" />
+                    <span>5v5</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, gameType: "Deathmatch" })
+                    }
+                    className={`group relative flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold uppercase transition-all ${
+                      formData.gameType === "Deathmatch"
+                        ? "bg-purple-600 text-white shadow-lg shadow-purple-900/20"
+                        : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+                    }`}
+                  >
+                    <Skull className="h-4 w-4" />
+                    <span>Deathmatch</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, gameType: "1v1" })
+                    }
+                    className={`group relative flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold uppercase transition-all ${
+                      ["1v1", "2v2", "3v3"].includes(formData.gameType)
+                        ? "bg-amber-600 text-white shadow-lg shadow-amber-900/20"
+                        : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+                    }`}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>Skirmish</span>
+                  </button>
                 </div>
+
+                {/* Sub Mode Selector for Skirmish */}
+                {["1v1", "2v2", "3v3"].includes(formData.gameType) && (
+                  <div className="animate-in fade-in slide-in-from-top-2 mt-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      {["1v1", "2v2", "3v3"].map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() =>
+                            setFormData({ ...formData, gameType: mode })
+                          }
+                          className={`flex items-center justify-center gap-2 rounded-lg border border-white/5 py-2 text-xs font-black tracking-wider uppercase transition-all ${
+                            formData.gameType === mode
+                              ? "border-amber-500/50 bg-amber-500/20 text-amber-400"
+                              : "bg-slate-900/30 text-slate-500 hover:bg-slate-800"
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-center text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                      {formData.gameType === "1v1" && "Solo Duel Mode"}
+                      {formData.gameType === "2v2" && "Wingman Mode"}
+                      {formData.gameType === "3v3" && "Trio Skirmish Mode"}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Basic Info */}

@@ -113,9 +113,47 @@ export default function MatchEditorModal({
 
         {/* Modal Content - Scrollable */}
         <div className="scrollbar-thin scrollbar-track-slate-900 scrollbar-thumb-rose-500/20 flex-1 space-y-6 overflow-y-auto p-6">
+          {/* Finalize Banner */}
+          {match.teamA !== "LOBBY" &&
+            match.status !== "completed" &&
+            matchEditData.scoreA !== matchEditData.scoreB && (
+              <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+                    <Trophy className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black tracking-tight text-white uppercase">
+                      Ready to Finalize?
+                    </h4>
+                    <p className="text-[10px] font-bold tracking-wide text-slate-400 uppercase">
+                      Advance{" "}
+                      <span className="text-amber-500">
+                        {matchEditData.scoreA > matchEditData.scoreB
+                          ? participantMap[match.teamA]?.name || "Team A"
+                          : participantMap[match.teamB]?.name || "Team B"}
+                      </span>{" "}
+                      to next round
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={actions.handleFinalizeMatch}
+                  disabled={savingMatch}
+                  className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-[10px] font-black tracking-widest text-black uppercase transition-all hover:bg-amber-400 disabled:opacity-50"
+                >
+                  {savingMatch ? (
+                    <LoaderIcon className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-3 w-3" />
+                  )}
+                  Finalize & Advance
+                </button>
+              </div>
+            )}
           {/* Quick Import - Only for non-lobby matches AND (BO1 or Auto) */}
           {match.teamA !== "LOBBY" &&
-            tournament.gameType === "5v5" &&
+            ["5v5", "1v1", "2v2", "3v3"].includes(tournament.gameType) &&
             (!matchEditData.matchFormat ||
               matchEditData.matchFormat === "Auto" ||
               matchEditData.matchFormat === "BO1") && (
@@ -496,12 +534,91 @@ export default function MatchEditorModal({
                                   </div>
                                 </div>
 
-                                {/* Expanded Stats Editor - Only editable in Series Answer? Or allow edit per map? */}
-                                {/* Original code edited Aggregate stats directly if map stats weren't used? */}
-                                {/* For simplicity allow editing current view values. But update logic needs to know if we are updating map specific or aggregate. */}
-                                {/* The hook 'updatePlayerStat' updates 'playerStats'. We need a way to update 'mapPlayerStats' if viewingMapIdx !== -1. */}
-                                {/* Current 'updatePlayerStat' in hook only updates 'playerStats'. We might need to enhance hook or just disable editing in modal for now unless it's basic fields. */}
-                                {/* Let's stick to displaying them for now to avoid complexity, or just allow editing 'playerStats' (Series Total) when viewing Series. */}
+                                {expandedPlayers[uniqueKey] && (
+                                  <div className="border-t border-white/5 bg-slate-950/30 p-3">
+                                    <div className="grid grid-cols-4 gap-3">
+                                      {/* Kills */}
+                                      <div className="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+                                        <label className="mb-1 block text-[8px] font-bold text-slate-500 uppercase">
+                                          Kills
+                                        </label>
+                                        <input
+                                          type="number"
+                                          className="w-full bg-transparent text-center text-sm font-bold text-white outline-none"
+                                          value={currentStats.kills || 0}
+                                          onChange={(e) =>
+                                            updatePlayerStat(
+                                              uniqueKey,
+                                              "kills",
+                                              e.target.value,
+                                              viewingMapIdx,
+                                            )
+                                          }
+                                        />
+                                      </div>
+
+                                      {/* Deaths */}
+                                      <div className="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+                                        <label className="mb-1 block text-[8px] font-bold text-slate-500 uppercase">
+                                          Deaths
+                                        </label>
+                                        <input
+                                          type="number"
+                                          className="w-full bg-transparent text-center text-sm font-bold text-white outline-none"
+                                          value={currentStats.deaths || 0}
+                                          onChange={(e) =>
+                                            updatePlayerStat(
+                                              uniqueKey,
+                                              "deaths",
+                                              e.target.value,
+                                              viewingMapIdx,
+                                            )
+                                          }
+                                        />
+                                      </div>
+
+                                      {/* Assists */}
+                                      <div className="rounded-lg border border-white/5 bg-slate-900/50 p-2">
+                                        <label className="mb-1 block text-[8px] font-bold text-slate-500 uppercase">
+                                          Assists
+                                        </label>
+                                        <input
+                                          type="number"
+                                          className="w-full bg-transparent text-center text-sm font-bold text-white outline-none"
+                                          value={currentStats.assists || 0}
+                                          onChange={(e) =>
+                                            updatePlayerStat(
+                                              uniqueKey,
+                                              "assists",
+                                              e.target.value,
+                                              viewingMapIdx,
+                                            )
+                                          }
+                                        />
+                                      </div>
+
+                                      {/* ACS */}
+                                      <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2">
+                                        <label className="mb-1 block text-[8px] font-bold text-emerald-500 uppercase">
+                                          ACS
+                                        </label>
+                                        <input
+                                          type="number"
+                                          className="w-full bg-transparent text-center text-sm font-bold text-emerald-400 outline-none"
+                                          value={currentStats.acs || 0}
+                                          onChange={(e) =>
+                                            updatePlayerStat(
+                                              uniqueKey,
+                                              "acs",
+                                              e.target.value,
+                                              viewingMapIdx,
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}

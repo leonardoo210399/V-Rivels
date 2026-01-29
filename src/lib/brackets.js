@@ -44,11 +44,14 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
     
     // Calculate max round to identify Finals (last round) and Semis (second to last)
     const maxRound = matches.length > 0 ? Math.max(...matches.map(m => m.round)) : 0;
+    
+    const SKIRMISH_MAPS = ["Skirmish A", "Skirmish B", "Skirmish C"];
+    const isSkirmish = ["1v1", "2v2", "3v3"].includes(gameType);
 
     // 2. Save each match to the database
     const promises = matches.map(match => {
         let scheduledTime = null;
-        if (tournamentDate && gameType === "5v5") {
+        if (tournamentDate && (gameType === "5v5" || isSkirmish)) {
             const startDate = new Date(tournamentDate);
             const offset = (match.round - 1) * 4 + match.matchIndex;
             startDate.setHours(startDate.getHours() + offset);
@@ -57,15 +60,34 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
 
         // Determine format based on preset
         let finalFormat = matchFormat;
-        if (matchFormat === "BO1_FINAL_BO3") {
-             finalFormat = match.round === maxRound ? "BO3" : "BO1";
-        } else if (matchFormat === "BO1_SEMI_BO3_FINAL_BO5") {
-             if (match.round === maxRound) finalFormat = "BO5";
-             else if (match.round === maxRound - 1) finalFormat = "BO3";
-             else finalFormat = "BO1";
-        } else if (matchFormat === "BO1_FINAL_BO5") {
-            finalFormat = match.round === maxRound ? "BO5" : "BO1";
+        // Skirmish is always BO1 usually, but let's respect override if needed, or default to BO1
+        if (isSkirmish) {
+            finalFormat = "BO1"; 
+        } else {
+             if (matchFormat === "BO1_FINAL_BO3") {
+                 finalFormat = match.round === maxRound ? "BO3" : "BO1";
+            } else if (matchFormat === "BO1_SEMI_BO3_FINAL_BO5") {
+                 if (match.round === maxRound) finalFormat = "BO5";
+                 else if (match.round === maxRound - 1) finalFormat = "BO3";
+                 else finalFormat = "BO1";
+            } else if (matchFormat === "BO1_FINAL_BO5") {
+                finalFormat = match.round === maxRound ? "BO5" : "BO1";
+            }
         }
+
+        // Handle Skirmish Map Assignment (No Veto)
+        let vetoData = null;
+        let vetoStarted = false;
+
+        // if (isSkirmish) {
+        //     const randomMap = SKIRMISH_MAPS[Math.floor(Math.random() * SKIRMISH_MAPS.length)];
+        //     vetoData = JSON.stringify({
+        //         map: randomMap,
+        //         status: "completed",
+        //         logs: [{ action: "auto_assign", map: randomMap, timestamp: Date.now() }]
+        //     });
+        //     vetoStarted = true;
+        // }
 
         return databases.createDocument(
             DATABASE_ID,
@@ -81,7 +103,8 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
                 scoreA: 0,
                 scoreB: 0,
                 status: match.status || "scheduled",
-                vetoStarted: false,
+                vetoStarted: vetoStarted,
+                vetoData: vetoData,
                 scheduledTime: scheduledTime,
                 matchFormat: finalFormat
             }
@@ -248,14 +271,18 @@ export async function startMatchVeto(matchId) {
     );
 }
 
-export async function updateMatchVeto(matchId, vetoData) {
+export async function updateMatchVeto(matchId, vetoData, vetoStarted = null) {
+    const data = {
+        vetoData: typeof vetoData === 'string' ? vetoData : JSON.stringify(vetoData)
+    };
+    if (vetoStarted !== null) {
+        data.vetoStarted = vetoStarted;
+    }
     return await databases.updateDocument(
         DATABASE_ID,
         MATCHES_COLLECTION_ID,
         matchId,
-        {
-            vetoData: JSON.stringify(vetoData)
-        }
+        data
     );
 }
 

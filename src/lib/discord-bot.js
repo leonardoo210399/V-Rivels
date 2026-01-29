@@ -547,7 +547,13 @@ export async function announceNewTournament(tournament) {
       : "🆓 FREE";
     const prizeDisplay = tournament.prizePool || "TBA";
     const gameModeEmoji = tournament.gameType === "Deathmatch" ? "💀" : "⚔️";
-    const gameModeText = tournament.gameType === "Deathmatch" ? "Deathmatch" : "5v5 Tournament";
+    let gameModeText = "5v5 Tournament";
+    if (tournament.gameType === "Deathmatch") gameModeText = "Deathmatch";
+    else if (tournament.gameType === "1v1") gameModeText = "1v1 Duel";
+    else if (tournament.gameType === "2v2") gameModeText = "2v2 Skirmish";
+    else if (tournament.gameType === "3v3") gameModeText = "3v3 Skirmish";
+
+    const isTeamMode = ["5v5", "2v2", "3v3"].includes(tournament.gameType);
 
     const embed = {
       title: `🏆 ${tournament.name}`,
@@ -561,7 +567,7 @@ export async function announceNewTournament(tournament) {
         
         { name: "💰 PRIZE POOL", value: `\`${prizeDisplay}\``, inline: true },
         { name: "🎟️ ENTRY FEE", value: `\`${entryFeeDisplay}\``, inline: true },
-        { name: "👥 SLOTS", value: `\`${tournament.maxTeams || "∞"} ${tournament.gameType === "Deathmatch" ? "players" : "teams"}\``, inline: true },
+        { name: "👥 SLOTS", value: `\`${tournament.maxTeams || "∞"} ${isTeamMode ? "teams" : "players"}\``, inline: true },
         
         { name: "🏅 PRIZES", value: `> 🥇 **1st:** ${tournament.firstPrize || "TBA"}\n> 🥈 **2nd:** ${tournament.secondPrize || "TBA"}\n`, inline: false },
         

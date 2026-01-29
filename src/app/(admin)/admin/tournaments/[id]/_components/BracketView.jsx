@@ -32,6 +32,7 @@ export default function BracketView({
     setMatchPartyCodes,
     matchResetSteps,
     updating: matchUpdating,
+    handleSkirmishLottery,
   } = actions;
 
   const {
@@ -49,6 +50,9 @@ export default function BracketView({
   const isWorking = matchUpdating || tournamentUpdating;
 
   const is5v5 = tournament.gameType === "5v5";
+  const isBracketMode = ["5v5", "1v1", "2v2", "3v3"].includes(
+    tournament.gameType,
+  );
 
   return (
     <div className="rounded-3xl border border-white/5 bg-slate-950/30 p-8 backdrop-blur-sm">
@@ -251,7 +255,7 @@ export default function BracketView({
                               const time = match.scheduledTime;
                               let displayTime = time;
                               if (!time && tournament.date) {
-                                if (is5v5) {
+                                if (isBracketMode) {
                                   const startDate = new Date(tournament.date);
                                   const offset =
                                     (match.round - 1) * 4 + match.matchIndex;
@@ -292,7 +296,7 @@ export default function BracketView({
 
                       <div className="flex items-center gap-4">
                         {/* Inline Party Code Input */}
-                        {is5v5 && match.teamA !== "LOBBY" && (
+                        {isBracketMode && match.teamA !== "LOBBY" && (
                           <div className="mr-2 flex flex-col gap-1">
                             <label className="ml-1 text-[8px] font-black tracking-widest text-rose-500/60 uppercase">
                               Party Code
@@ -383,6 +387,19 @@ export default function BracketView({
                             >
                               <MapIcon className="h-3.5 w-3.5" />
                               Start Veto
+                            </button>
+                          )}
+
+                        {!is5v5 &&
+                          match.teamA !== "LOBBY" &&
+                          match.status !== "completed" &&
+                          !match.vetoStarted && (
+                            <button
+                              onClick={() => handleSkirmishLottery(match.$id)}
+                              className="flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-[10px] font-black text-purple-400 uppercase transition-all hover:bg-purple-500/20"
+                            >
+                              <MapIcon className="h-3.5 w-3.5" />
+                              Map Lottery
                             </button>
                           )}
 

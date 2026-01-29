@@ -242,7 +242,38 @@ export default function TournamentDetailPage({ params }) {
       }
     }
     loadData();
+    loadData();
   }, [id, user]);
+
+  useEffect(() => {
+    if (!tournament) return;
+    let size = 5;
+    if (tournament.gameType === "3v3") size = 3;
+    if (tournament.gameType === "2v2") size = 2;
+
+    // Only reset if size mismatch
+    if (
+      members.length !== size &&
+      ["5v5", "3v3", "2v2"].includes(tournament.gameType)
+    ) {
+      setMembers(
+        Array(size)
+          .fill()
+          .map(() => ({
+            name: "",
+            tag: "",
+            verified: false,
+            loading: false,
+            card: null,
+          })),
+      );
+    }
+  }, [tournament?.gameType]);
+
+  const isTeamMode =
+    tournament && ["5v5", "3v3", "2v2"].includes(tournament.gameType);
+  const isSoloMode =
+    tournament && ["Deathmatch", "1v1"].includes(tournament.gameType);
 
   const lobbyMatch = matches?.find((m) => m.teamA === "LOBBY");
   const lobbyCode = lobbyMatch?.valoPartyCode;
@@ -354,7 +385,7 @@ export default function TournamentDetailPage({ params }) {
     e.preventDefault();
     if (!user) return;
 
-    if (tournament.gameType === "5v5") {
+    if (isTeamMode) {
       if (!teamName) {
         setError("Team name is required");
         return;
@@ -375,7 +406,7 @@ export default function TournamentDetailPage({ params }) {
       }
     } else if (!userProfile) {
       setError(
-        "Please link your Valorant account in your profile first to register for DM.",
+        `Please link your Valorant account in your profile first to register for ${tournament.gameType}.`,
       );
       return;
     }
@@ -384,23 +415,21 @@ export default function TournamentDetailPage({ params }) {
 
     // Prepare metadata for registration
     const metadata = {
-      members:
-        tournament.gameType === "5v5"
-          ? members.map((m) => ({
-              name: m.name,
-              tag: m.tag,
-              card: m.card,
-            }))
-          : null,
-      playerName:
-        tournament.gameType !== "5v5"
-          ? `${userProfile.ingameName}#${userProfile.tag}`
-          : null,
+      members: isTeamMode
+        ? members.map((m) => ({
+            name: m.name,
+            tag: m.tag,
+            card: m.card,
+          }))
+        : null,
+      playerName: !isTeamMode
+        ? `${userProfile.ingameName}#${userProfile.tag}`
+        : null,
       playerCard: userProfile?.card || null,
     };
 
     const registrationData = {
-      name: tournament.gameType === "5v5" ? teamName : userProfile.ingameName,
+      name: isTeamMode ? teamName : userProfile.ingameName,
       metadata,
     };
 
@@ -793,7 +822,7 @@ export default function TournamentDetailPage({ params }) {
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           {tournament.gameType === "Deathmatch"
-                            ? "Free-for-all (FFA)"
+                            ? "Deathmatch"
                             : "Single Elimination"}
                         </li>
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
@@ -839,7 +868,9 @@ export default function TournamentDetailPage({ params }) {
                     {registrations.length > 0 ? (
                       registrations.map((reg) => {
                         const meta = parseMetadata(reg.metadata);
-                        const is5v5 = tournament.gameType === "5v5";
+                        const isTeamMode = ["5v5", "2v2", "3v3"].includes(
+                          tournament.gameType,
+                        );
                         const members = meta?.members || meta?.roster || [];
 
                         return (
@@ -866,7 +897,7 @@ export default function TournamentDetailPage({ params }) {
                               </div>
                             </div>
 
-                            {is5v5 && members.length > 0 && (
+                            {isTeamMode && members.length > 0 && (
                               <div className="mt-1 border-t border-white/5 pt-3">
                                 <p className="mb-2 text-[8px] font-black tracking-widest text-slate-600 uppercase">
                                   Roster
@@ -1081,9 +1112,7 @@ export default function TournamentDetailPage({ params }) {
               <div className="group relative mb-5 overflow-hidden rounded-2xl border border-white/5 bg-slate-950/60 p-5 text-center transition-all hover:bg-slate-950/80 md:mb-6 md:p-6">
                 <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-rose-500/10 blur-2xl transition-all group-hover:bg-rose-500/20" />
                 <p className="mb-2 text-[10px] font-black tracking-[0.2em] text-rose-500/80 uppercase md:text-xs">
-                  {tournament.gameType === "Deathmatch"
-                    ? "INDIVIDUAL ENTRY"
-                    : "TEAM REGISTRATION"}
+                  {isSoloMode ? "INDIVIDUAL ENTRY" : "TEAM REGISTRATION"}
                 </p>
                 <div className="relative inline-flex items-baseline gap-1">
                   <span className="text-xl font-bold text-white/50 md:text-2xl">
@@ -1187,7 +1216,7 @@ export default function TournamentDetailPage({ params }) {
                   {lobbyCode && (isRegistered || isAdmin) && (
                     <div className="flex flex-col gap-2">
                       <p className="mt-4 text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
-                        {tournament.gameType === "5v5"
+                        {isTeamMode
                           ? "Tournament Main Lobby Code"
                           : "Valorant Party Code"}
                         {isAdmin && !isRegistered && (
@@ -1214,7 +1243,7 @@ export default function TournamentDetailPage({ params }) {
                         </button>
                       </div>
                       <p className="px-1 text-[8px] font-bold text-slate-500 uppercase md:text-[9px]">
-                        {tournament.gameType === "5v5"
+                        {isTeamMode
                           ? "Use this for the general lobby. Match-specific codes are in the Match Lobby."
                           : "Use this and join in Valorant"}
                       </p>
@@ -1421,7 +1450,7 @@ export default function TournamentDetailPage({ params }) {
                     </div>
                   ) : (
                     <>
-                      {tournament.gameType === "5v5" ? (
+                      {isTeamMode ? (
                         <div className="space-y-4 md:space-y-6">
                           <div>
                             <label className="mb-2 block text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
@@ -1439,7 +1468,7 @@ export default function TournamentDetailPage({ params }) {
 
                           <div className="space-y-2 md:space-y-3">
                             <label className="block text-[9px] font-black tracking-widest text-slate-500 uppercase md:text-[10px]">
-                              Roster (5)
+                              Roster ({members.length})
                             </label>
                             {members.map((member, index) => (
                               <div
@@ -1529,8 +1558,7 @@ export default function TournamentDetailPage({ params }) {
                         type="submit"
                         disabled={
                           registering ||
-                          (tournament.gameType === "5v5" &&
-                            members.some((m) => !m.verified))
+                          (isTeamMode && members.some((m) => !m.verified))
                         }
                         className="flex w-full items-center justify-center gap-2 rounded-lg bg-rose-600 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-rose-900/20 transition-all hover:bg-rose-700 disabled:opacity-50 md:rounded-xl md:py-4 md:text-xs"
                       >

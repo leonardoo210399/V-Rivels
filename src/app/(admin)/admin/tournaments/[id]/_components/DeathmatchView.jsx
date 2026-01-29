@@ -264,7 +264,7 @@ export default function DeathmatchView({
                 Deathmatch Arena
               </h3>
               <p className="mt-1 text-xs text-slate-400">
-                Free-for-all elimination • {registrations.length} Players
+                Deathmatch elimination • {registrations.length} Players
               </p>
             </div>
           </div>

@@ -14,7 +14,9 @@ export default function MatchesTab({
   tournamentActions,
   loadData,
 }) {
-  const is5v5 = tournament.gameType === "5v5";
+  const isBracketMode = ["5v5", "1v1", "2v2", "3v3"].includes(
+    tournament.gameType,
+  );
 
   const participantMap = useMemo(() => {
     return (
@@ -33,7 +35,7 @@ export default function MatchesTab({
 
   return (
     <>
-      {is5v5 ? (
+      {isBracketMode ? (
         <BracketView
           tournament={tournament}
           matches={matches}
