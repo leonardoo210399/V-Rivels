@@ -793,7 +793,7 @@ export default function TournamentDetailPage({ params }) {
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">
                           <div className="h-1 w-1 rounded-full bg-rose-500" />
                           {tournament.gameType === "Deathmatch"
-                            ? "Free-for-all (FFA)"
+                            ? "Deathmatch"
                             : "Single Elimination"}
                         </li>
                         <li className="flex items-center gap-2 text-xs opacity-70 transition-opacity hover:opacity-100 md:gap-3 md:text-sm">

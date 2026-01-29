@@ -185,7 +185,7 @@ export default function SettingsTab({
                 className="w-full cursor-not-allowed rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm font-bold text-slate-500 outline-none"
               >
                 <option value="5v5">5v5 Tournament</option>
-                <option value="Deathmatch">Deathmatch (FFA)</option>
+                <option value="Deathmatch">Deathmatch</option>
               </select>
             </div>
 
