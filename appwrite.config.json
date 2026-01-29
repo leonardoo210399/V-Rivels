@@ -614,7 +614,10 @@
                     "array": false,
                     "elements": [
                         "5v5",
-                        "Deathmatch"
+                        "Deathmatch",
+                        "1v1",
+                        "2v2",
+                        "3v3"
                     ],
                     "format": "enum",
                     "default": null

@@ -22,7 +22,8 @@ export default function ParticipantsTab({
   loadData,
 }) {
   const [updating, setUpdating] = useState(false);
-  const is5v5 = tournament.gameType === "5v5";
+  const isTeamMode = ["5v5", "2v2", "3v3"].includes(tournament.gameType);
+  const isDeathmatch = tournament.gameType === "Deathmatch";
 
   const parseMetadata = (metadata) => {
     try {
@@ -110,7 +111,7 @@ export default function ParticipantsTab({
               <div className="flex flex-col justify-between gap-6 p-6 md:flex-row md:items-center">
                 <div className="flex items-center gap-4">
                   <div className="rounded-2xl border border-white/5 bg-slate-900 p-4 text-rose-500">
-                    {is5v5 ? (
+                    {isTeamMode ? (
                       <Users className="h-6 w-6" />
                     ) : (
                       <User className="h-6 w-6" />
@@ -118,7 +119,9 @@ export default function ParticipantsTab({
                   </div>
                   <div>
                     <h3 className="mb-1 text-xl font-bold tracking-tight text-white">
-                      {is5v5 ? reg.teamName : meta?.playerName || reg.teamName}
+                      {isTeamMode
+                        ? reg.teamName
+                        : meta?.playerName || reg.teamName}
                     </h3>
                     <p
                       className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase"
@@ -137,7 +140,7 @@ export default function ParticipantsTab({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {!is5v5 && (
+                  {isDeathmatch && (
                     <div className="mr-6 flex items-center gap-6 border-r border-white/5 pr-6">
                       <div className="text-center">
                         <p className="mb-1 text-[10px] font-black text-slate-500 uppercase">
@@ -229,7 +232,7 @@ export default function ParticipantsTab({
                 </div>
               </div>
 
-              {is5v5 && (
+              {isTeamMode && (
                 <div className="border-t border-white/5 bg-slate-950/30 p-6 pb-8">
                   <div className="mb-4 flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-emerald-500" />

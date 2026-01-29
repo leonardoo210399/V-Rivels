@@ -36,6 +36,7 @@ import MatchInfo from "@/components/match/MatchInfo";
 import CountdownTimer from "@/components/match/CountdownTimer";
 import TeamFaceOff from "@/components/match/TeamFaceOff";
 import MapCard3D from "@/components/match/MapCard3D";
+import MapLottery from "@/components/match/MapLottery";
 
 const MAP_POOL = [
   { name: "Ascent", image: mapImages["Ascent"] },
@@ -49,6 +50,10 @@ const MAP_POOL = [
   { name: "Pearl", image: mapImages["Pearl"] },
   { name: "Sunset", image: mapImages["Sunset"] },
   { name: "Abyss", image: mapImages["Abyss"] },
+  { name: "Corrode", image: mapImages["Corrode"] },
+  { name: "Skirmish A", image: mapImages["Skirmish A"] },
+  { name: "Skirmish B", image: mapImages["Skirmish B"] },
+  { name: "Skirmish C", image: mapImages["Skirmish C"] },
 ];
 
 export default function MatchLobbyPage({ params }) {
@@ -89,6 +94,10 @@ export default function MatchLobbyPage({ params }) {
   const [mapPlayerStats, setMapPlayerStats] = useState([]);
   const [viewingMapIdx, setViewingMapIdx] = useState(null); // null means "Total"
 
+  // Lottery State
+  const [lotteryMap, setLotteryMap] = useState(null);
+  const [isRolling, setIsRolling] = useState(false);
+
   useEffect(() => {
     loadData();
 
@@ -103,10 +112,14 @@ export default function MatchLobbyPage({ params }) {
               const parsed = JSON.parse(updatedMatch.vetoData);
               setVetoState({
                 ...parsed,
+                bannedMaps: parsed.bannedMaps || [],
                 pickedMaps: parsed.pickedMaps || [],
                 selectedMaps:
                   parsed.selectedMaps ||
-                  (parsed.selectedMap ? [parsed.selectedMap] : []),
+                  (parsed.selectedMap ? [parsed.selectedMap] : null) ||
+                  (parsed.map ? [parsed.map] : null) ||
+                  [],
+                selectedMap: parsed.selectedMap || parsed.map || null,
               });
             } catch (e) {
               console.error("Failed to parse veto data", e);
@@ -137,6 +150,63 @@ export default function MatchLobbyPage({ params }) {
     return () => unsubscribe();
   }, [matchId, id]);
 
+  // Lottery Effect
+  useEffect(() => {
+    if (
+      !vetoState.selectedMap &&
+      vetoState.logs &&
+      vetoState.logs.some((l) => l.action === "lottery_win")
+    ) {
+      // Lottery was just triggered but state might not fully reflect 'selectedMap' in UI yet if we want to animate
+      // But actually, we receive the final map immediately. logic:
+      // If we see "lottery_win", we want to play animation THEN show result.
+      const winLog = vetoState.logs.find((l) => l.action === "lottery_win");
+      if (winLog && !isRolling && !lotteryMap) {
+        // Check if we already showed this?
+        // For simplicity: if vetoState.selectedMap is set, we might miss animation if we reload.
+        // Let's rely on a local trigger or just check if we haven't acknowledged it.
+        // If "lottery_win" exists, we play animation if we haven't yet.
+        // Actually, better logic:
+        // If `vetoState.selectedMap` is SET, we just show it.
+        // The animation should happen when we transition from "No Map" to "Map Selected" via logs.
+        // But `useEffect` above updates `vetoState` immediately.
+        // So let's intercept the update?
+        // Alternative: If `vetoState.logs` has lottery_win, and we are NOT showing the map yet (handled by local delay).
+        // BUT `vetoState` sets `selectedMap` immediately.
+        // Let's change the `setVetoState` logic above to DELAY setting `selectedMap` if it's a lottery win.
+        // OR, easier: Use a separate `displayedMap` state.
+        // Let's do this:
+        // If we detect a lottery win, we set `isRolling` to true.
+        // We cycle `lotteryMap`.
+        // After 3s, we set `isRolling` false and `lotteryMap` to the winner.
+      }
+    }
+  }, [vetoState]);
+
+  const handleLotteryAnimation = (finalMap) => {
+    setLotteryMap(finalMap);
+    setIsRolling(true);
+  };
+
+  // Intercept Veto State Update to trigger animation
+  // I'll modify the useEffect above to call handleLotteryAnimation instead of setting selectedMap immediately if it's a new lottery win.
+  // However, I can't easily modify the massive useEffect without replacing it.
+  // Instead, I'll use a `useEffect` that watches `vetoState.selectedMap`.
+
+  useEffect(() => {
+    if (
+      vetoState.selectedMap &&
+      vetoState.logs?.some((l) => l.action === "lottery_win")
+    ) {
+      // If we haven't set lotteryMap yet (first load or just happened), decide whether to animate.
+      // If it's freshly loaded (page refresh), maybe just show it?
+      // Log timestamp check could verify "freshness" but let's just animate if `lotteryMap` is empty.
+      if (!lotteryMap) {
+        handleLotteryAnimation(vetoState.selectedMap);
+      }
+    }
+  }, [vetoState.selectedMap]);
+
   useEffect(() => {
     if (user?.$id && id) {
       checkUserRegistration(id, user.$id)
@@ -152,7 +222,19 @@ export default function MatchLobbyPage({ params }) {
 
       if (matchData.vetoData) {
         try {
-          setVetoState(JSON.parse(matchData.vetoData));
+          const parsed = JSON.parse(matchData.vetoData);
+          setVetoState({
+            ...parsed,
+            bannedMaps: parsed.bannedMaps || [],
+            pickedMaps: parsed.pickedMaps || [],
+            pickedMaps: parsed.pickedMaps || [],
+            selectedMaps:
+              parsed.selectedMaps ||
+              (parsed.selectedMap ? [parsed.selectedMap] : null) ||
+              (parsed.map ? [parsed.map] : null) ||
+              [],
+            selectedMap: parsed.selectedMap || parsed.map || null,
+          });
         } catch (e) {
           console.error("Veto data parsing failed", e);
         }
@@ -274,8 +356,8 @@ export default function MatchLobbyPage({ params }) {
     const newTurn = vetoState.currentTurn === "teamA" ? "teamB" : "teamA";
 
     let finalSelectedMaps = [];
-    if (newBanned.length + newPicked.length === MAP_POOL.length - 1) {
-      const decider = MAP_POOL.find(
+    if (newBanned.length + newPicked.length === currentMapPool.length - 1) {
+      const decider = currentMapPool.find(
         (m) => !newBanned.includes(m.name) && !newPicked.includes(m.name),
       ).name;
       // Combine picks and decider in order: Picks first, then decider
@@ -375,8 +457,13 @@ export default function MatchLobbyPage({ params }) {
     }
   }
 
+  const currentMapPool =
+    tournament?.gameType === "5v5"
+      ? MAP_POOL.filter((m) => !m.name.startsWith("Skirmish"))
+      : MAP_POOL;
+
   const vetoProgress =
-    (vetoState.bannedMaps.length / (MAP_POOL.length - 1)) * 100;
+    (vetoState.bannedMaps.length / (currentMapPool.length - 1)) * 100;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white selection:bg-rose-500/30">
@@ -606,7 +693,7 @@ export default function MatchLobbyPage({ params }) {
                         Veto Progress ({getEffectiveFormat()})
                       </span>
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: MAP_POOL.length - 1 }).map(
+                        {Array.from({ length: currentMapPool.length - 1 }).map(
                           (_, i) => {
                             const turnIdx = i + 1;
                             const action = getVetoAction(
@@ -646,51 +733,67 @@ export default function MatchLobbyPage({ params }) {
                 </div>
 
                 {/* Selected Maps Hero */}
-                {vetoState.selectedMaps?.length > 0 ? (
+                {/* Selected Maps Hero */}
+                {vetoState.selectedMaps?.length > 0 || isRolling ? (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 px-2">
-                      <Zap className="h-4 w-4 text-emerald-400" />
-                      <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">
-                        Series Maps Locked
-                      </span>
-                    </div>
-                    <div
-                      className={`grid gap-4 ${vetoState.selectedMaps.length > 1 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-1"}`}
-                    >
-                      {vetoState.selectedMaps.map((mapName, idx) => {
-                        const mapInfo = MAP_POOL.find(
-                          (m) => m.name === mapName,
-                        );
-                        const mapImage =
-                          typeof mapInfo?.image === "object"
-                            ? mapInfo?.image?.src
-                            : mapInfo?.image;
-                        return (
-                          <div
-                            key={mapName}
-                            className="group relative aspect-video overflow-hidden rounded-2xl border border-white/10"
-                          >
-                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 text-center">
-                              <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-slate-950/80 px-3 py-1 text-[8px] font-black tracking-[0.2em] text-emerald-400 uppercase shadow-xl backdrop-blur-md">
-                                Map {idx + 1}{" "}
-                                {idx === vetoState.selectedMaps.length - 1 &&
-                                vetoState.selectedMaps.length > 1
-                                  ? "(Decider)"
-                                  : ""}
-                              </span>
-                              <h3 className="text-2xl font-black text-white uppercase italic drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] md:text-3xl">
-                                {mapName}
-                              </h3>
-                            </div>
-                            <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent" />
+                    {!isRolling && (
+                      <div className="flex items-center gap-2 px-2">
+                        <Zap className="h-4 w-4 text-emerald-400" />
+                        <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">
+                          Series Maps Locked
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Skirmish Lottery View */}
+                    {isRolling && (
+                      <div className="flex w-full items-center justify-center py-8">
+                        <MapLottery
+                          winnerMap={lotteryMap}
+                          onComplete={() => setIsRolling(false)}
+                        />
+                      </div>
+                    )}
+
+                    {!isRolling && vetoState.selectedMaps?.length > 0 && (
+                      <div
+                        className={`grid gap-4 ${vetoState.selectedMaps.length > 1 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-1"}`}
+                      >
+                        {vetoState.selectedMaps.map((mapName, idx) => {
+                          const mapInfo = MAP_POOL.find(
+                            (m) => m.name === mapName,
+                          );
+                          const mapImage =
+                            typeof mapInfo?.image === "object"
+                              ? mapInfo?.image?.src
+                              : mapInfo?.image;
+                          return (
                             <div
-                              className="h-full w-full bg-cover bg-center transition-transform duration-[2s] group-hover:scale-110"
-                              style={{ backgroundImage: `url(${mapImage})` }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                              key={mapName}
+                              className="group relative aspect-video overflow-hidden rounded-2xl border border-white/10"
+                            >
+                              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 text-center">
+                                <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-slate-950/80 px-3 py-1 text-[8px] font-black tracking-[0.2em] text-emerald-400 uppercase shadow-xl backdrop-blur-md">
+                                  Map {idx + 1}{" "}
+                                  {idx === vetoState.selectedMaps.length - 1 &&
+                                  vetoState.selectedMaps.length > 1
+                                    ? "(Decider)"
+                                    : ""}
+                                </span>
+                                <h3 className="text-2xl font-black text-white uppercase italic drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] md:text-3xl">
+                                  {mapName}
+                                </h3>
+                              </div>
+                              <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent" />
+                              <div
+                                className="h-full w-full bg-cover bg-center transition-transform duration-[2s] group-hover:scale-110"
+                                style={{ backgroundImage: `url(${mapImage})` }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : isCompleted ? (
                   /* Match Completed - No Map Selected State */
@@ -786,7 +889,7 @@ export default function MatchLobbyPage({ params }) {
 
                     {/* Maps Grid */}
                     <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-                      {MAP_POOL.slice(0, 12).map((map) => {
+                      {currentMapPool.map((map) => {
                         const isBanned = vetoState.bannedMaps.includes(
                           map.name,
                         );

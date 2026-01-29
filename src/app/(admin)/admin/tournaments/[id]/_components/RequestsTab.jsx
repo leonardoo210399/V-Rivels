@@ -25,7 +25,7 @@ export default function RequestsTab({
   const [selectedRequestForRejection, setSelectedRequestForRejection] =
     useState(null);
 
-  const is5v5 = tournament.gameType === "5v5";
+  const isTeamMode = ["5v5", "2v2", "3v3"].includes(tournament.gameType);
 
   const parseMetadata = (metadata) => {
     try {
@@ -106,7 +106,7 @@ export default function RequestsTab({
 
       // 4. Announce Registration
       const meta = parseMetadata(request.metadata);
-      const registrantName = is5v5
+      const registrantName = isTeamMode
         ? request.teamName
         : meta?.playerName || request.teamName;
 
@@ -173,7 +173,7 @@ export default function RequestsTab({
                   <div>
                     <div className="mb-1 flex items-center gap-2">
                       <h3 className="text-xl font-bold tracking-tight text-white">
-                        {is5v5
+                        {isTeamMode
                           ? req.teamName
                           : meta?.playerName || req.teamName}
                       </h3>
