@@ -547,7 +547,7 @@ export async function announceNewTournament(tournament) {
       : "🆓 FREE";
     const prizeDisplay = tournament.prizePool || "TBA";
     const gameModeEmoji = tournament.gameType === "Deathmatch" ? "💀" : "⚔️";
-    const gameModeText = tournament.gameType === "Deathmatch" ? "Deathmatch FFA" : "5v5 Tournament";
+    const gameModeText = tournament.gameType === "Deathmatch" ? "Deathmatch" : "5v5 Tournament";
 
     const embed = {
       title: `🏆 ${tournament.name}`,

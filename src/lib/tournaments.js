@@ -130,6 +130,19 @@ export async function getRegistrations(tournamentId) {
     );
 }
 
+export async function checkUserRegistration(tournamentId, userId) {
+    if (!userId) return false;
+    const response = await databases.listDocuments(
+        DATABASE_ID,
+        REGISTRATIONS_COLLECTION_ID,
+        [
+            Query.equal("tournamentId", tournamentId),
+            Query.equal("userId", userId)
+        ]
+    );
+    return response.total > 0;
+}
+
 export async function getRegistration(registrationId) {
     return await databases.getDocument(
         DATABASE_ID,

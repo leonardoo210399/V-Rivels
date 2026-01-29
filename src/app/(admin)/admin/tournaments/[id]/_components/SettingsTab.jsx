@@ -54,6 +54,8 @@ export default function SettingsTab({
     checkInStart: "",
   });
 
+  const [newPrize, setNewPrize] = useState({ label: "", value: "" });
+
   useEffect(() => {
     if (tournament) {
       setEditForm({
@@ -241,6 +243,125 @@ export default function SettingsTab({
                 }
                 className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white transition-all outline-none focus:border-rose-500"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="ml-1 text-[10px] font-black tracking-widest text-emerald-500 uppercase">
+                1st Prize
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. ₹500"
+                value={editForm.firstPrize}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, firstPrize: e.target.value })
+                }
+                className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white transition-all outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="ml-1 text-[10px] font-black tracking-widest text-emerald-500 uppercase">
+                2nd Prize
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. ₹200"
+                value={editForm.secondPrize}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, secondPrize: e.target.value })
+                }
+                className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white transition-all outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-white/5 pt-8">
+            <h4 className="mb-4 text-xs font-black tracking-widest text-indigo-400 uppercase">
+              Additional Prizes (MVP, 3rd Place, etc.)
+            </h4>
+            <div className="space-y-4">
+              {editForm.additionalPrizes.length > 0 && (
+                <div className="grid gap-3">
+                  {editForm.additionalPrizes.map((prize, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded-xl border border-white/5 bg-slate-900/50 p-4 transition-all hover:bg-slate-900"
+                    >
+                      <div>
+                        <p className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          {prize.label || "Special Prize"}
+                        </p>
+                        <p className="text-sm font-bold text-white">
+                          ₹{prize.value}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...editForm.additionalPrizes];
+                          updated.splice(idx, 1);
+                          setEditForm({
+                            ...editForm,
+                            additionalPrizes: updated,
+                          });
+                        }}
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-slate-900/30 p-4 sm:flex-row sm:items-end">
+                <div className="flex-1 space-y-2">
+                  <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Prize Label
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. MVP"
+                    value={newPrize.label}
+                    onChange={(e) =>
+                      setNewPrize({ ...newPrize, label: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Amount (Value)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 100"
+                    value={newPrize.value}
+                    onChange={(e) =>
+                      setNewPrize({ ...newPrize, value: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={!newPrize.label || !newPrize.value}
+                  onClick={() => {
+                    setEditForm({
+                      ...editForm,
+                      additionalPrizes: [
+                        ...editForm.additionalPrizes,
+                        { ...newPrize },
+                      ],
+                    });
+                    setNewPrize({ label: "", value: "" });
+                  }}
+                  className="rounded-xl bg-indigo-600 px-6 py-3 text-[10px] font-black tracking-widest text-white uppercase transition-all hover:bg-indigo-500 disabled:opacity-30"
+                >
+                  Add Prize
+                </button>
+              </div>
             </div>
           </div>
 

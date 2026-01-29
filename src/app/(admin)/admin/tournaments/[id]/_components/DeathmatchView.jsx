@@ -169,7 +169,8 @@ export default function DeathmatchView({
         try {
           await finalizeDeathmatch(tournament.$id, winnerId, runnerUpId);
 
-          if (tournament.discordChannelId) {
+          // --- Discord Result Broadcasting ---
+          try {
             const winnerReg = registrations.find((r) => r.$id === winnerId);
             const winnerMeta = winnerReg
               ? parseMetadata(winnerReg.metadata)
@@ -179,42 +180,45 @@ export default function DeathmatchView({
             const winnerKills = sortedEntries[0][1].kills;
             const winnerDeaths = sortedEntries[0][1].deaths;
 
-            let message = `🏆 **DEATHMATCH RESULT**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths`;
+            let runnerName = "Runner Up";
+            let runnerKills = 0;
+            let runnerDeaths = 0;
 
             if (runnerUpId) {
               const runnerReg = registrations.find((r) => r.$id === runnerUpId);
               const runnerMeta = runnerReg
                 ? parseMetadata(runnerReg.metadata)
                 : {};
-              const runnerName =
+              runnerName =
                 runnerMeta?.playerName || runnerReg?.teamName || "Runner Up";
-
-              const runnerKills = sortedEntries[1]?.[1]?.kills || 0;
-              const runnerDeaths = sortedEntries[1]?.[1]?.deaths || 0;
-
-              message += `\n**Runner Up:** ${runnerName} 🥈\n**Stats:** ${runnerKills} Kills / ${runnerDeaths} Deaths`;
+              runnerKills = sortedEntries[1]?.[1]?.kills || 0;
+              runnerDeaths = sortedEntries[1]?.[1]?.deaths || 0;
             }
 
             const origin = window.location.origin;
             const tournamentLink = `${origin}/tournaments/${tournament.$id}`;
+
+            // 1. Channel specific message (with stats)
+            let message = `🏆 **DEATHMATCH RESULT**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths`;
+            if (runnerUpId) {
+              message += `\n**Runner Up:** ${runnerName} 🥈\n**Stats:** ${runnerKills} Kills / ${runnerDeaths} Deaths`;
+            }
             message += `\n\n🔗 **View Full Leaderboard:** [Click Here](${tournamentLink})`;
 
-            try {
-              // Construct Public Message with extra context
-              const publicMessage = `🏆 **DEATHMATCH RESULT**\n**[${tournament.name}](${tournamentLink})**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths${runnerUpId ? `\n**Runner Up:** ${runnerName} 🥈` : ""}\n\n🔗 **View Full Leaderboard:** [Click Here](${tournamentLink})`;
+            // 2. Public broadcast message
+            const publicMessage = `🏆 **DEATHMATCH RESULT**\n**[${tournament.name}](${tournamentLink})**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths${runnerUpId ? `\n**Runner Up:** ${runnerName} 🥈` : ""}\n\n🔗 **View Full Leaderboard:** [Click Here](${tournamentLink})`;
 
-              await broadcastMatchResultAction(
-                tournament.discordChannelId,
-                message,
-                tournament.discordRoleId,
-                publicMessage,
-              );
-            } catch (discordErr) {
-              console.warn(
-                "Discord notification failed for DM result:",
-                discordErr,
-              );
-            }
+            await broadcastMatchResultAction(
+              tournament.discordChannelId,
+              message,
+              tournament.discordRoleId,
+              publicMessage,
+            );
+          } catch (discordErr) {
+            console.warn(
+              "Discord notification failed for DM result:",
+              discordErr,
+            );
           }
         } catch (err) {
           console.error(
