@@ -1,98 +1,75 @@
-# 🎮 VRIVALS — The Ultimate Valorant Esports Ecosystem
+# 🎮 V-RIVALS — The Next-Gen Valorant Esports Platform
 
-![VRIVALS Banner](./public/banner.png)
+![V-RIVALS Banner](./public/banner.png)
 
-**VRIVALS** is an award-winning, high-performance competitive platform engineered specifically for the _Valorant_ community. It bridges the gap between casual matchmaking and professional esports by offering a unified ecosystem for tournaments, player scouting, statistical analysis, and community building.
+**V-RIVALS** is an award-winning, high-performance competitive platform engineered specifically for the _Valorant_ community. It bridges the gap between casual matchmaking and professional esports by offering a unified ecosystem for tournaments, player scouting, statistical analysis, and community building.
 
-Built with an ultramodern tech stack featuring **Next.js 15**, **Tailwind CSS 4**, and **Appwrite**, VRIVALS delivers a pixel-perfect, responsive, and blazing-fast experience. It integrates directly with Riot Games' data (via HenrikDev API) to provide real-time stats, rank verification, and live match tracking.
-
----
-
-## ✨ Comprehensive Feature Suite
-
-### 🏆 Esports & Tournaments Engine
-
-The core of VRIVALS is its professional-grade tournament management system.
-
-- **Dynamic Bracket Generation**: Automated bracket creation for Single Elimination, Double Elimination, and Battle Royale formats.
-- **Live Match Tracking**: Real-time updates for ongoing matches, including map picks/bans (simulated) and live score reporting.
-- **Automated Kill/Death Tracking**: For Deathmatch tournaments, user stats are synced periodically to update standings automatically.
-- **Prize Pool Management**: Integrated support for distributing prize pools (INR/USD), handling split payments, and managing payout status.
-- **Match Rooms**: Dedicated lobbies for each match where teams can chat, ready up, and submit results (admin verified).
-
-### 🔍 Player Finder & Intelligence (Scouting)
-
-A sophisticated discovery engine to help teams find the perfect roster fit.
-
-- **Smart Filtering**: Filter free agents by **Role** (Duelist, Controller, etc.), **Region** (AP, NA, EU), **Rank** (Radiant to Iron), and **Agent Pool**.
-- **Intelligence Score (ELO)**: A proprietary algorithm that calculates a player's "Intelligence Score" based on their rank, win rate, and recent performance, displayed boldly on their card.
-- **Detailed Agent Mastery**: Visual breakdown of a player's Main Agent and Secondary picks with mastery levels.
-- **Direct Scouting**: "Scouting Report" feature allowing players to write a pitch about their playstyle and availability.
-
-### 👤 Advanced Player Profiles
-
-Your digital resume for the competitive scene.
-
-- **Riot Account Sync**: One-click integration to fetch current Rank, Level, and Account Banner directly from Valorant.
-- **Visual Career History**: A graphical timeline of your previous 10 matches with K/D/A ratios, Headshot percentages, and Win/Loss streaks.
-- **Performance Metrics**: Detailed breakdown of stats including Average Combat Score (ACS), First Bloods, and Clutches.
-- **Privacy Controls**: Options to toggle visibility of certain stats or contact information (Discord ID).
-
-### 🏅 Hall of Fame (Leaderboards)
-
-Compare yourself against the best on the platform.
-
-- **Global Rankings**: Rank players by Total Earnings, Tournament Wins, or proprietary VRIVALS Score.
-- **Top 3 Podium**: Premium, animated spotlight for the top 3 players of the season.
-- **Regional Leaderboards**: Drill down to see who dominates your specific server region.
-
-### 🛡️ Admin Command Center
-
-A powerful dashboard for ecosystem managers.
-
-- **User Management**: Search, ban, or verify users from a central table.
-- **Tournament Control**: Create/Edit/Delete tournaments, force-advance brackets, and resolve match disputes.
-- **Payment Verification**: Manual audit tools for verifying entry fee screenshots and transaction IDs.
-- **System Health**: Monitor API usage and backend connection status.
-
----
-
-## 🗺️ Sitemap & Page Overview
-
-### PUBLIC ROUTES
-
-- **`/` (Home)**: Award-winning landing page featuring 3D animations (GSAP), feature showcases, and call-to-action sections.
-- **`/player-finder`**: The main hub for recruiting teammates. Features a grid of "Agent Cards" with live filters.
-- **`/leaderboard`**: Global standings and top player showcases.
-- **`/tournaments`**: List of upcoming, ongoing, and past tournaments with registration status.
-- **`/about`**: Mission statement, team details, and platform roadmap.
-- **`/contact`**: Support forms and social media links.
-- **`/login` | `/register`**: Authentication portals with email/password and OAuth support.
-
-### AUTHENTICATED ROUTES
-
-- **`/profile`**: Your personal dashboard to manage your account, view stats, and edit your "Scouting Report".
-- **`/player/[id]`**: Public view of a specific player's profile (viewable by anyone, but personalized context for logged-in users).
-- **`/tournaments/[id]`**: Specific tournament lobby, brackets, and rules.
-
-### LEGAL & SUPPORT
-
-- `/privacy`, `/terms`, `/refund-policy`, `/rules`, `/support`.
+Built with an ultramodern tech stack featuring **Next.js 15**, **Tailwind CSS 4**, and **Appwrite**, V-RIVALS delivers a pixel-perfect, responsive, and blazing-fast experience. It integrates directly with Riot Games' data (via unofficial APIs) to provide real-time stats, rank verification, and live match tracking.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer           | Technology                                                               | Usage                                                   |
-| :-------------- | :----------------------------------------------------------------------- | :------------------------------------------------------ |
-| **Framework**   | **[Next.js 15](https://nextjs.org/)**                                    | App Router, Server Actions, SSR/ISR                     |
-| **Language**    | **[React 19](https://react.dev/)**                                       | Component architecture, Hooks                           |
-| **Styling**     | **[Tailwind CSS 4](https://tailwindcss.com/)**                           | Utility-first styling, Glassmorphism design system      |
-| **Animations**  | **[GSAP](https://greensock.com/gsap/)**                                  | Advanced scroll triggers, text reveals, intro sequences |
-| **Icons**       | **[Lucide React](https://lucide.dev/)**                                  | Consistent, lightweight SVG iconography                 |
-| **Backend**     | **[Appwrite](https://appwrite.io/)**                                     | Authentication, Database, Storage, Cloud Functions      |
-| **Game Data**   | **[HenrikDev API](https://github.com/Henrik-3/unofficial-valorant-api)** | Unofficial Valorant API for ranks/matches               |
-| **Performance** | **[Vercel Speed Insights](https://vercel.com/docs/speed-insights)**      | Real-time user experience monitoring                    |
+![Next JS](https://img.shields.io/badge/Next-black?style=for-the-badge&logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Appwrite](https://img.shields.io/badge/Appwrite-FD366E?style=for-the-badge&logo=appwrite&logoColor=white)
+![GSAP](https://img.shields.io/badge/GSAP-88CE02?style=for-the-badge&logo=greensock&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![NodeJS](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![Lucide](https://img.shields.io/badge/Lucide_Icons-F05032?style=for-the-badge&logo=lucide&logoColor=white)
+![Valorant API](https://img.shields.io/badge/Valorant_API-FF4655?style=for-the-badge&logo=valorant&logoColor=white)
+![Discord.js](https://img.shields.io/badge/Discord.js-5865F2?style=for-the-badge&logo=discord&logoColor=white)
+
+---
+
+## ✨ Features at a Glance
+
+### 🏆 Advanced Tournament Engine
+
+The platform supports multiple competitive formats with professional-grade management tools.
+
+- **Game Modes**: Support for **Standard 5v5**, **Deathmatch** (FFA), and **Skirmish** modes (1v1, 2v2, 3v3).
+- **Automated Brackets**: Dynamic single-elimination bracket generation that updates in real-time as matches conclude.
+- **Match Lobbies**: Dedicated match rooms for every pairing, featuring:
+  - **Map Veto System**: Interactive map banning phase for 5v5 matches.
+  - **Map Lottery**: CS:GO Case-style map randomization animation for Skirmish modes.
+  - **Live Chat**: Real-time communication between teams and admins.
+  - **Quick Import**: Admins can fetch match results directly from Valorant API to auto-fill scores and stats.
+
+### 🤖 Deep Discord Integration
+
+Seamlessly connected with your community Discord server.
+
+- **Verification Bot**: Links Discord accounts to V-RIVALS profiles to verify identity.
+- **Automated Channels**: Automatically creates private text and voice channels for each tournament match.
+- **Role Management**: Assigns roles to registered captains and players automatically.
+- **Live Notifications**: Broadcasts tournament creates, match results, and scouting reports directly to Discord channels.
+
+### 🔍 Scouting & Player Finder
+
+A sophisticated discovery engine to help teams find the perfect roster fit.
+
+- **Smart Filtering**: Filter free agents by **Role** (Duelist, Controller, etc.), **Region** (AP, NA, EU), **Rank** (Radiant to Iron), and **Agent Pool**.
+- **Intelligence Score**: A proprietary algorithm that calculates a player's "Intelligence Score" based on their rank, win rate, and recent performance.
+- **Scouting Reports**: Players can post "Scouting Reports" (LFT posts) which are broadcasted to the Discord server.
+
+### 👤 Pro-Grade Profiles
+
+Your digital resume for the competitive scene.
+
+- **Riot Sync**: One-click integration key stats directly from Valorant (Rank, Headshot %, K/D).
+- **Career Timeline**: Visual history of recent matches with detailed performance breakdowns (ACS, ADR, Clutches).
+- **Rank Intelligence**: Visualizations of MMR progress and rank distribution.
+- **Leaderboards**: Global and regional leaderboards tracking earnings and tournament wins.
+
+### 🛡️ Admin Command Center
+
+A powerful dashboard for ecosystem managers.
+
+- **Tournament Control**: Create, edit, and delete tournaments. Force-advance brackets and resolve disputes.
+- **User Management**: Inspect user profiles, ban/suspend users, and manage permissions.
+- **Discord Controls**: Manually sync or delete tournament-associated Discord channels.
 
 ---
 
@@ -101,23 +78,25 @@ A powerful dashboard for ecosystem managers.
 ```bash
 src/
 ├── app/                  # Next.js 15 App Router
-│   ├── (admin)/          # Protected Admin routes (Dashboard, User Mgmt)
-│   ├── (main)/           # Public Layout & Pages
-│   │   ├── player-finder/ # Player discovery module
-│   │   ├── profile/      # User profile module
-│   │   └── ...           # Other pages
-│   ├── api/              # Internal API Routes (Proxies, Webhooks)
-│   └── globals.css       # Tailwind 4 imports & global styles
+│   ├── (admin)/          # Protected Admin Dashboard routes
+│   │   ├── admin/tournaments/[id]/ # Deep tournament management
+│   │   └── ...
+│   ├── (main)/           # Public facing pages
+│   │   ├── tournaments/  # List & Detail views for tournaments
+│   │   ├── profile/      # User Profile & Stats
+│   │   └── match/        # Live Match Lobby & Veto Interface
+│   ├── api/              # API Routes (Discord Webhooks, Auth callbacks)
+│   └── globals.css       # Tailwind 4 & Global Styles
 ├── components/           # Reusable UI Library
-│   ├── admin/            # Admin-specific tables/forms
-│   ├── landing/          # Hero, Features, special landing components
+│   ├── match/            # Match-specific components (MapLottery, VetoBoard)
+│   ├── admin/            # Admin forms (MatchEditor, BracketView)
 │   └── ...               # Generic UI (Buttons, Modals, Loaders)
-├── context/              # React Context Providers (AuthContext)
-├── lib/                  # Business Logic & Singletons
-│   ├── appwrite.js       # Appwrite Client SDK configuration
-│   ├── valorant.js       # Valorant API wrapper functions
-│   └── utils.js          # Helper functions (CN, formatters)
-└── assets/               # Static Assets (Images, Sounds, Fonts)
+├── lib/                  # Core Business Logic
+│   ├── appwrite.js       # Appwrite SDK Config
+│   ├── brackets.js       # Bracket generation & advancement logic
+│   ├── discord.js        # Discord Bot interactions
+│   └── valorant.js       # Game API wrappers
+└── context/              # React Context Providers (AuthContext)
 ```
 
 ---
@@ -127,15 +106,14 @@ src/
 ### 1. Prerequisites
 
 - **Node.js** (v18.17.0 or better)
-- **npm** (v9+) or **pnpm**
-- An active **Appwrite** instance (Cloud or Self-Hosted)
-- (Optional) **HenrikDev API Key** for production-level rate limits.
+- **Appwrite Instance**: You need a running Appwrite instance (Cloud or Self-Hosted).
+- **Discord Application**: Create a bot in the [Discord Developer Portal](https://discord.com/developers/applications).
 
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/aditya/valo-website.git
-cd valo-website/frontend
+git clone https://github.com/leonardoo210399/V-Rivels.git
+cd V-Rivels/frontend
 ```
 
 ### 3. Install Dependencies
@@ -146,23 +124,96 @@ npm install
 yarn install
 ```
 
-### 4. Configure Environment Variables
+### 4. Environment Configuration
 
-Create a `.env.local` file in the root of `frontend/`:
+The application relies on several environment variables for Appwrite, Valorant Data, and Discord integration. Create a `.env` or `.env.local` file in the root of `frontend/`.
+
+#### CORE: Appwrite Configuration
+
+These keys connect the frontend to your Appwrite backend.
+| Variable | Description | How to get it |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_APPWRITE_ENDPOINT` | Appwrite API Endpoint | Appwrite Console -> Settings |
+| `NEXT_PUBLIC_APPWRITE_PROJECT_ID` | Project ID | Appwrite Console -> Overview (Top Left) |
+| `NEXT_PUBLIC_APPWRITE_PROJECT_NAME` | Project Name | Appwrite Console -> Settings |
+| `NEXT_PUBLIC_APPWRITE_DATABASE_ID` | Database ID | Appwrite Console -> Databases -> ID |
+| `APPWRITE_API_KEY` | Server-side Admin Key | Appwrite Console -> Overview -> API Keys (Scopes: users, database, functions) |
+
+#### DATABASE: Collection IDs
+
+Specific IDs for your Appwrite Collections.
+| Variable | Description | How to get it |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID` | Tournaments Collection | Database -> Tournaments -> Settings |
+| `NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID` | Registrations Collection | Database -> Registrations -> Settings |
+| `NEXT_PUBLIC_APPWRITE_MATCHES_COLLECTION_ID` | Matches Collection | Database -> Matches -> Settings |
+| `NEXT_PUBLIC_APPWRITE_FREE_AGENTS_COLLECTION_ID` | Player Finder Collection | Database -> Free Agents -> Settings |
+| `NEXT_PUBLIC_APPWRITE_SUPPORT_TICKETS_COLLECTION_ID` | Support/Help Collection | Database -> Support Tickets -> Settings |
+
+#### GAME DATA: Valorant API
+
+Keys for the unofficial HenrikDev API to fetch player ranks and matches.
+| Variable | Description | How to get it |
+| :--- | :--- | :--- |
+| `VALORANT_API_KEYS` | Comma-separated list of API keys | [HenrikDev Portal](https://api.henrikdev.xyz/) (Generate multiple for rate limit rotation) |
+
+#### INTEGRATIONS: Discord Bot
+
+Required for automated channel creation and innovative notification features.
+| Variable | Description | How to get it |
+| :--- | :--- | :--- |
+| `DISCORD_BOT_TOKEN` | Bot Token | [Discord Developer Portal](https://discord.com/developers/applications) -> Bot -> Token |
+| `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` | Channel for major updates | Enable Dev Mode -> Right Click Channel -> Copy ID |
+| `DISCORD_TOURNAMENT_INFO_CHANNEL_ID` | Channel for tournament logs | Right Click Channel -> Copy ID |
+| `DISCORD_PLAYER_FINDER_CHANNEL_ID` | Channel for scouting posts | Right Click Channel -> Copy ID |
+| `DISCORD_RESULTS_CHANNEL_ID` | Channel for match results | Right Click Channel -> Copy ID |
+| `DISCORD_REGISTRATIONS_CHANNEL_ID` | Channel for new team signups | Right Click Channel -> Copy ID |
+
+#### SYSTEM: Base URLs
+
+| Variable               | Description                | Example                                          |
+| :--------------------- | :------------------------- | :----------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL` | Public URL of the frontend | `http://localhost:3000` or `https://vrivals.com` |
+| `APP_BASE_URL`         | Internal Server URL        | `http://localhost:3000` or `https://vrivals.com` |
 
 ```env
-# Appwrite Configuration
+# EXAMPLE .env FILE
+
+# Core Appwrite
 NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-NEXT_PUBLIC_APPWRITE_PROJECT_ID=your_project_id_here
-NEXT_PUBLIC_APPWRITE_DATABASE_ID=your_database_id_here
-NEXT_PUBLIC_APPWRITE_BUCKET_ID=your_storage_bucket_id_here
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=65abcd1234
+NEXT_PUBLIC_APPWRITE_PROJECT_NAME=V-RIVALS
+NEXT_PUBLIC_APPWRITE_DATABASE_ID=65dbcd5678
+APPWRITE_API_KEY=your_secret_admin_key_here
 
-# Valorant API (Optional but recommended)
-NEXT_PUBLIC_VALORANT_API_KEY=your_henrik_api_key
+# Collections
+NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID=tournaments
+NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID=registrations
+NEXT_PUBLIC_APPWRITE_MATCHES_COLLECTION_ID=matches
+NEXT_PUBLIC_APPWRITE_FREE_AGENTS_COLLECTION_ID=free_agents
+NEXT_PUBLIC_APPWRITE_SUPPORT_TICKETS_COLLECTION_ID=support_tickets
 
-# Admin Configuration (Optional)
-NEXT_PUBLIC_ADMIN_EMAIL=admin@vrivals.com
+# Valorant Data
+VALORANT_API_KEYS=key1,key2,key3
+
+# Discord
+DISCORD_BOT_TOKEN=OTk5...
+DISCORD_ANNOUNCEMENTS_CHANNEL_ID=123456789
+DISCORD_TOURNAMENT_INFO_CHANNEL_ID=123456789
+DISCORD_PLAYER_FINDER_CHANNEL_ID=123456789
+DISCORD_RESULTS_CHANNEL_ID=123456789
+DISCORD_REGISTRATIONS_CHANNEL_ID=123456789
+
+# System
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+APP_BASE_URL=http://localhost:3000
 ```
+
+#### DATABASE: Schema Setup
+
+> [!TIP]
+> This project includes an `appwrite.config.json` file properly defining all Collections (Users, Tournaments, Matches, etc.) and their Attributes.
+> You can reference this file to manually create your Appwrite Database structure, or use the Appwrite CLI to deploy it directly.
 
 ### 5. Start Development Server
 
@@ -170,54 +221,66 @@ NEXT_PUBLIC_ADMIN_EMAIL=admin@vrivals.com
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the app.
+Visit [http://localhost:3000](http://localhost:3000) to see the application.
+
+### 7. Feature Gallery
+
+<img src="./public/banner.png" alt="V-RIVALS Dashboard" width="100%" />
+
+> _Experience the next generation of esports management with 3D Map Vetoes, Live Brackets, and Real-time Discord Updates._
+
+V-RIVALS is optimized for Vercel. Since the **Discord Bot** runs via **Serverless Actions** (spinning up per-request), you do **not** need a separate worker process for the bot. It works out of the box!
+
+> [!IMPORTANT]
+> **Prerequisites Required!**
+> The button below handles code deployment and configuration, but it **cannot create your database**.
+> You MUST have your own **Appwrite Instance** (Cloud or Self-Hosted) and **Discord Application** created beforehand to populate the environment variables during setup.
+
+<a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fleonardoo210399%2FV-Rivels&env=NEXT_PUBLIC_APPWRITE_ENDPOINT,NEXT_PUBLIC_APPWRITE_PROJECT_ID,APPWRITE_API_KEY,DISCORD_BOT_TOKEN,NEXT_PUBLIC_APPWRITE_DATABASE_ID,NEXT_PUBLIC_APPWRITE_TOURNAMENTS_COLLECTION_ID,NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID,NEXT_PUBLIC_APPWRITE_MATCHES_COLLECTION_ID,NEXT_PUBLIC_APPWRITE_FREE_AGENTS_COLLECTION_ID,NEXT_PUBLIC_APPWRITE_SUPPORT_TICKETS_COLLECTION_ID"><img src="https://vercel.com/button" alt="Deploy with Vercel"/></a>
 
 ---
 
-## 📦 Deployment
+## 📦 Game Modes Detail
 
-### Vercel (Recommended)
+V-RIVALS supports diverse competitive formats suited for different player counts:
 
-1. Push your code to GitHub.
-2. Import the project into Vercel.
-3. Vercel will auto-detect Next.js.
-4. Add the **Environment Variables** from step 4 into Vercel's settings.
-5. Click **Deploy**.
+### 5v5 Standard
 
-### Netlify
+- **Format**: Competitive Standard.
+- **Features**: Full Map Veto capabilities, Coin Toss integration, and Captain-priority check-ins.
+- **Roster**: Supports 5 main players + subs.
 
-1. Drag and drop the folder or connect via Git.
-2. Set build command: `npm run build`.
-3. Set publish directory: `.next`.
-4. Configure standard Next.js plugin in Netlify.
+### Deathmatch (FFA)
+
+- **Format**: High-score wins.
+- **Features**: Automated score aggregation across multiple maps.
+- **Limit**: Up to 40 players per lobby.
+
+### Skirmish (1v1 / 2v2 / 3v3)
+
+- **Format**: Fast-paced elimination.
+- **Features**:
+  - **Map Lottery**: A unique visual selector that randomly chooses the map.
+  - **Quick Brackets**: smaller bracket sizes (8-16 teams) for quick daily cups.
 
 ---
 
-## 🤝 Contributing Guidelines
+## 🤝 Contributing
 
-We welcome community contributions!
+We welcome contributions to make V-RIVALS better!
 
 1. **Fork** the repository.
-2. Create a **Feature Branch** (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
+2. Create a **Feature Branch** (`git checkout -b feature/NewThing`).
+3. Commit your changes.
+4. Push to the branch.
 5. Open a **Pull Request**.
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **[MIT License](./LICENSE)**. See `LICENSE` for more information.
 
 ---
 
-## 🙏 Acknowledgements
-
-- **Riot Games**: For creating Valorant and their API policies.
-- **HenrikDev**: For the incredible unofficial API that powers independent projects.
-- **Appwrite Team**: For the backend-as-a-service that makes this possible.
-- **Lucide**: For the beautiful open-source icons.
-
----
-
-_Designed & Developed by **Aditya** & **Leonardoo210399**_
+_Designed & Developed by **Aditya** (aka **Leonardoo210399**)_

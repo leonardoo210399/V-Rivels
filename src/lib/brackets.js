@@ -79,16 +79,6 @@ export async function createBracket(tournamentId, registrations, gameType = "5v5
         let vetoData = null;
         let vetoStarted = false;
 
-        // if (isSkirmish) {
-        //     const randomMap = SKIRMISH_MAPS[Math.floor(Math.random() * SKIRMISH_MAPS.length)];
-        //     vetoData = JSON.stringify({
-        //         map: randomMap,
-        //         status: "completed",
-        //         logs: [{ action: "auto_assign", map: randomMap, timestamp: Date.now() }]
-        //     });
-        //     vetoStarted = true;
-        // }
-
         return databases.createDocument(
             DATABASE_ID,
             MATCHES_COLLECTION_ID,

@@ -449,17 +449,17 @@ export default function ProfilePage() {
           <ProfileSkeleton />
         ) : !valProfile && hasLinkedAccount ? (
           // User has previously linked but profile fetch failed - show error state, not the form
-          <div className="group relative mx-auto my-12 max-w-4xl overflow-hidden rounded-[2.5rem] border border-white/10 bg-slate-900 p-12 text-center shadow-2xl backdrop-blur-xl md:p-20">
-            <div className="absolute top-0 right-0 h-96 w-96 translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-600/10 blur-[120px]" />
-            <div className="absolute bottom-0 left-0 h-96 w-96 -translate-x-1/2 translate-y-1/2 rounded-full bg-blue-600/5 blur-[120px]" />
+          <div className="group relative mx-auto my-8 max-w-2xl overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 p-8 text-center shadow-2xl backdrop-blur-xl md:p-10">
+            <div className="absolute top-0 right-0 h-48 w-48 translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-600/10 blur-[80px]" />
+            <div className="absolute bottom-0 left-0 h-48 w-48 -translate-x-1/2 translate-y-1/2 rounded-full bg-blue-600/5 blur-[80px]" />
             <div className="relative z-10 flex flex-col items-center">
-              <div className="mb-8 rounded-[2rem] border border-white/5 bg-slate-950 p-6 shadow-inner">
-                <AlertCircle className="h-16 w-16 text-amber-500" />
+              <div className="mb-6 rounded-2xl border border-white/5 bg-slate-950 p-4 shadow-inner">
+                <AlertCircle className="h-10 w-10 text-amber-500" />
               </div>
-              <h2 className="mb-4 text-3xl font-black tracking-tighter text-white uppercase md:text-4xl">
+              <h2 className="mb-2 text-xl font-black tracking-tighter text-white uppercase md:text-2xl">
                 Loading Your Profile
               </h2>
-              <p className="mb-8 max-w-sm text-sm text-slate-400 md:text-base">
+              <p className="mb-6 max-w-xs text-xs text-slate-400 md:text-sm">
                 {profileFetchFailed
                   ? "We couldn't load your profile due to a network issue. Please check your connection and try again."
                   : "Please wait while we fetch your profile data..."}
@@ -467,10 +467,10 @@ export default function ProfilePage() {
               {profileFetchFailed && (
                 <button
                   onClick={() => window.location.reload()}
-                  className="group relative overflow-hidden rounded-2xl bg-rose-600 px-8 py-4 text-sm font-black text-white shadow-2xl shadow-rose-600/20 transition-all hover:bg-rose-700 active:scale-[0.98]"
+                  className="group relative overflow-hidden rounded-xl bg-rose-600 px-6 py-3 text-xs font-black text-white shadow-xl shadow-rose-600/20 transition-all hover:bg-rose-700 active:scale-[0.98]"
                 >
                   <span className="flex items-center gap-2">
-                    <Activity className="h-4 w-4" />
+                    <Activity className="h-3.5 w-3.5" />
                     Retry Loading
                   </span>
                 </button>
