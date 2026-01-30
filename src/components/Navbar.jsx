@@ -291,14 +291,14 @@ export default function Navbar() {
 
         {/* Mobile menu content */}
         {isOpen && (
-          <div className="absolute top-24 right-4 left-4 rounded-3xl border border-white/10 bg-slate-900/90 p-6 shadow-2xl backdrop-blur-2xl transition-all duration-300 lg:hidden">
-            <nav className="flex flex-col gap-2">
+          <div className="scrollbar-hide absolute top-20 right-2 left-2 max-h-[85vh] overflow-y-auto rounded-3xl border border-white/10 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-2xl transition-all duration-300 lg:hidden">
+            <nav className="flex flex-col gap-1 pb-4">
               {[...navLinks, ...moreLinks].map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className={`flex items-center gap-4 rounded-2xl px-6 py-4 text-lg font-bold transition-all ${
+                  className={`flex items-center gap-4 rounded-xl px-4 py-3 text-base font-bold transition-all ${
                     pathname === link.href
                       ? "bg-rose-500 text-white shadow-lg shadow-rose-500/20"
                       : "text-slate-400 hover:bg-white/5 hover:text-white"
@@ -315,20 +315,31 @@ export default function Navbar() {
                   setIsOpen(false);
                   setIsSearchOpen(true);
                 }}
-                className="flex items-center gap-4 rounded-2xl px-6 py-4 text-lg font-bold text-slate-400 transition-all hover:bg-white/5 hover:text-white"
+                className="flex items-center gap-4 rounded-xl px-4 py-3 text-base font-bold text-slate-400 transition-all hover:bg-white/5 hover:text-white"
               >
                 <Search className="h-4 w-4" />
                 Player Search
               </button>
 
               {!loading && (
-                <div className="mt-4 flex flex-col gap-4 border-t border-white/10 pt-4">
+                <div className="mt-2 flex flex-col gap-2 border-t border-white/10 pt-2">
                   {user ? (
                     <>
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center gap-4 rounded-xl px-4 py-3 text-base font-bold text-amber-500 hover:bg-amber-500/10"
+                        >
+                          <ShieldCheck className="h-5 w-5" />
+                          Admin Panel
+                        </Link>
+                      )}
+
                       <Link
                         href="/profile"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-4 rounded-2xl px-6 py-4 text-slate-300 hover:bg-white/5"
+                        className="flex items-center gap-4 rounded-xl px-4 py-3 text-base font-bold text-slate-300 hover:bg-white/5"
                       >
                         <User className="h-5 w-5" />
                         Profile
@@ -338,7 +349,7 @@ export default function Navbar() {
                           logout();
                           setIsOpen(false);
                         }}
-                        className="flex items-center gap-4 rounded-2xl px-6 py-4 text-rose-500 hover:bg-rose-500/10"
+                        className="flex items-center gap-4 rounded-xl px-4 py-3 text-base font-bold text-rose-500 hover:bg-rose-500/10"
                       >
                         <LogOut className="h-5 w-5" />
                         Sign Out
@@ -348,7 +359,7 @@ export default function Navbar() {
                     <Link
                       href="/login"
                       onClick={() => setIsOpen(false)}
-                      className="rounded-2xl bg-rose-600 py-4 text-center text-lg font-bold text-white shadow-lg shadow-rose-500/20"
+                      className="mt-2 rounded-xl bg-rose-600 py-3 text-center text-base font-bold text-white shadow-lg shadow-rose-500/20"
                     >
                       SIGN IN
                     </Link>

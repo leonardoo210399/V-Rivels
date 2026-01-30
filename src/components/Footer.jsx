@@ -1,7 +1,45 @@
+"use client";
+
 import Link from "next/link";
-import { FaDiscord, FaTwitter, FaInstagram, FaTwitch } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { FaDiscord, FaInstagram, FaYoutube } from "react-icons/fa";
 
 export default function Footer() {
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
+  useEffect(() => {
+    if (activeTooltip) {
+      const timer = setTimeout(() => setActiveTooltip(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTooltip]);
+
+  const handleComingSoon = (id) => {
+    setActiveTooltip(id);
+  };
+
+  const SocialButton = ({ id, icon: Icon }) => (
+    <div className="relative">
+      <button
+        onClick={() => handleComingSoon(id)}
+        className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 transition-all duration-300 hover:bg-rose-500 hover:text-white"
+      >
+        <Icon size={20} />
+      </button>
+
+      {activeTooltip === id && (
+        <div className="animate-in fade-in zoom-in slide-in-from-bottom-2 absolute bottom-full left-1/2 mb-3 -translate-x-1/2 duration-300">
+          <div className="relative rounded-lg bg-slate-950 px-3 py-1.5 shadow-2xl ring-1 ring-white/10">
+            <span className="text-[10px] font-black tracking-wider whitespace-nowrap text-rose-500 uppercase">
+              Coming Soon
+            </span>
+            <div className="ring-b ring-r absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-slate-950 ring-white/10"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <footer className="w-full border-t border-slate-800 bg-slate-900 pt-16 pb-8 text-slate-300">
       <div className="container mx-auto px-4">
@@ -53,7 +91,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/#about"
+                  href="/about"
                   className="transition-colors hover:text-rose-400"
                 >
                   About
@@ -100,14 +138,6 @@ export default function Footer() {
                   Refund Policy
                 </Link>
               </li>
-              <li>
-                <Link
-                  href="/shipping-policy"
-                  className="transition-colors hover:text-rose-400"
-                >
-                  Shipping Policy
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -116,33 +146,18 @@ export default function Footer() {
             <h3 className="mb-4 text-sm font-bold tracking-wide text-white uppercase">
               Connect
             </h3>
-            <div className="flex space-x-4">
+            <div className="flex items-center space-x-4">
               <a
                 href="https://discord.gg/gexZcZzCHV"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 transition-all duration-300 hover:bg-rose-500 hover:text-white"
               >
                 <FaDiscord size={20} />
               </a>
-              <a
-                href="#"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
-              >
-                <FaTwitter size={20} />
-              </a>
-              <a
-                href="#"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
-              >
-                <FaInstagram size={20} />
-              </a>
-              <a
-                href="#"
-                className="rounded-lg bg-slate-800 p-2 transition-all duration-300 hover:bg-rose-500 hover:text-white"
-              >
-                <FaTwitch size={20} />
-              </a>
+
+              <SocialButton id="instagram" icon={FaInstagram} />
+              <SocialButton id="youtube" icon={FaYoutube} />
             </div>
           </div>
         </div>
