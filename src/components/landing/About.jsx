@@ -30,7 +30,7 @@ const About = () => {
   return (
     <div id="about" className="min-h-screen w-full">
       <div className="relative mt-36 mb-8 flex flex-col items-center gap-5 px-10">
-        <p className="font-general text-sm uppercase md:text-[10px]">
+        <p className="font-general text-sm text-black uppercase md:text-sm">
           Welcome to VRivals Arena
         </p>
 

@@ -129,9 +129,9 @@ export default function AboutPage() {
     },
     {
       icon: <Shield className="h-8 w-8 text-rose-500" />,
-      title: "Anti-Cheat Integration",
+      title: "Secure Environment",
       description:
-        "Competitive integrity is our priority. Our platform leverages Riot's Vanguard anti-cheat to ensure a fair and cheat-free environment.",
+        "All matches are played on official Riot servers, benefiting from Vanguard anti-cheat protection.",
     },
     {
       icon: <Users className="h-8 w-8 text-blue-500" />,
