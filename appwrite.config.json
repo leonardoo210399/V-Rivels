@@ -608,6 +608,15 @@
                     "encrypt": false
                 },
                 {
+                    "key": "map",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
                     "key": "gameType",
                     "type": "string",
                     "required": true,

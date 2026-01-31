@@ -39,6 +39,7 @@ import {
   Info,
   RotateCcw,
   Swords,
+  Map,
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
@@ -1032,6 +1033,21 @@ export default function TournamentDetailPage({ params }) {
                       </p>
                     </div>
                   </div>
+                  {(tournament.gameType === "Deathmatch" || tournament.map) && (
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className="rounded-lg border border-white/5 bg-slate-950 p-2.5 text-rose-500 shadow-lg shadow-rose-500/5 md:rounded-xl md:p-3">
+                        <Map className="h-4 w-4 md:h-5 md:w-5" />
+                      </div>
+                      <div>
+                        <p className="mb-0.5 text-[9px] font-black tracking-[0.2em] text-slate-500 uppercase md:text-[10px]">
+                          Map
+                        </p>
+                        <p className="text-xs font-bold tracking-tight text-white uppercase md:text-sm">
+                          {tournament.map || "TBD"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 md:gap-4">
                     <div className="rounded-lg border border-white/5 bg-slate-950 p-2.5 text-rose-500 shadow-lg shadow-rose-500/5 md:rounded-xl md:p-3">
                       <ShieldCheck className="h-4 w-4 md:h-5 md:w-5" />
@@ -1115,12 +1131,20 @@ export default function TournamentDetailPage({ params }) {
                   {isSoloMode ? "INDIVIDUAL ENTRY" : "TEAM REGISTRATION"}
                 </p>
                 <div className="relative inline-flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-white/50 md:text-2xl">
-                    ₹
-                  </span>
-                  <p className="text-4xl font-black tracking-tighter text-white italic drop-shadow-lg md:text-5xl">
-                    {tournament.entryFee}
-                  </p>
+                  {!tournament.entryFee || Number(tournament.entryFee) === 0 ? (
+                    <p className="text-3xl font-black tracking-tighter text-emerald-400 italic drop-shadow-lg md:text-4xl">
+                      FREE ENTRY
+                    </p>
+                  ) : (
+                    <>
+                      <span className="text-xl font-bold text-white/50 md:text-2xl">
+                        ₹
+                      </span>
+                      <p className="text-4xl font-black tracking-tighter text-white italic drop-shadow-lg md:text-5xl">
+                        {tournament.entryFee}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="mt-4 flex items-center justify-center gap-2 text-[9px] font-bold tracking-widest text-slate-500 uppercase md:text-[10px]">
                   <div className="h-1 w-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
