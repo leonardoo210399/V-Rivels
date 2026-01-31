@@ -15,6 +15,7 @@ import {
   deleteTournamentChannelsAction,
   addMemberToTournamentChannelsAction,
   assignTournamentRoleAction,
+  announceRegistrationApprovedAction,
 } from "@/app/actions/discord";
 import { getMatches } from "@/lib/brackets";
 import CompleteBracket from "@/components/CompleteBracket";
@@ -482,6 +483,17 @@ export default function TournamentDetailPage({ params }) {
         } catch (discordErr) {
           console.warn("Failed to grant Discord access:", discordErr);
         }
+      }
+
+      // Announce Registration to Discord
+      try {
+        await announceRegistrationApprovedAction(
+          tournament.name,
+          registrationData.name,
+          transactionId || "FREE",
+        );
+      } catch (announceErr) {
+        console.warn("Failed to announce registration:", announceErr);
       }
 
       // Refresh registrations
