@@ -8,7 +8,9 @@ import {
   Info,
   Users,
   ExternalLink,
+  Map,
 } from "lucide-react";
+import { mapImages } from "@/assets/images/maps";
 import { sendTournamentMessageAction } from "@/app/actions/discord";
 import { updateTournament } from "@/lib/tournaments";
 
@@ -52,6 +54,7 @@ export default function SettingsTab({
     discordInviteUrl: "",
     checkInEnabled: false,
     checkInStart: "",
+    map: "",
   });
 
   const [newPrize, setNewPrize] = useState({ label: "", value: "" });
@@ -81,6 +84,7 @@ export default function SettingsTab({
         discordInviteUrl: tournament.discordInviteUrl || "",
         checkInEnabled: tournament.checkInEnabled || false,
         checkInStart: formatToLocalISO(tournament.checkInStart),
+        map: tournament.map || "",
       });
     }
   }, [tournament]);
@@ -190,6 +194,31 @@ export default function SettingsTab({
                 <option value="3v3">Skirmish (3v3)</option>
               </select>
             </div>
+
+            {/* Map Selection for Deathmatch */}
+            {editForm.gameType === "Deathmatch" && (
+              <div className="space-y-2">
+                <label className="ml-1 flex items-center gap-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                  <Map className="h-3 w-3 text-purple-500" /> Map Selection
+                </label>
+                <select
+                  value={editForm.map}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, map: e.target.value })
+                  }
+                  className="w-full cursor-pointer rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-purple-500"
+                >
+                  <option value="">Random Map</option>
+                  {Object.keys(mapImages)
+                    .filter((m) => !m.startsWith("Skirmish"))
+                    .map((mapName) => (
+                      <option key={mapName} value={mapName}>
+                        {mapName}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="ml-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
