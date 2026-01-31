@@ -4,6 +4,7 @@ import {
   createTournamentChannelAction,
   announceNewTournamentAction,
 } from "@/app/actions/discord";
+import { mapImages } from "@/assets/images/maps";
 import {
   X,
   Trophy,
@@ -22,6 +23,7 @@ import {
   Redo2,
   Plus,
   Trash2,
+  Map as MapIcon,
 } from "lucide-react";
 import Loader from "@/components/Loader";
 
@@ -235,6 +237,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
     secondPrize: "",
     additionalPrizes: [],
     matchFormat: "Auto",
+    map: "",
   });
   const [showPreview, setShowPreview] = useState(false);
   const [history, setHistory] = useState([formData.description]);
@@ -292,6 +295,11 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
       setFormData((prev) => ({ ...prev, maxTeams: 16 }));
     else if (formData.gameType === "Deathmatch")
       setFormData((prev) => ({ ...prev, maxTeams: 40 }));
+
+    // Reset map when switching modes, but if switching back to Deathmatch, maybe default to random or empty
+    if (formData.gameType !== "Deathmatch") {
+      setFormData((prev) => ({ ...prev, map: "" }));
+    }
   }, [formData.gameType]);
 
   const updateDescription = (newText) => {
@@ -374,6 +382,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         matchFormat: formData.matchFormat,
         registeredTeams: 0,
         bracketGenerated: false,
+        map: formData.map || null,
       };
 
       // 2. Create Tournament Document (Client Side)
@@ -440,6 +449,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
         secondPrize: "",
         additionalPrizes: [],
         matchFormat: "Auto",
+        map: "",
       });
     } catch (error) {
       console.error("Failed to create tournament", error);
@@ -714,6 +724,36 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
                     </select>
                   </div>
                 </div>
+
+                {/* Map Selection for Deathmatch */}
+                {formData.gameType === "Deathmatch" && (
+                  <div className="animate-in fade-in slide-in-from-top-2 border-t border-white/5 pt-4">
+                    <label className="mb-2 block flex items-center gap-1 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      <MapIcon className="h-3 w-3 text-purple-500" /> Map
+                      Selection
+                    </label>
+                    <select
+                      value={formData.map}
+                      onChange={(e) =>
+                        setFormData({ ...formData, map: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-white/5 bg-slate-950 px-4 py-3 text-sm text-white transition-all outline-none focus:border-purple-500/50"
+                    >
+                      <option value="">Random Map</option>
+                      {Object.keys(mapImages)
+                        .filter((m) => !m.startsWith("Skirmish")) // Exclude Skirmish maps for Deathmatch likely? Or keep them? Deathmatch usually standard maps.
+                        .map((mapName) => (
+                          <option key={mapName} value={mapName}>
+                            {mapName}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="mt-2 text-[10px] text-slate-500">
+                      Leave empty to deciding via veto or random selection
+                      later.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
                   <div>

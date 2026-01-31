@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   List,
   ChevronDown,
+  Banknote,
 } from "lucide-react";
 import { BentoTilt } from "@/components/BentoGrid";
 import Image from "next/image";
@@ -28,6 +29,8 @@ export default function TournamentsPage() {
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [activeTab, setActiveTab] = useState("UPCOMING");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [priceFilter, setPriceFilter] = useState("All");
+  const [isPriceFilterOpen, setIsPriceFilterOpen] = useState(false);
 
   useEffect(() => {
     async function loadTournaments() {
@@ -60,9 +63,14 @@ export default function TournamentsPage() {
         matchesStatus = status === "completed";
       }
 
-      return matchesFilter && matchesSearch && matchesStatus;
+      const matchesPrice =
+        priceFilter === "All" ||
+        (priceFilter === "Free" && (!t.entryFee || Number(t.entryFee) === 0)) ||
+        (priceFilter === "Paid" && t.entryFee && Number(t.entryFee) > 0);
+
+      return matchesFilter && matchesSearch && matchesStatus && matchesPrice;
     });
-  }, [tournaments, filter, searchQuery, activeTab]);
+  }, [tournaments, filter, searchQuery, activeTab, priceFilter]);
 
   const tabCounts = useMemo(() => {
     const baseFiltered = tournaments.filter((t) => {
@@ -70,7 +78,12 @@ export default function TournamentsPage() {
       const matchesSearch = t.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-      return matchesFilter && matchesSearch;
+      const matchesPrice =
+        priceFilter === "All" ||
+        (priceFilter === "Free" && (!t.entryFee || Number(t.entryFee) === 0)) ||
+        (priceFilter === "Paid" && t.entryFee && Number(t.entryFee) > 0);
+
+      return matchesFilter && matchesSearch && matchesPrice;
     });
 
     return {
@@ -197,7 +210,7 @@ export default function TournamentsPage() {
             />
           </div>
 
-          <div className="flex w-full items-center gap-2 md:w-auto">
+          <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 md:w-auto md:overflow-visible md:pb-0">
             {/* View Toggle */}
             <div className="flex items-center rounded-xl border border-white/5 bg-slate-950 p-1">
               <button
@@ -220,7 +233,7 @@ export default function TournamentsPage() {
             <div className="relative h-full flex-1 md:flex-none">
               <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-950 px-6 py-3 text-sm text-slate-300 transition-all hover:border-white/10 focus:border-rose-500/50"
+                className="flex w-full min-w-[160px] items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-950 px-6 py-3 text-sm text-slate-300 transition-all hover:border-white/10 focus:border-rose-500/50 md:w-44"
               >
                 <span className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-rose-500" />
@@ -252,6 +265,53 @@ export default function TournamentsPage() {
                         className={`flex w-full items-center rounded-lg px-4 py-3 text-left text-sm transition-all hover:bg-white/5 ${
                           filter === option.value
                             ? "bg-rose-500/10 text-rose-500"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Price Filter */}
+            <div className="relative h-full flex-1 md:flex-none">
+              <button
+                onClick={() => setIsPriceFilterOpen(!isPriceFilterOpen)}
+                className="flex w-full min-w-[160px] items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-950 px-6 py-3 text-sm text-slate-300 transition-all hover:border-white/10 focus:border-rose-500/50 md:w-44"
+              >
+                <span className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4 text-emerald-500" />
+                  {priceFilter === "All" ? "All Prices" : priceFilter}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-300 ${isPriceFilterOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isPriceFilterOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsPriceFilterOpen(false)}
+                  />
+                  <div className="absolute top-full right-0 z-50 mt-2 w-full min-w-[200px] overflow-hidden rounded-xl border border-white/10 bg-slate-900 p-1 shadow-2xl backdrop-blur-xl">
+                    {[
+                      { value: "All", label: "All Prices" },
+                      { value: "Free", label: "Free Entry" },
+                      { value: "Paid", label: "Paid Tournaments" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setPriceFilter(option.value);
+                          setIsPriceFilterOpen(false);
+                        }}
+                        className={`flex w-full items-center rounded-lg px-4 py-3 text-left text-sm transition-all hover:bg-white/5 ${
+                          priceFilter === option.value
+                            ? "bg-emerald-500/10 text-emerald-500"
                             : "text-slate-400 hover:text-white"
                         }`}
                       >
@@ -345,7 +405,7 @@ export default function TournamentsPage() {
                       <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-rose-500/5 blur-[100px] transition-colors group-hover:bg-rose-500/10" />
 
                       {/* Card Header */}
-                      <div className="relative z-10 mb-6 flex min-h-[90px] items-start justify-between gap-4">
+                      <div className="relative z-10 mb-3 flex min-h-[90px] items-start justify-between gap-4">
                         <div className="flex min-w-0 flex-col gap-2">
                           <div className="flex items-center gap-2">
                             <span
@@ -368,14 +428,34 @@ export default function TournamentsPage() {
                       </div>
 
                       {/* Prize Pool Box */}
-                      <div className="relative z-10 mb-8 overflow-hidden rounded-2xl border border-white/5 bg-slate-950/50 p-4 transition-all duration-500 group-hover:border-rose-500/30 md:p-6">
+                      <div className="relative z-10 mb-5 overflow-hidden rounded-2xl border border-white/5 bg-slate-950/50 p-4 transition-all duration-500 group-hover:border-rose-500/30 md:p-6">
                         <div className="absolute inset-0 bg-gradient-to-r from-rose-500/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 
                         <div className="relative z-10 flex flex-col gap-4">
                           <div>
-                            <span className="mb-2 block text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase transition-colors group-hover:text-rose-400">
-                              Total Prize Pool
-                            </span>
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="block text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase transition-colors group-hover:text-rose-400">
+                                Total Prize Pool
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
+                                  Entry:
+                                </span>
+                                <span
+                                  className={`text-[10px] font-black tracking-widest uppercase ${
+                                    !tournament.entryFee ||
+                                    Number(tournament.entryFee) === 0
+                                      ? "text-emerald-500"
+                                      : "text-amber-500"
+                                  }`}
+                                >
+                                  {!tournament.entryFee ||
+                                  Number(tournament.entryFee) === 0
+                                    ? "FREE"
+                                    : `₹${tournament.entryFee}`}
+                                </span>
+                              </div>
+                            </div>
                             <div className="py-1">
                               <span className="inline-block origin-left bg-gradient-to-r from-white to-slate-400 bg-clip-text text-4xl leading-tight font-black tracking-tight text-transparent italic transition-all group-hover:scale-105 group-hover:from-rose-400 group-hover:to-amber-300 md:text-5xl">
                                 ₹{tournament.prizePool}
@@ -466,7 +546,7 @@ export default function TournamentsPage() {
                   <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0c10] p-5 transition-all hover:border-rose-500/30 hover:bg-slate-900/50">
                     <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       {/* Left Section: Game Type & Name */}
-                      <div className="flex items-center gap-4 md:w-[30%] md:gap-6">
+                      <div className="flex items-center gap-4 md:w-[25%] md:gap-6">
                         <div
                           className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${
                             tournament.gameType === "Deathmatch"
@@ -491,7 +571,26 @@ export default function TournamentsPage() {
                       </div>
 
                       {/* Center: Prize Information */}
-                      <div className="grid grid-cols-3 gap-2 border-y border-white/5 py-3 md:flex md:flex-1 md:items-center md:justify-between md:border-none md:px-12 md:py-0">
+                      <div className="grid grid-cols-4 gap-2 border-y border-white/5 py-3 md:flex md:flex-1 md:items-center md:justify-between md:border-none md:px-8 md:py-0">
+                        <div className="flex flex-col">
+                          <span className="mb-1 text-[8px] font-black tracking-widest text-slate-600 uppercase md:text-[9px] md:tracking-[0.2em]">
+                            Entry Fee
+                          </span>
+                          <span
+                            className={`text-base leading-none font-black tracking-tight transition-colors md:text-xl ${
+                              !tournament.entryFee ||
+                              Number(tournament.entryFee) === 0
+                                ? "text-emerald-500"
+                                : "text-amber-500"
+                            }`}
+                          >
+                            {!tournament.entryFee ||
+                            Number(tournament.entryFee) === 0
+                              ? "FREE"
+                              : `₹${tournament.entryFee}`}
+                          </span>
+                        </div>
+                        <div className="hidden h-10 w-[1px] bg-white/10 md:block" />
                         <div className="group/prize flex flex-col">
                           <span className="mb-1 text-[8px] font-black tracking-widest text-slate-600 uppercase transition-colors group-hover:text-rose-500 md:text-[9px] md:tracking-[0.2em]">
                             Prize Pool
