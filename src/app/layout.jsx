@@ -6,16 +6,22 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 import "./app.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 const poppins = Poppins({
   weight: ["300", "400", "500", "600"],
   subsets: ["latin"],
   variable: "--font-poppins",
+  display: "swap",
 });
 const anton = Anton({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-anton",
+  display: "swap",
 });
 
 export const metadata = {
