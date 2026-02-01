@@ -18,6 +18,10 @@ export const AuthProvider = ({ children }) => {
       const accountDetails = await account.get();
       setUser(accountDetails);
     } catch (error) {
+      // Log error for debugging (won't affect user experience)
+      if (error.code !== 401) {
+        console.error("Auth status check failed:", error);
+      }
       setUser(null);
     } finally {
       setLoading(false);
