@@ -118,6 +118,8 @@ const Hero = () => {
                   src={getVideoSrc((currentIndex % totalVideos) + 1)}
                   loop
                   muted
+                  playsInline
+                  preload="none"
                   id="current-video"
                   className="size-64 origin-center scale-150 object-cover object-center"
                   onLoadedData={handleVideoLoad}
@@ -131,6 +133,8 @@ const Hero = () => {
             src={getVideoSrc(currentIndex)}
             loop
             muted
+            playsInline
+            preload="none"
             id="next-video"
             className="invisible absolute top-1/2 left-1/2 z-20 size-64 -translate-x-1/2 -translate-y-1/2 object-cover object-center"
             onLoadedData={handleVideoLoad}
@@ -142,6 +146,8 @@ const Hero = () => {
             autoPlay
             loop
             muted
+            playsInline
+            preload="auto"
             className="absolute top-0 left-0 size-full object-cover object-center"
             onLoadedData={handleVideoLoad}
           />

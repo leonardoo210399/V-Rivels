@@ -244,7 +244,6 @@ export default function TournamentDetailPage({ params }) {
       }
     }
     loadData();
-    loadData();
   }, [id, user]);
 
   useEffect(() => {
