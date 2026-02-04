@@ -491,6 +491,7 @@ export default function TournamentDetailPage({ params }) {
           tournament.name,
           registrationData.name,
           transactionId || "FREE",
+          userProfile?.discordId || null,
         );
       } catch (announceErr) {
         console.warn("Failed to announce registration:", announceErr);
