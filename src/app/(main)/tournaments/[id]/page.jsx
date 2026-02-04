@@ -759,7 +759,7 @@ export default function TournamentDetailPage({ params }) {
 
       <div className="relative z-30 mx-auto -mt-6 max-w-6xl px-4 py-6 md:-mt-10 md:px-6 md:py-12">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push("/tournaments")}
           className="group mt-2 mb-4 flex items-center gap-2 text-[10px] font-black tracking-[0.2em] text-slate-400 uppercase transition-all hover:text-white md:mt-5 md:mb-5"
         >
           <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />

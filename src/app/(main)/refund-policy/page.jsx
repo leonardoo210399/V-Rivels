@@ -172,7 +172,7 @@ export default function RefundPolicy() {
           </section>
 
           <div className="mt-8 border-t border-white/5 pt-8 text-center text-xs tracking-widest text-slate-600 uppercase">
-            <p>Last Updated: Last Updated: {formatDate(new Date())}</p>
+            <p>Last Updated: {formatDate(new Date())}</p>
           </div>
         </div>
       </div>
