@@ -69,7 +69,7 @@ export async function broadcastMatchResultAction(channelId, message, roleId = nu
 /**
  * Sends a registration approval notification to the Public Registrations Channel.
  */
-export async function announceRegistrationApprovedAction(tournamentName, registrantName, transactionId) {
+export async function announceRegistrationApprovedAction(tournamentName, registrantName, transactionId, discordUserId = null) {
     const channelId = process.env.DISCORD_REGISTRATIONS_CHANNEL_ID;
     if (!channelId) {
         // Silently fail if not configured, or warn
@@ -77,7 +77,8 @@ export async function announceRegistrationApprovedAction(tournamentName, registr
         return;
     }
 
-    const message = `✨ **REGISTRATION CONFIRMED!**\n\n**${registrantName}** has secured their slot in **${tournamentName}**! 🎟️\n\n*Good luck!* 🍀`;
+    const mention = discordUserId ? `<@${discordUserId}>` : `**${registrantName}**`;
+    const message = `✨ **REGISTRATION CONFIRMED!**\n\n${mention} has secured their slot in **${tournamentName}**! 🎟️\n\n*Good luck!* 🍀`;
     
     try {
         await sendTournamentMessage(channelId, message, null);

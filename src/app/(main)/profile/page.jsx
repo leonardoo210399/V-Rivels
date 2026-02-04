@@ -243,7 +243,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push("/login");
+      router.push(`/login?redirect=${window.location.pathname}`);
       return;
     }
 

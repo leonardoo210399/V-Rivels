@@ -255,7 +255,7 @@ export default function Navbar() {
                   </div>
                 ) : (
                   <Link
-                    href="/login"
+                    href={`/login?redirect=${pathname}`}
                     className="relative overflow-hidden rounded-full bg-rose-600 px-8 py-2.5 text-sm font-bold text-white transition-all hover:bg-rose-700 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-95"
                   >
                     SIGN IN
@@ -357,7 +357,7 @@ export default function Navbar() {
                     </>
                   ) : (
                     <Link
-                      href="/login"
+                      href={`/login?redirect=${pathname}`}
                       onClick={() => setIsOpen(false)}
                       className="mt-2 rounded-xl bg-rose-600 py-3 text-center text-base font-bold text-white shadow-lg shadow-rose-500/20"
                     >

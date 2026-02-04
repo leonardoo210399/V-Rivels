@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { getTournaments } from "@/lib/tournaments";
+import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import {
@@ -497,10 +498,7 @@ export default function TournamentsPage() {
                               Start Date
                             </span>
                             <span className="text-sm font-bold text-slate-300">
-                              {new Date(tournament.date).toLocaleDateString(
-                                undefined,
-                                { month: "short", day: "numeric" },
-                              )}
+                              {formatDate(tournament.date)}
                             </span>
                           </div>
                         </div>
@@ -626,13 +624,7 @@ export default function TournamentsPage() {
                             Start Date
                           </span>
                           <span className="text-xs font-black tracking-tight text-slate-300 uppercase md:text-sm">
-                            {new Date(tournament.date).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                              },
-                            )}
+                            {formatDate(tournament.date)}
                           </span>
                         </div>
                         <div className="flex h-8 items-center gap-2 rounded-lg border border-white/5 bg-slate-950/50 px-3 md:h-10 md:gap-3 md:rounded-xl md:px-4">

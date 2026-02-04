@@ -13,6 +13,7 @@ import {
   deleteRegistration,
 } from "@/lib/tournaments";
 import { updatePaymentRequestStatus } from "@/lib/payment_requests";
+import { formatDate } from "@/lib/utils";
 
 export default function ParticipantsTab({
   tournament,
@@ -128,8 +129,7 @@ export default function ParticipantsTab({
                       suppressHydrationWarning
                     >
                       <Calendar className="h-3 w-3" />
-                      Registered{" "}
-                      {new Date(reg.registeredAt).toLocaleDateString()}
+                      Registered {formatDate(reg.registeredAt)}
                     </p>
                     {reg.checkedIn && (
                       <div className="mt-2 flex w-fit items-center gap-1.5 rounded-full border border-teal-500/20 bg-teal-500/10 px-2 py-0.5 text-[9px] font-black tracking-widest text-teal-400 uppercase">

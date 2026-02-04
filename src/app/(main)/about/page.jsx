@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import AnimatedTitle from "@/components/AnimatedTitle";
 import { Shield, Users, Trophy, Zap, Target, Globe } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import { useAuth } from "@/context/AuthContext";
@@ -19,6 +20,7 @@ const USERS_COLLECTION_ID = "users"; // Consistent with lib/users.js
 
 export default function AboutPage() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const containerRef = useRef(null);
   const [stats, setStats] = useState({
     activePlayers: "...",
@@ -318,7 +320,7 @@ export default function AboutPage() {
           </p>
 
           <Link
-            href={user ? "/tournaments" : "/login"}
+            href={user ? "/tournaments" : `/login?redirect=${pathname}`}
             className="group relative inline-flex items-center gap-4 rounded-full bg-rose-600 px-10 py-5 text-xl font-black text-white transition-all hover:bg-rose-700 hover:shadow-[0_0_50px_rgba(244,63,94,0.4)] active:scale-95"
           >
             <span>JOIN THE ARENA</span>

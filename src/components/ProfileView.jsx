@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "@/lib/utils";
 import {
   User,
   Trophy,
@@ -753,9 +754,9 @@ export default function ProfileView({
                           {/* Date & Time */}
                           <div className="hidden shrink-0 text-right sm:block">
                             <p className="text-[9px] font-bold tracking-widest text-slate-500 uppercase tabular-nums">
-                              {new Date(
-                                match.metadata?.game_start * 1000,
-                              ).toLocaleDateString()}
+                              {formatDate(
+                                new Date(match.metadata?.game_start * 1000),
+                              )}
                             </p>
                             <p className="text-[9px] font-bold tracking-widest text-slate-600 uppercase">
                               {match.metadata?.game_length

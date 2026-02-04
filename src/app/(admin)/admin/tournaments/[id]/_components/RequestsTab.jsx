@@ -110,11 +110,21 @@ export default function RequestsTab({
         ? request.teamName
         : meta?.playerName || request.teamName;
 
+      // Get discordId - userProfile was fetched above, but it's scoped inside try, so we fetch again
+      let discordId = null;
+      try {
+        const profile = await getUserProfile(request.userId);
+        discordId = profile?.discordId || null;
+      } catch (discordErr) {
+        console.warn("Failed to get user profile for Discord ID:", discordErr);
+      }
+
       try {
         await announceRegistrationApprovedAction(
           tournament.name,
           registrantName,
           request.transactionId,
+          discordId,
         );
       } catch (announceErr) {
         console.warn("Failed to announce registration:", announceErr);

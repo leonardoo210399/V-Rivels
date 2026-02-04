@@ -30,11 +30,11 @@ export const AuthProvider = ({ children }) => {
 
   const isAdmin = user?.labels?.includes("admin");
 
-  async function loginWithGoogle() {
+  async function loginWithGoogle(redirectPath = "/profile") {
     try {
       account.createOAuth2Session(
         OAuthProvider.Google,
-        `${window.location.origin}/profile`,
+        `${window.location.origin}${redirectPath}`,
         `${window.location.origin}/login`,
       );
     } catch (error) {
@@ -42,11 +42,11 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  async function loginWithDiscord() {
+  async function loginWithDiscord(redirectPath = "/profile") {
     try {
       account.createOAuth2Session(
         OAuthProvider.Discord,
-        `${window.location.origin}/profile`,
+        `${window.location.origin}${redirectPath}`,
         `${window.location.origin}/login`,
         ["identify", "email", "guilds"],
       );

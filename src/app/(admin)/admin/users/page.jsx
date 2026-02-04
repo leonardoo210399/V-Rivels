@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getMatches } from "@/lib/valorant";
+import { formatDate } from "@/lib/utils";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";
@@ -303,7 +304,7 @@ export default function AdminUsersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-500">
-                        {new Date(u.$createdAt).toLocaleDateString()}
+                        {formatDate(u.$createdAt)}
                       </td>
                     </tr>
                   );

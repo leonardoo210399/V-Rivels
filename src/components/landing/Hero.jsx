@@ -23,14 +23,22 @@ const Hero = () => {
   };
 
   useEffect(() => {
+    // Check if user has visited before to skip loader for better 4G experience
+    const hasVisited = localStorage.getItem("vrivals_has_visited");
+    if (hasVisited) {
+      setLoading(false);
+    }
+
     // Hide loader when at least one video loads (more forgiving)
     if (loadedVideos >= 1) {
       setLoading(false);
+      localStorage.setItem("vrivals_has_visited", "true");
     }
 
     // Fallback: hide loader after 3 seconds regardless
     const timeout = setTimeout(() => {
       setLoading(false);
+      localStorage.setItem("vrivals_has_visited", "true");
     }, 3000);
 
     return () => clearTimeout(timeout);
@@ -120,6 +128,7 @@ const Hero = () => {
                   muted
                   playsInline
                   preload="none"
+                  poster={`videos/hero-${(currentIndex % totalVideos) + 1}-poster.jpg`}
                   id="current-video"
                   className="size-64 origin-center scale-150 object-cover object-center"
                   onLoadedData={handleVideoLoad}
@@ -135,6 +144,7 @@ const Hero = () => {
             muted
             playsInline
             preload="none"
+            poster={`videos/hero-${currentIndex}-poster.jpg`}
             id="next-video"
             className="invisible absolute top-1/2 left-1/2 z-20 size-64 -translate-x-1/2 -translate-y-1/2 object-cover object-center"
             onLoadedData={handleVideoLoad}
@@ -148,6 +158,7 @@ const Hero = () => {
             muted
             playsInline
             preload="auto"
+            poster={`videos/hero-${currentIndex === totalVideos - 1 ? 1 : currentIndex}-poster.jpg`}
             className="absolute top-0 left-0 size-full object-cover object-center"
             onLoadedData={handleVideoLoad}
           />
