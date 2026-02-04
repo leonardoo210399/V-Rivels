@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTournaments, deleteTournament } from "@/lib/tournaments";
 import { getAllPendingPaymentRequests } from "@/lib/payment_requests";
+import { formatDate } from "@/lib/utils";
 import {
   Trophy,
   Calendar,
@@ -138,7 +139,7 @@ export default function AdminTournamentsPage() {
                         suppressHydrationWarning
                       >
                         <Calendar className="h-3 w-3" />
-                        {new Date(t.date).toLocaleDateString()}
+                        {formatDate(t.date)}
                       </div>
                     </td>
                     <td className="px-6 py-4">

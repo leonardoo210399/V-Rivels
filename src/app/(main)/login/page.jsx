@@ -1,18 +1,20 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FaDiscord } from "react-icons/fa";
 
 export default function LoginPage() {
   const { user, loginWithGoogle, loginWithDiscord } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") || "/profile";
 
   useEffect(() => {
     if (user) {
-      router.push("/profile");
+      router.push(redirect);
     }
-  }, [user, router]);
+  }, [user, router, redirect]);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
@@ -62,7 +64,7 @@ export default function LoginPage() {
 
           <div className="relative z-10 space-y-3">
             <button
-              onClick={loginWithGoogle}
+              onClick={() => loginWithGoogle(redirect)}
               className="group flex w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-black px-6 py-4 text-sm font-bold text-white shadow-2xl transition-all hover:border-white/20 hover:bg-zinc-900 hover:shadow-white/5 active:scale-[0.98]"
             >
               <div className="flex items-center justify-center bg-transparent">
@@ -95,7 +97,7 @@ export default function LoginPage() {
             </button>
 
             <button
-              onClick={loginWithDiscord}
+              onClick={() => loginWithDiscord(redirect)}
               className="group flex w-full items-center justify-center gap-3 rounded-full border border-indigo-500/30 bg-[#5865F2] px-6 py-4 text-sm font-bold text-white shadow-2xl shadow-indigo-600/20 transition-all hover:bg-[#4752C4] active:scale-[0.98]"
             >
               <FaDiscord className="h-5 w-5" />

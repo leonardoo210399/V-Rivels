@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Shield, Users, Monitor, Gavel } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 export default function RulesAndRegulations() {
   return (
@@ -164,14 +165,7 @@ export default function RulesAndRegulations() {
           </div>
 
           <div className="mt-8 border-t border-white/5 pt-8 text-center text-xs tracking-widest text-slate-600 uppercase">
-            <p>
-              Last Updated:{" "}
-              {new Date().toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
+            <p>Last Updated: Last Updated: {formatDate(new Date())}</p>
           </div>
         </div>
       </div>

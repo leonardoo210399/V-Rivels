@@ -48,6 +48,7 @@ import DeathmatchStandings from "@/components/DeathmatchStandings";
 import UPIPaymentModal from "@/components/UPIPaymentModal";
 import { account } from "@/lib/appwrite";
 import { checkDiscordMembership, DISCORD_INVITE_URL } from "@/lib/discord";
+import { formatDate } from "@/lib/utils";
 const RichText = ({ text }) => {
   if (!text) return null;
 
@@ -901,10 +902,7 @@ export default function TournamentDetailPage({ params }) {
                                     "Unknown"}
                                 </p>
                                 <p className="text-[9px] font-medium tracking-[0.1em] text-slate-500 uppercase md:text-[10px]">
-                                  Registered{" "}
-                                  {new Date(
-                                    reg.$createdAt,
-                                  ).toLocaleDateString()}
+                                  Registered {formatDate(reg.$createdAt)}
                                 </p>
                               </div>
                             </div>
@@ -994,7 +992,7 @@ export default function TournamentDetailPage({ params }) {
                         className="truncate text-xs font-bold tracking-tight text-white uppercase md:text-sm"
                         suppressHydrationWarning
                       >
-                        {new Date(tournament.date).toLocaleDateString()} @{" "}
+                        {formatDate(tournament.date)} @{" "}
                         {new Date(tournament.date).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -1184,7 +1182,9 @@ export default function TournamentDetailPage({ params }) {
                     Please sign in to register for this tournament.
                   </p>
                   <button
-                    onClick={() => router.push("/login")}
+                    onClick={() =>
+                      router.push(`/login?redirect=${window.location.pathname}`)
+                    }
                     className="font-anton w-full rounded-lg bg-white px-4 py-2.5 text-[10px] font-black tracking-widest text-slate-950 uppercase transition-all hover:bg-slate-200 md:rounded-xl md:px-6 md:py-3 md:text-xs"
                   >
                     Log In

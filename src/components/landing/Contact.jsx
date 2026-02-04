@@ -2,6 +2,7 @@
 import AnimatedTitle from "./AnimatedTitle";
 import Button from "./Button";
 import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
 
 const ImageClipBox = ({ src, clipClass }) => (
   <div className={clipClass}>
@@ -11,6 +12,12 @@ const ImageClipBox = ({ src, clipClass }) => (
 
 const Contact = () => {
   const { user, loading } = useAuth();
+  // We can't use usePathname here easily because this might be used on pages where we don't want to redirect back?
+  // Actually, Contact is usually on landing, so redirecting back to landing is fine.
+  // But let's check if we can import usePathname.
+  // The file is "use client", so yes.
+
+  const pathname = usePathname();
 
   return (
     <div id="contact" className="my-20 min-h-96 w-full px-10">
@@ -50,7 +57,7 @@ const Contact = () => {
           <Button
             title={user ? "Go to Profile" : "Sign Up Now"}
             containerClass="mt-10 cursor-pointer"
-            href={user ? "/profile" : "/login"}
+            href={user ? "/profile" : `/login?redirect=${pathname}`}
           />
         </div>
       </div>

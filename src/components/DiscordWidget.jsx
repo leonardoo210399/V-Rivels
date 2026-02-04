@@ -712,7 +712,7 @@ function WidgetContent({
           <div className="border-t border-white/5 p-3">
             {isLoggedIn === false ? (
               <Link
-                href="/login"
+                href={`/login?redirect=${window.location.pathname}`}
                 className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 py-3 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-indigo-600/20 transition-all duration-300 hover:scale-105 hover:shadow-indigo-600/40 active:scale-95"
               >
                 <LogIn className="h-3.5 w-3.5 transition-transform duration-300 group-hover:scale-110" />

@@ -318,7 +318,11 @@ export default function AboutPage() {
           </p>
 
           <Link
-            href={user ? "/tournaments" : "/login"}
+            href={
+              user
+                ? "/tournaments"
+                : `/login?redirect=${window.location.pathname}`
+            }
             className="group relative inline-flex items-center gap-4 rounded-full bg-rose-600 px-10 py-5 text-xl font-black text-white transition-all hover:bg-rose-700 hover:shadow-[0_0_50px_rgba(244,63,94,0.4)] active:scale-95"
           >
             <span>JOIN THE ARENA</span>
