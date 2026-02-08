@@ -631,7 +631,6 @@ export function useMatchActions(
       const SKIRMISH_MAPS = ["Skirmish A", "Skirmish B", "Skirmish C"];
       const randomMap =
         SKIRMISH_MAPS[Math.floor(Math.random() * SKIRMISH_MAPS.length)];
-      console.log("Lottery selected:", randomMap); // log for debugging
 
       const vetoData = JSON.stringify({
         map: randomMap,
