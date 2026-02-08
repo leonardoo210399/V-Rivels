@@ -1,11 +1,10 @@
 "use server";
 
 import {
-  createPaymentOrder as createEkqrOrder,
-  checkOrderStatus as checkEkqrStatus,
+  createPaymentOrder,
+  checkOrderStatus,
   generateClientTxnId,
-  formatDateForEkqr,
-} from "@/lib/upigateway";
+} from "@/lib/edgegateway";
 
 const sdk = require("node-appwrite");
 
@@ -22,7 +21,7 @@ function getAppwriteClient() {
 }
 
 /**
- * Create a UPI payment order via ekQR API
+ * Create a UPI payment order via EdgeGateway
  * This is a server action to keep the API key secure
  * 
  * @param {Object} params
@@ -52,8 +51,8 @@ export async function createPaymentOrderAction({
     const clientTxnId = generateClientTxnId();
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_BASE_URL}/tournaments/${tournamentId}?payment=complete`;
 
-    // Create order via ekQR API
-    const orderResponse = await createEkqrOrder({
+    // Create order via EdgeGateway API
+    const orderData = await createPaymentOrder({
       clientTxnId,
       amount: String(amount),
       productInfo: `${tournamentName} - Entry Fee`,
@@ -82,23 +81,23 @@ export async function createPaymentOrderAction({
         requestedAt: new Date().toISOString(),
         paymentStatus: "pending",
         transactionId: clientTxnId,
-        ekqrOrderId: String(orderResponse.order_id || ""),
+        ekqrOrderId: String(orderData.order_id || ""),
         amount: String(amount),
       }
     );
 
     return {
       success: true,
-      paymentUrl: orderResponse.payment_url,
-      orderId: orderResponse.order_id,
+      paymentUrl: orderData.payment_url,
+      orderId: orderData.order_id,
       clientTxnId,
-      // Enterprise plan features - deep links for UPI apps
+      // EdgeGateway provides deep links directly
       intentLinks: {
-        upiLink: orderResponse.upi_intent?.upi_link,
-        bhimLink: orderResponse.upi_intent?.bhim_link,
-        gpayLink: orderResponse.upi_intent?.gpay_link,
-        phonepeLink: orderResponse.upi_intent?.phonepe_link,
-        paytmLink: orderResponse.upi_intent?.paytm_link,
+        upiLink: orderData.upi_intent?.bhim_link || orderData.payment_url, // Fallback for QR generation
+        bhimLink: orderData.upi_intent?.bhim_link,
+        gpayLink: orderData.upi_intent?.gpay_link,
+        phonepeLink: orderData.upi_intent?.phonepe_link,
+        paytmLink: orderData.upi_intent?.paytm_link,
       },
     };
   } catch (error) {
@@ -111,22 +110,23 @@ export async function createPaymentOrderAction({
 }
 
 /**
- * Check payment status via ekQR API
+ * Check payment status via EdgeGateway
  * 
  * @param {string} clientTxnId - The transaction ID
- * @param {Date} [txnDate] - Transaction date (defaults to today)
  * @returns {Promise<{success: boolean, status?: string, data?: Object, error?: string}>}
  */
-export async function checkPaymentStatusAction(clientTxnId, txnDate = new Date()) {
+export async function checkPaymentStatusAction(clientTxnId) {
   try {
-    const formattedDate = formatDateForEkqr(txnDate);
-    const result = await checkEkqrStatus(clientTxnId, formattedDate);
+    const result = await checkOrderStatus(clientTxnId);
 
-    const status = result.data?.status || result.status || "unknown";
+    // EdgeGateway Response Analysis:
+    // Root 'status': "success" means the API call worked.
+    // Transaction status is inside 'data'.
+    const txnStatus = result.data?.status || result.data?.order_status || "pending";
 
     return {
       success: true,
-      status: status.toLowerCase(), // Normalize to lowercase
+      status: txnStatus.toLowerCase(),
       data: result.data || result,
     };
   } catch (error) {
@@ -186,6 +186,48 @@ export async function updatePaymentStatusAction(clientTxnId, targetStatus) {
       throw updateError;
     }
   } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Submit UTR/Transaction ID manually for a payment request
+ */
+export async function submitUtrAction(clientTxnId, utr) {
+  const client = getAppwriteClient();
+  const databases = new sdk.Databases(client);
+  const sdkQueries = sdk.Query;
+
+  try {
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      PAYMENT_REQUESTS_COLLECTION_ID,
+      [sdkQueries.equal("transactionId", clientTxnId)]
+    );
+
+    if (response.documents.length === 0) {
+      return { success: false, error: "Payment request not found" };
+    }
+
+    const docId = response.documents[0].$id;
+
+    await databases.updateDocument(
+      DATABASE_ID,
+      PAYMENT_REQUESTS_COLLECTION_ID,
+      docId,
+      { 
+        upiTxnId: utr,
+        metadata: JSON.stringify({ 
+          ...JSON.parse(response.documents[0].metadata || "{}"),
+          manuallySubmittedUtr: utr,
+          manuallySubmittedAt: new Date().toISOString()
+        })
+      }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("[submitUtrAction] Error:", error);
     return { success: false, error: error.message };
   }
 }

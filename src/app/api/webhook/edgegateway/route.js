@@ -1,4 +1,4 @@
- import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 // Import Appwrite server SDK for webhook processing
 const sdk = require("node-appwrite");
@@ -18,37 +18,52 @@ function getAppwriteClient() {
 }
 
 /**
- * Webhook handler for UPI Gateway (ekQR) payment callbacks
+ * Webhook handler for EdgeGateway payment callbacks
  * 
- * Receives POST with Content-Type: application/x-www-form-urlencoded
+ * Receives POST with JSON payload
  * 
- * Payload fields:
- * - status: "success" | "failure"
- * - client_txn_id: Our transaction ID
- * - amount: Payment amount
- * - upi_txn_id: UPI reference number
- * - customer_vpa: Customer's UPI ID
- * - udf1: tournamentId
- * - udf2: userId
- * - udf3: extra data (JSON string with teamName, metadata)
+ * Payload structure (example):
+ * {
+ *   "id": 12345678,
+ *   "amount": 100.15,
+ *   "client_txn_id": "ORD123456",
+ *   "status": "success",
+ *   "customer_email": "jondoe@gmail.com",
+ *   "customer_vpa": "jondoe@upi",
+ *   "utr": "325612458963",
+ *   "udf1": "tournamentId",
+ *   "udf2": "userId"
+ * }
  */
 export async function POST(request) {
   try {
-    // Parse form data (application/x-www-form-urlencoded)
-    const formData = await request.formData();
+    const rawBody = await request.text();
+    let payload;
     
-    const status = formData.get("status");
-    const clientTxnId = formData.get("client_txn_id");
-    const amount = formData.get("amount");
-    const upiTxnId = formData.get("upi_txn_id");
-    const customerVpa = formData.get("customer_vpa");
-    const tournamentId = formData.get("udf1");
-    const userId = formData.get("udf2");
-    const extraDataStr = formData.get("udf3");
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (e) {
+      console.error("[EdgeGateway Webhook] Failed to parse JSON body:", rawBody);
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON" },
+        { status: 400 }
+      );
+    }
+    
+    // Extract fields
+    const status = payload.status;
+    const clientTxnId = payload.client_txn_id;
+    const upiTxnId = payload.utr || payload.upi_txn_id;
+    const customerVpa = payload.customer_vpa;
+    
+    // udf1, udf2 might be in payload or we might need to fetch from DB if not returned
+    // EdgeGateway usually returns them if sent during creation
+    const tournamentId = payload.udf1;
+    const userId = payload.udf2;
 
     // Validate required fields
-    if (!clientTxnId || !status) {
-      console.error("[UPI Webhook] Missing required fields");
+    if (!clientTxnId) {
+      console.error("[EdgeGateway Webhook] Missing client_txn_id");
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
         { status: 400 }
@@ -66,7 +81,7 @@ export async function POST(request) {
     );
 
     if (paymentRequests.total === 0) {
-      console.error("[UPI Webhook] Payment request not found:", clientTxnId);
+      console.error("[EdgeGateway Webhook] Payment request not found:", clientTxnId);
       return NextResponse.json(
         { success: false, error: "Payment request not found" },
         { status: 404 }
@@ -95,8 +110,6 @@ export async function POST(request) {
 
       // Create the tournament registration
       try {
-        const metadata = paymentRequest.metadata ? JSON.parse(paymentRequest.metadata) : {};
-        
         await databases.createDocument(
           DATABASE_ID,
           REGISTRATIONS_COLLECTION_ID,
@@ -125,6 +138,7 @@ export async function POST(request) {
 
           // Determine registrant name based on game type
           const isTeamMode = ["5v5", "2v2", "3v3"].includes(tournament?.gameType);
+          const metadata = paymentRequest.metadata ? JSON.parse(paymentRequest.metadata) : {};
           const registrantName = isTeamMode 
             ? paymentRequest.teamName 
             : metadata?.playerName || paymentRequest.teamName;
@@ -136,7 +150,7 @@ export async function POST(request) {
               userProfile.discordId
             );
             if (roleResult?.error) {
-              console.warn("[UPI Webhook] Discord role assignment failed:", roleResult.error);
+              console.warn("[EdgeGateway Webhook] Discord role assignment failed:", roleResult.error);
             }
           }
 
@@ -148,24 +162,24 @@ export async function POST(request) {
             userProfile?.discordId || null
           );
         } catch (discordError) {
-          console.warn("[UPI Webhook] Discord notification failed:", discordError);
+          console.warn("[EdgeGateway Webhook] Discord notification failed:", discordError);
           // Don't fail the webhook if Discord fails
         }
         
       } catch (regError) {
-        console.error("[UPI Webhook] Failed to create registration:", regError);
+        console.error("[EdgeGateway Webhook] Failed to create registration:", regError);
         // Payment is still marked as verified, admin can manually create registration
       }
 
     } else {
-      // Payment failed - use 'failed' (new enum value)
+      // Payment failed
       await databases.updateDocument(
         DATABASE_ID,
         PAYMENT_REQUESTS_COLLECTION_ID,
         paymentRequest.$id,
         {
-          paymentStatus: "failed",
-          rejectionReason: `Payment failed via UPI. Status: ${status}`,
+          paymentStatus: "rejected",
+          rejectionReason: `Payment failed via EdgeGateway. Status: ${status}`,
         }
       );
     }
@@ -173,7 +187,7 @@ export async function POST(request) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error("[UPI Webhook] Error processing webhook:", error);
+    console.error("[EdgeGateway Webhook] Error processing webhook:", error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
@@ -181,10 +195,10 @@ export async function POST(request) {
   }
 }
 
-// Handle GET requests (for webhook URL verification)
+// Handle GET requests (for webhook URL verification if needed)
 export async function GET() {
   return NextResponse.json({ 
     status: "ok", 
-    message: "UPI Gateway webhook endpoint is active" 
+    message: "EdgeGateway webhook endpoint is active" 
   });
 }

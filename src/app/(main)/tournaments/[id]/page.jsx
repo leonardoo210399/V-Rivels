@@ -45,7 +45,7 @@ import {
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
-import UPIPaymentModalEkqr from "@/components/UPIPaymentModalEkqr";
+import UPIPaymentModal from "@/components/UPIPaymentModal";
 import { account } from "@/lib/appwrite";
 import { checkDiscordMembership, DISCORD_INVITE_URL } from "@/lib/discord";
 import { formatDate } from "@/lib/utils";
@@ -1640,25 +1640,30 @@ export default function TournamentDetailPage({ params }) {
       )}
 
       {/* UPI Payment Modal */}
-      <UPIPaymentModalEkqr
-        isOpen={showPaymentModal}
-        onClose={() => {
-          setShowPaymentModal(false);
-          setPendingPaymentData(null);
-          setError(null);
-        }}
-        tournamentId={tournament.$id}
-        tournamentName={tournament.name}
-        entryFee={tournament.entryFee}
-        userId={user?.$id}
-        userEmail={user?.email}
-        userName={pendingPaymentData?.name || userProfile?.ingameName || "Player"}
-        teamName={pendingPaymentData?.name || ""}
-        metadata={pendingPaymentData?.metadata || {}}
-        onPaymentStarted={(clientTxnId) => {
-          // Optionally store clientTxnId for tracking
-        }}
-      />
+      {showPaymentModal && (
+        <UPIPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPendingPaymentData(null);
+            setError(null);
+          }}
+          tournamentId={tournament.$id}
+          tournamentName={tournament.name}
+          entryFee={tournament.entryFee}
+          userId={user?.$id}
+          userEmail={user?.email}
+          userName={pendingPaymentData?.name || userProfile?.ingameName || "Player"}
+          teamName={pendingPaymentData?.name || ""}
+          metadata={pendingPaymentData?.metadata || {}}
+          onPaymentStarted={(clientTxnId) => {
+            // Optionally store clientTxnId for tracking
+            if (pendingPaymentData) {
+               // We might want to save this temporarily or just let the modal handle polling
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
