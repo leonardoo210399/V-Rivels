@@ -107,7 +107,7 @@ export default function DiscordWidget({
         });
       }
     } catch (err) {
-      console.log("Could not fetch server stats:", err);
+      // Failed to fetch stats - handle silently
     }
   };
 

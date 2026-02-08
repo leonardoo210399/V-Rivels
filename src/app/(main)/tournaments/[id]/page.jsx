@@ -1656,7 +1656,6 @@ export default function TournamentDetailPage({ params }) {
         teamName={pendingPaymentData?.name || ""}
         metadata={pendingPaymentData?.metadata || {}}
         onPaymentStarted={(clientTxnId) => {
-          console.log("Payment started:", clientTxnId);
           // Optionally store clientTxnId for tracking
         }}
       />

@@ -57,7 +57,6 @@ export async function checkDiscordMembership(accessToken, forceRefresh = false) 
       try {
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
-          console.log("[Discord] Falling back to stale cache due to 429");
           const { data } = JSON.parse(cached);
           const vrivalsGuild = data.find((guild) => guild.id === VRIVALS_SERVER_ID);
           return {

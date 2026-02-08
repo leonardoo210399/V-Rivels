@@ -66,8 +66,6 @@ export async function createPaymentOrderAction({
       udf3: "", // Can store additional data if needed
     });
 
-    console.log("[createPaymentOrderAction] ekQR Response:", JSON.stringify(orderResponse, null, 2));
-
     // Store payment request in database
     const client = getAppwriteClient();
     const databases = new sdk.Databases(client);
@@ -124,13 +122,7 @@ export async function checkPaymentStatusAction(clientTxnId, txnDate = new Date()
     const formattedDate = formatDateForEkqr(txnDate);
     const result = await checkEkqrStatus(clientTxnId, formattedDate);
 
-    // Log the full response for debugging
-    console.log("[checkPaymentStatusAction] Full response:", JSON.stringify(result, null, 2));
-
-    // Status could be in different locations depending on API response
     const status = result.data?.status || result.status || "unknown";
-
-    console.log("[checkPaymentStatusAction] Extracted status:", status);
 
     return {
       success: true,
@@ -156,15 +148,11 @@ export async function checkPaymentStatusAction(clientTxnId, txnDate = new Date()
  * Robust implementation: Tries 'failed', falls back to 'rejected' if schema restricts it
  */
 export async function updatePaymentStatusAction(clientTxnId, targetStatus) {
-  console.log(`[updatePaymentStatusAction] Called for txn: ${clientTxnId} with target status: ${targetStatus}`);
-  
   const client = getAppwriteClient();
   const databases = new sdk.Databases(client);
   const sdkQueries = sdk.Query;
 
   try {
-    // 1. Find the document
-    console.log(`[updatePaymentStatusAction] Searching for txn: ${clientTxnId}`);
     const response = await databases.listDocuments(
       DATABASE_ID,
       PAYMENT_REQUESTS_COLLECTION_ID,
@@ -172,14 +160,11 @@ export async function updatePaymentStatusAction(clientTxnId, targetStatus) {
     );
 
     if (response.documents.length === 0) {
-      console.warn(`[updatePaymentStatusAction] Transaction not found: ${clientTxnId}`);
       return { success: false, error: "Payment request not found" };
     }
 
     const docId = response.documents[0].$id;
-    console.log(`[updatePaymentStatusAction] Found doc: ${docId}`);
 
-    // 2. Try updating with the requested status (e.g., 'failed')
     try {
       await databases.updateDocument(
         DATABASE_ID,
@@ -187,25 +172,20 @@ export async function updatePaymentStatusAction(clientTxnId, targetStatus) {
         docId,
         { paymentStatus: targetStatus }
       );
-      console.log(`[updatePaymentStatusAction] Successfully updated to '${targetStatus}'`);
       return { success: true, status: targetStatus };
     } catch (updateError) {
-      // 3. Fallback: If schema validation fails, try 'rejected'
       if (updateError.type === 'document_invalid_structure' && targetStatus !== 'rejected') {
-        console.warn(`[updatePaymentStatusAction] Schema rejected '${targetStatus}'. Retrying with 'rejected'...`);
         await databases.updateDocument(
           DATABASE_ID,
           PAYMENT_REQUESTS_COLLECTION_ID,
           docId,
           { paymentStatus: 'rejected' }
         );
-        console.log(`[updatePaymentStatusAction] Fallback update to 'rejected' successful`);
         return { success: true, status: 'rejected' };
       }
-      throw updateError; // Rethrow other errors
+      throw updateError;
     }
   } catch (error) {
-    console.error("[updatePaymentStatusAction] Final Error:", error);
     return { success: false, error: error.message };
   }
 }
