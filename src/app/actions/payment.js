@@ -145,3 +145,67 @@ export async function checkPaymentStatusAction(clientTxnId, txnDate = new Date()
     };
   }
 }
+
+/**
+ * Update payment request status in Appwrite
+ * Used to mark as expired or failed
+ */
+/**
+ * Update payment request status in Appwrite
+ * Used to mark as expired or failed
+ * Robust implementation: Tries 'failed', falls back to 'rejected' if schema restricts it
+ */
+export async function updatePaymentStatusAction(clientTxnId, targetStatus) {
+  console.log(`[updatePaymentStatusAction] Called for txn: ${clientTxnId} with target status: ${targetStatus}`);
+  
+  const client = getAppwriteClient();
+  const databases = new sdk.Databases(client);
+  const sdkQueries = sdk.Query;
+
+  try {
+    // 1. Find the document
+    console.log(`[updatePaymentStatusAction] Searching for txn: ${clientTxnId}`);
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      PAYMENT_REQUESTS_COLLECTION_ID,
+      [sdkQueries.equal("transactionId", clientTxnId)]
+    );
+
+    if (response.documents.length === 0) {
+      console.warn(`[updatePaymentStatusAction] Transaction not found: ${clientTxnId}`);
+      return { success: false, error: "Payment request not found" };
+    }
+
+    const docId = response.documents[0].$id;
+    console.log(`[updatePaymentStatusAction] Found doc: ${docId}`);
+
+    // 2. Try updating with the requested status (e.g., 'failed')
+    try {
+      await databases.updateDocument(
+        DATABASE_ID,
+        PAYMENT_REQUESTS_COLLECTION_ID,
+        docId,
+        { paymentStatus: targetStatus }
+      );
+      console.log(`[updatePaymentStatusAction] Successfully updated to '${targetStatus}'`);
+      return { success: true, status: targetStatus };
+    } catch (updateError) {
+      // 3. Fallback: If schema validation fails, try 'rejected'
+      if (updateError.type === 'document_invalid_structure' && targetStatus !== 'rejected') {
+        console.warn(`[updatePaymentStatusAction] Schema rejected '${targetStatus}'. Retrying with 'rejected'...`);
+        await databases.updateDocument(
+          DATABASE_ID,
+          PAYMENT_REQUESTS_COLLECTION_ID,
+          docId,
+          { paymentStatus: 'rejected' }
+        );
+        console.log(`[updatePaymentStatusAction] Fallback update to 'rejected' successful`);
+        return { success: true, status: 'rejected' };
+      }
+      throw updateError; // Rethrow other errors
+    }
+  } catch (error) {
+    console.error("[updatePaymentStatusAction] Final Error:", error);
+    return { success: false, error: error.message };
+  }
+}

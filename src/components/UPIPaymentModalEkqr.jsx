@@ -49,6 +49,23 @@ export default function UPIPaymentModalEkqr({
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [checking, setChecking] = useState(false);
 
+  // Handle expiration
+  useEffect(() => {
+    if (timeLeft === 0 && paymentData && !paymentComplete) {
+      console.log("[Payment] Transaction expired locally");
+      const markAsExpired = async () => {
+        try {
+          const { updatePaymentStatusAction } = await import("@/app/actions/payment");
+          // Try 'failed' - the action will fallback to 'rejected' if needed
+          await updatePaymentStatusAction(paymentData.clientTxnId, "failed");
+        } catch (err) {
+          console.error("[Payment] Failed to mark as expired:", err);
+        }
+      };
+      markAsExpired();
+    }
+  }, [timeLeft, paymentData, paymentComplete]);
+
   // Timer countdown
   useEffect(() => {
     if (!paymentData || timeLeft <= 0 || paymentComplete) return;
@@ -58,7 +75,7 @@ export default function UPIPaymentModalEkqr({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [paymentData, timeLeft, paymentComplete]);
+  }, [paymentData, , paymentComplete]);
 
   // Poll for payment status every 5 seconds
   useEffect(() => {
@@ -201,7 +218,7 @@ export default function UPIPaymentModalEkqr({
       />
 
       {/* Modal */}
-      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-lg duration-300">
+      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-md md:max-w-3xl duration-300">
         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
           {/* Glow Effects */}
           <div className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-rose-500/20 blur-3xl" />
@@ -231,13 +248,13 @@ export default function UPIPaymentModalEkqr({
           </div>
 
           {/* Content */}
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {/* Amount Display */}
-            <div className="mb-6 rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 text-center">
-              <p className="mb-1 text-[10px] font-black tracking-widest text-rose-500/60 uppercase">
+            <div className="mb-3 md:mb-6 rounded-xl border border-rose-500/20 bg-rose-500/5 p-2 md:p-4 text-center">
+              <p className="text-[10px] font-black tracking-widest text-rose-500/60 uppercase">
                 Entry Fee
               </p>
-              <p className="text-4xl font-black tracking-tight text-white">
+              <p className="text-2xl md:text-4xl font-black tracking-tight text-white">
                 ₹{entryFee}
               </p>
             </div>
@@ -310,37 +327,55 @@ export default function UPIPaymentModalEkqr({
 
             {/* State: Payment Ready */}
             {paymentData && !paymentComplete && (
-              <div className="space-y-3">
-                {/* QR Code Display */}
-                <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Left Column: QR Code */}
+                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 p-3 md:p-4">
+                  {/* Expired State Overlay */}
+                  {timeLeft <= 0 && (
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center backdrop-blur-md">
+                      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/20">
+                        <Clock className="h-7 w-7 text-rose-500" />
+                      </div>
+                      <h3 className="mb-1 text-base font-bold text-white">Payment Timed Out</h3>
+                      <p className="mb-4 text-[11px] leading-relaxed text-slate-400">
+                        The QR code has expired for security. No worries, you haven't been charged.
+                      </p>
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="flex items-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-rose-600 active:scale-95"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Restart Payment
+                      </button>
+                    </div>
+                  )}
+
                   {/* Header */}
-                  <div className="mb-3 text-center">
-                    <p className="text-lg font-bold text-white">{userName || "Player"}</p>
-                    <p className="text-sm text-slate-400">Scan to pay ₹{entryFee}</p>
+                  <div className="mb-2 md:mb-3 text-center">
+                    <p className="text-base md:text-lg font-bold text-white">{userName || "Player"}</p>
+                    <p className="text-xs md:text-sm text-slate-400">Scan to pay ₹{entryFee}</p>
                   </div>
 
                   {/* QR Code - Scraped image first, then custom QR, then iframe fallback */}
                   {qrImage ? (
-                    // Scraped QR image from ekQR page
-                    <div className="mx-auto mb-3 flex items-center justify-center rounded-xl bg-white p-4" style={{ width: "220px", height: "220px" }}>
+                    <div className="mx-auto mb-2 md:mb-3 flex items-center justify-center rounded-xl bg-white p-3 md:p-4" style={{ width: "clamp(160px, 40vw, 220px)", height: "clamp(160px, 40vw, 220px)" }}>
                       <img 
                         src={qrImage} 
                         alt="Scan to Pay" 
-                        style={{ width: "190px", height: "190px" }}
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   ) : paymentData.intentLinks?.upiLink ? (
-                    // Custom QR from UPI link (Enterprise plan)
-                    <div className="mx-auto mb-3 flex items-center justify-center rounded-xl bg-white p-4" style={{ width: "220px", height: "220px" }}>
+                    <div className="mx-auto mb-2 md:mb-3 flex items-center justify-center rounded-xl bg-white p-3 md:p-4" style={{ width: "clamp(160px, 40vw, 220px)", height: "clamp(160px, 40vw, 220px)" }}>
                       <QRCodeSVG
                         value={paymentData.intentLinks.upiLink}
                         size={190}
+                        style={{ width: "100%", height: "100%" }}
                         level="M"
                         includeMargin={false}
                       />
                     </div>
                   ) : (
-                    // Fallback: Cropped iframe (shouldn't happen often now)
                     <div 
                       className="mx-auto mb-3 overflow-hidden rounded-xl bg-white"
                       style={{ width: "240px", height: "280px" }}
@@ -367,80 +402,124 @@ export default function UPIPaymentModalEkqr({
                       Valid for {formatTime(timeLeft)}
                     </span>
                   </div>
+                </div>
 
-                  {/* Expired State */}
-                  {timeLeft <= 0 && (
-                    <div className="mt-3 rounded-lg bg-rose-500/10 p-2 text-center">
-                      <p className="text-xs font-bold text-rose-500">QR Expired - Please refresh</p>
+                {/* Right Column: Instructions & Actions - Desktop only */}
+                <div className="hidden md:flex flex-col justify-between space-y-3">
+                  {/* Instructions */}
+                  <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 p-4">
+                    <h3 className="mb-2 text-sm font-bold text-white">How to Pay</h3>
+                    <ol className="space-y-1.5 text-xs text-slate-400">
+                      <li className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-400">1</span>
+                        <span>Open any UPI app (GPay, PhonePe, Paytm, etc.)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-400">2</span>
+                        <span>Scan the QR code shown here</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-400">3</span>
+                        <span>Complete the payment of ₹{entryFee}</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-[10px] font-bold text-emerald-400">✓</span>
+                        <span>Payment will be verified automatically</span>
+                      </li>
+                    </ol>
+                  </div>
+                  {/* Bottom Actions - Desktop */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-emerald-500"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      I've Completed Payment
+                    </button>
+                    <button
+                      onClick={handleOpenPaymentUrl}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-800/50 px-4 py-2.5 text-xs font-medium text-slate-400 transition-all hover:bg-slate-700 hover:text-white"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open payment page in new tab
+                    </button>
+                  </div>
+
+                  {/* Compact Info */}
+                  <p className="text-center text-[10px] text-slate-500">
+                    <AlertCircle className="mr-1 inline h-3 w-3" />
+                    Payment confirms automatically within 1 minute after payment is completed
+                  </p>
+                </div>
+
+                {/* Mobile Only Actions - Below QR */}
+                <div className="md:hidden space-y-3">
+                  {/* UPI App Buttons - Mobile only */}
+                  {(paymentData.intentLinks?.gpayLink || paymentData.intentLinks?.phonepeLink) && (
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {paymentData.intentLinks?.gpayLink && (
+                        <a
+                          href={paymentData.intentLinks.gpayLink}
+                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:bg-slate-700"
+                        >
+                          <span className="text-base md:text-lg">💳</span>
+                          <span className="text-[9px] font-bold text-slate-300">GPay</span>
+                        </a>
+                      )}
+                      {paymentData.intentLinks?.phonepeLink && (
+                        <a
+                          href={paymentData.intentLinks.phonepeLink}
+                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:bg-slate-700"
+                        >
+                          <span className="text-base md:text-lg">📱</span>
+                          <span className="text-[9px] font-bold text-slate-300">PhonePe</span>
+                        </a>
+                      )}
+                      {paymentData.intentLinks?.paytmLink && (
+                        <a
+                          href={paymentData.intentLinks.paytmLink}
+                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:bg-slate-700"
+                        >
+                          <span className="text-base md:text-lg">💰</span>
+                          <span className="text-[9px] font-bold text-slate-300">Paytm</span>
+                        </a>
+                      )}
+                      {paymentData.intentLinks?.bhimLink && (
+                        <a
+                          href={paymentData.intentLinks.bhimLink}
+                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:border-white/20 hover:bg-slate-700"
+                        >
+                          <span className="text-base md:text-lg">🏦</span>
+                          <span className="text-[9px] font-bold text-slate-300">BHIM</span>
+                        </a>
+                      )}
                     </div>
                   )}
-                </div>
 
-                {/* UPI App Quick Pay Buttons */}
-                {(paymentData.intentLinks?.gpayLink || paymentData.intentLinks?.phonepeLink) && (
-                  <div className="grid grid-cols-4 gap-2">
-                    {paymentData.intentLinks?.gpayLink && (
-                      <a
-                        href={paymentData.intentLinks.gpayLink}
-                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 px-2 py-3 text-center transition-all hover:border-white/20 hover:bg-slate-700"
-                      >
-                        <span className="text-lg">💳</span>
-                        <span className="text-[10px] font-bold text-slate-300">GPay</span>
-                      </a>
-                    )}
-                    {paymentData.intentLinks?.phonepeLink && (
-                      <a
-                        href={paymentData.intentLinks.phonepeLink}
-                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 px-2 py-3 text-center transition-all hover:border-white/20 hover:bg-slate-700"
-                      >
-                        <span className="text-lg">📱</span>
-                        <span className="text-[10px] font-bold text-slate-300">PhonePe</span>
-                      </a>
-                    )}
-                    {paymentData.intentLinks?.paytmLink && (
-                      <a
-                        href={paymentData.intentLinks.paytmLink}
-                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 px-2 py-3 text-center transition-all hover:border-white/20 hover:bg-slate-700"
-                      >
-                        <span className="text-lg">💰</span>
-                        <span className="text-[10px] font-bold text-slate-300">Paytm</span>
-                      </a>
-                    )}
-                    {paymentData.intentLinks?.bhimLink && (
-                      <a
-                        href={paymentData.intentLinks.bhimLink}
-                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 px-2 py-3 text-center transition-all hover:border-white/20 hover:bg-slate-700"
-                      >
-                        <span className="text-lg">🏦</span>
-                        <span className="text-[10px] font-bold text-slate-300">BHIM</span>
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* Bottom Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleOpenPaymentUrl}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-3 text-xs font-bold text-slate-400 transition-all hover:bg-slate-700 hover:text-white"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Open in new tab
-                  </button>
+                  {/* Action Buttons - Mobile */}
                   <button
                     onClick={() => window.location.reload()}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-emerald-500"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 md:py-3 text-xs md:text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-emerald-500"
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    I've Paid
+                    <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    I've Completed Payment
                   </button>
-                </div>
+                  
+                  <button
+                    onClick={handleOpenPaymentUrl}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-800/50 px-4 py-2 md:py-2.5 text-[10px] md:text-xs font-medium text-slate-400 transition-all hover:bg-slate-700 hover:text-white"
+                  >
+                    <ExternalLink className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    Open payment page
+                  </button>
 
-                {/* Compact Info */}
-                <p className="text-center text-[10px] text-slate-500">
-                  <AlertCircle className="mr-1 inline h-3 w-3" />
-                  Payment confirms automatically within 1 minute
-                </p>
+                  {/* Compact Info */}
+                  <p className="text-center text-[10px] text-slate-500">
+                    <AlertCircle className="mr-1 inline h-3 w-3" />
+                    Payment confirms automatically within 1 minute
+                  </p>
+                </div>
               </div>
             )}
           </div>

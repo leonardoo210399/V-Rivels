@@ -347,7 +347,7 @@
             "name": "matches",
             "enabled": true,
             "rowSecurity": false,
-             "columns": [
+            "columns": [
                 {
                     "key": "tournamentId",
                     "type": "string",
@@ -608,15 +608,6 @@
                     "encrypt": false
                 },
                 {
-                    "key": "map",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 100,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
                     "key": "gameType",
                     "type": "string",
                     "required": true,
@@ -780,6 +771,15 @@
                     "size": 20,
                     "default": "Auto",
                     "encrypt": false
+                },
+                {
+                    "key": "map",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": []
@@ -866,7 +866,8 @@
                         "free",
                         "pending",
                         "verified",
-                        "rejected"
+                        "rejected",
+                        "failed"
                     ],
                     "format": "enum",
                     "default": "free"
@@ -925,15 +926,6 @@
                     "encrypt": false
                 },
                 {
-                    "key": "metadata",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 2000,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
                     "key": "requestedAt",
                     "type": "datetime",
                     "required": true,
@@ -971,6 +963,15 @@
                     "required": false,
                     "array": false,
                     "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
                     "default": null,
                     "encrypt": false
                 },
