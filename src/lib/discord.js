@@ -10,9 +10,10 @@ export const DISCORD_INVITE_URL = "https://discord.gg/gexZcZzCHV";
 /**
  * Check if a user is a member of the VRivals Arena Discord server
  * @param {string} accessToken - The Discord OAuth access token
+ * @param {boolean} forceRefresh - If true, bypass cache and fetch fresh data
  * @returns {Promise<{isMember: boolean, guildInfo: object|null}>}
  */
-export async function checkDiscordMembership(accessToken) {
+export async function checkDiscordMembership(accessToken, forceRefresh = false) {
   if (!accessToken) {
     // console.log("[Discord] No access token provided");
     return { isMember: false, guildInfo: null };
@@ -21,22 +22,26 @@ export async function checkDiscordMembership(accessToken) {
   const CACHE_KEY = `discord_guilds_cache_${accessToken.substring(0, 10)}`;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  // Check cache first
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const { timestamp, data } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        // console.log("[Discord] Using cached guild data");
-        const vrivalsGuild = data.find((guild) => guild.id === VRIVALS_SERVER_ID);
-        return {
-          isMember: !!vrivalsGuild,
-          guildInfo: vrivalsGuild || null,
-        };
+  // Check cache first (unless forceRefresh is true)
+  if (!forceRefresh) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { timestamp, data } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          // console.log("[Discord] Using cached guild data");
+          const vrivalsGuild = data.find((guild) => guild.id === VRIVALS_SERVER_ID);
+          return {
+            isMember: !!vrivalsGuild,
+            guildInfo: vrivalsGuild || null,
+          };
+        }
       }
+    } catch (e) {
+      console.warn("Failed to read discord cache", e);
     }
-  } catch (e) {
-    console.warn("Failed to read discord cache", e);
+  } else {
+    // console.log("[Discord] Force refresh - bypassing cache");
   }
 
   try {

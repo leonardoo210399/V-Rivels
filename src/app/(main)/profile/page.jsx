@@ -541,7 +541,7 @@ export default function ProfilePage() {
                     notify("Failed to unlink Discord.", "error");
                   }
                 }}
-                onConnect={loginWithDiscord}
+                onConnect={() => loginWithDiscord()}
               />
 
               {/* Active Player Finder Ad - Relocated below Rank */}

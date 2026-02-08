@@ -45,7 +45,7 @@ import {
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
-import UPIPaymentModal from "@/components/UPIPaymentModal";
+import UPIPaymentModalEkqr from "@/components/UPIPaymentModalEkqr";
 import { account } from "@/lib/appwrite";
 import { checkDiscordMembership, DISCORD_INVITE_URL } from "@/lib/discord";
 import { formatDate } from "@/lib/utils";
@@ -303,7 +303,7 @@ export default function TournamentDetailPage({ params }) {
     }
   };
 
-  const recheckDiscord = async () => {
+  const recheckDiscord = async (forceRefresh = false) => {
     if (!user) {
       setIsInDiscord(null);
       setHasDiscordLinked(null);
@@ -317,6 +317,7 @@ export default function TournamentDetailPage({ params }) {
         setHasDiscordLinked(true);
         const { isMember } = await checkDiscordMembership(
           session.providerAccessToken,
+          forceRefresh,
         );
         setIsInDiscord(isMember);
       } else {
@@ -331,6 +332,7 @@ export default function TournamentDetailPage({ params }) {
             setHasDiscordLinked(true);
             const { isMember } = await checkDiscordMembership(
               discord.providerAccessToken,
+              forceRefresh,
             );
             setIsInDiscord(isMember);
           } else {
@@ -1460,7 +1462,7 @@ export default function TournamentDetailPage({ params }) {
                   </div>
 
                   <button
-                    onClick={recheckDiscord}
+                    onClick={() => recheckDiscord(true)}
                     disabled={checkingDiscord}
                     className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 transition-all hover:text-white disabled:opacity-50"
                   >
@@ -1638,18 +1640,25 @@ export default function TournamentDetailPage({ params }) {
       )}
 
       {/* UPI Payment Modal */}
-      <UPIPaymentModal
+      <UPIPaymentModalEkqr
         isOpen={showPaymentModal}
         onClose={() => {
           setShowPaymentModal(false);
           setPendingPaymentData(null);
-          setError(null); // Clear error on close
+          setError(null);
         }}
+        tournamentId={tournament.$id}
         tournamentName={tournament.name}
         entryFee={tournament.entryFee}
-        onPaymentComplete={handlePaymentComplete}
-        isProcessing={registering}
-        error={error} // Pass the error state
+        userId={user?.$id}
+        userEmail={user?.email}
+        userName={pendingPaymentData?.name || userProfile?.ingameName || "Player"}
+        teamName={pendingPaymentData?.name || ""}
+        metadata={pendingPaymentData?.metadata || {}}
+        onPaymentStarted={(clientTxnId) => {
+          console.log("Payment started:", clientTxnId);
+          // Optionally store clientTxnId for tracking
+        }}
       />
     </div>
   );
