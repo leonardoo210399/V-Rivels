@@ -45,7 +45,7 @@ import {
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
-import UPIPaymentModal from "@/components/UPIPaymentModal";
+import UPIPaymentModalEkqr from "@/components/UPIPaymentModalEkqr";
 import { account } from "@/lib/appwrite";
 import { checkDiscordMembership, DISCORD_INVITE_URL } from "@/lib/discord";
 import { formatDate } from "@/lib/utils";
@@ -1640,18 +1640,25 @@ export default function TournamentDetailPage({ params }) {
       )}
 
       {/* UPI Payment Modal */}
-      <UPIPaymentModal
+      <UPIPaymentModalEkqr
         isOpen={showPaymentModal}
         onClose={() => {
           setShowPaymentModal(false);
           setPendingPaymentData(null);
-          setError(null); // Clear error on close
+          setError(null);
         }}
+        tournamentId={tournament.$id}
         tournamentName={tournament.name}
         entryFee={tournament.entryFee}
-        onPaymentComplete={handlePaymentComplete}
-        isProcessing={registering}
-        error={error} // Pass the error state
+        userId={user?.$id}
+        userEmail={user?.email}
+        userName={pendingPaymentData?.name || userProfile?.ingameName || "Player"}
+        teamName={pendingPaymentData?.name || ""}
+        metadata={pendingPaymentData?.metadata || {}}
+        onPaymentStarted={(clientTxnId) => {
+          console.log("Payment started:", clientTxnId);
+          // Optionally store clientTxnId for tracking
+        }}
       />
     </div>
   );
