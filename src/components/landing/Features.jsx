@@ -121,7 +121,7 @@ const Features = () => (
 
       <BentoTilt className="border-hsla relative mb-7 h-96 w-full overflow-hidden rounded-md md:h-[65vh]">
         <BentoCard
-          src="videos/feature-1.mp4"
+          src="/videos/feature-1.mp4"
           title={
             <>
               t<b>o</b>urna<b>m</b>ents
@@ -135,7 +135,7 @@ const Features = () => (
       <div className="grid h-auto w-full grid-cols-1 gap-7 md:h-[135vh] md:grid-cols-2 md:grid-rows-3">
         <BentoTilt className="bento-tilt_1 row-span-1 md:col-span-1 md:row-span-2">
           <BentoCard
-            src="videos/feature-2.mp4"
+            src="/videos/feature-2.mp4"
             title={
               <>
                 pl<b>a</b>yer find<b>e</b>r
@@ -148,7 +148,7 @@ const Features = () => (
 
         <BentoTilt className="bento-tilt_1 row-span-1 ms-0 md:col-span-1 md:ms-0">
           <BentoCard
-            src="videos/feature-3.mp4"
+            src="/videos/feature-3.mp4"
             title={
               <>
                 le<b>a</b>derboar<b>d</b>
@@ -161,7 +161,7 @@ const Features = () => (
 
         <BentoTilt className="bento-tilt_1 me-0 md:col-span-1 md:me-0">
           <BentoCard
-            src="videos/feature-4.mp4"
+            src="/videos/feature-4.mp4"
             title={
               <>
                 match <b>v</b>erification
@@ -183,7 +183,7 @@ const Features = () => (
 
         <BentoTilt className="bento-tilt_2">
           <video
-            src="videos/feature-5.mp4"
+            src="/videos/feature-5.mp4"
             loop
             muted
             autoPlay

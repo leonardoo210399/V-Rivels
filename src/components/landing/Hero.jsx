@@ -95,7 +95,7 @@ const Hero = () => {
     });
   });
 
-  const getVideoSrc = (index) => `videos/hero-${index}.mp4`;
+  const getVideoSrc = (index) => `/videos/hero-${index}.mp4`;
 
   return (
     <div className="relative h-dvh w-full overflow-x-hidden">
@@ -128,10 +128,10 @@ const Hero = () => {
                   muted
                   playsInline
                   preload="none"
-                  poster={`videos/hero-${(currentIndex % totalVideos) + 1}-poster.jpg`}
                   id="current-video"
                   className="size-64 origin-center scale-150 object-cover object-center"
                   onLoadedData={handleVideoLoad}
+                  onError={(e) => console.error("Video load error:", e)}
                 />
               </div>
             </VideoPreview>
@@ -144,10 +144,10 @@ const Hero = () => {
             muted
             playsInline
             preload="none"
-            poster={`videos/hero-${currentIndex}-poster.jpg`}
             id="next-video"
             className="invisible absolute top-1/2 left-1/2 z-20 size-64 -translate-x-1/2 -translate-y-1/2 object-cover object-center"
             onLoadedData={handleVideoLoad}
+             onError={(e) => console.error("Video load error:", e)}
           />
           <video
             src={getVideoSrc(
@@ -158,9 +158,9 @@ const Hero = () => {
             muted
             playsInline
             preload="auto"
-            poster={`videos/hero-${currentIndex === totalVideos - 1 ? 1 : currentIndex}-poster.jpg`}
             className="absolute top-0 left-0 size-full object-cover object-center"
             onLoadedData={handleVideoLoad}
+             onError={(e) => console.error("Video load error:", e)}
           />
         </div>
 
