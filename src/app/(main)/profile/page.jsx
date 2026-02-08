@@ -366,9 +366,7 @@ export default function ProfilePage() {
         };
 
         try {
-          console.log("Saving profile to Appwrite:", profileData);
           const savedProfile = await saveUserProfile(user.$id, profileData);
-          console.log("Profile saved successfully:", savedProfile);
           setPlatformProfile(profileData);
 
           // Mark as linked in localStorage so form never shows again

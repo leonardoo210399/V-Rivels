@@ -17,6 +17,7 @@ import {
   Loader2,
   RefreshCw,
   Clock,
+  Download,
 } from "lucide-react";
 
 /**
@@ -52,14 +53,12 @@ export default function UPIPaymentModalEkqr({
   // Handle expiration
   useEffect(() => {
     if (timeLeft === 0 && paymentData && !paymentComplete) {
-      console.log("[Payment] Transaction expired locally");
       const markAsExpired = async () => {
         try {
           const { updatePaymentStatusAction } = await import("@/app/actions/payment");
-          // Try 'failed' - the action will fallback to 'rejected' if needed
           await updatePaymentStatusAction(paymentData.clientTxnId, "failed");
         } catch (err) {
-          console.error("[Payment] Failed to mark as expired:", err);
+          // Silent fail - webhook will handle if needed
         }
       };
       markAsExpired();
@@ -80,15 +79,8 @@ export default function UPIPaymentModalEkqr({
   // Poll for payment status every 5 seconds
   useEffect(() => {
     if (!paymentData?.clientTxnId || paymentComplete || timeLeft <= 0) {
-      console.log("[Payment Poll] Not starting polling:", { 
-        hasClientTxnId: !!paymentData?.clientTxnId, 
-        paymentComplete, 
-        timeLeft 
-      });
       return;
     }
-
-    console.log("[Payment Poll] Starting polling for:", paymentData.clientTxnId);
 
     const checkStatus = async () => {
       try {
@@ -96,22 +88,16 @@ export default function UPIPaymentModalEkqr({
         const { checkPaymentStatusAction } = await import("@/app/actions/payment");
         const result = await checkPaymentStatusAction(paymentData.clientTxnId);
         
-        console.log("[Payment Poll] Status check result:", result);
-        
-        // Check for various success status values
         const successStatuses = ["success", "completed", "approved", "paid"];
         if (result.success && successStatuses.includes(result.status?.toLowerCase())) {
-          console.log("[Payment Poll] Payment successful! Status:", result.status);
           setPaymentComplete(true);
-          // Auto-reload after short delay to show success
           setTimeout(() => {
             window.location.reload();
           }, 2000);
-          return true; // Stop polling
+          return true;
         }
         return false;
       } catch (err) {
-        console.error("[Payment Poll] Status check failed:", err);
         return false;
       } finally {
         setChecking(false);
@@ -196,7 +182,6 @@ export default function UPIPaymentModalEkqr({
         onPaymentStarted(result.clientTxnId);
       }
     } catch (err) {
-      console.error("Payment initiation failed:", err);
       setError(err.message || "Failed to initiate payment");
     } finally {
       setLoading(false);
@@ -292,7 +277,8 @@ export default function UPIPaymentModalEkqr({
 
                 <button
                   onClick={handleInitiatePayment}
-                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/40"
+                  disabled={loading}
+                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ShieldCheck className="h-5 w-5" />
                   <span className="text-sm font-black tracking-wide uppercase">
@@ -340,13 +326,44 @@ export default function UPIPaymentModalEkqr({
                       <p className="mb-4 text-[11px] leading-relaxed text-slate-400">
                         The QR code has expired for security. No worries, you haven't been charged.
                       </p>
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="flex items-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-rose-600 active:scale-95"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                        Restart Payment
-                      </button>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={async () => {
+                            try {
+                              setChecking(true);
+                              const { checkPaymentStatusAction } = await import("@/app/actions/payment");
+                              const result = await checkPaymentStatusAction(paymentData.clientTxnId);
+                              const successStatuses = ["success", "completed", "approved", "paid"];
+                              if (result.success && successStatuses.includes(result.status?.toLowerCase())) {
+                                setPaymentComplete(true);
+                                setTimeout(() => window.location.reload(), 2000);
+                              } else {
+                                alert("Payment not received yet. Please restart if you haven't paid.");
+                              }
+                            } catch (err) {
+                              alert("Could not check status. Please try again.");
+                            } finally {
+                              setChecking(false);
+                            }
+                          }}
+                          disabled={checking}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-slate-800 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-slate-700 active:scale-95 disabled:opacity-50"
+                        >
+                          {checking ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                          {checking ? "Checking..." : "Check Payment Status"}
+                        </button>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="flex items-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-rose-600 active:scale-95"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Restart Payment
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -455,7 +472,7 @@ export default function UPIPaymentModalEkqr({
 
                 {/* Mobile Only Actions - Below QR */}
                 <div className="md:hidden space-y-3">
-                  {/* Share QR Button - Mobile only */}
+                  {/* Pay with GPay Button - Mobile only */}
                   <button
                     onClick={async () => {
                       if (!qrImage) return;
@@ -473,22 +490,38 @@ export default function UPIPaymentModalEkqr({
                             files: [file],
                           });
                         } else {
-                          // Fallback for browsers that don't support sharing files
-                          alert("Sharing not supported on this browser. Please take a screenshot.");
+                          alert("Sharing not supported on this browser. Please download the QR code.");
                         }
                       } catch (err) {
-                        console.error("Error sharing QR:", err);
+                        // Silent fail for sharing
                       }
                     }}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-900/30 transition-all hover:bg-indigo-500 active:scale-95"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-900/30 transition-all hover:from-blue-500 hover:to-cyan-400 active:scale-95"
                   >
-                    <ExternalLink className="h-4 w-4" />
-                    Share QR to Pay
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" 
+                      alt="GPay" 
+                      className="h-7 w-7" 
+                    />
+                    Pay with GPay
                   </button>
-                  
-                  <p className="text-center text-[10px] text-slate-500">
-                    Share to GPay, PhonePe, or Paytm to pay
-                  </p>
+
+                  {/* Download QR Button */}
+                  <button
+                    onClick={() => {
+                      if (!qrImage) return;
+                      const link = document.createElement('a');
+                      link.href = qrImage;
+                      link.download = `payment-qr-${paymentData?.clientTxnId || 'code'}.png`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-800/50 px-4 py-2.5 text-xs font-medium text-slate-300 transition-all hover:bg-slate-700 hover:text-white active:scale-95"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download QR for Other Apps
+                  </button>
 
                   <button
                     onClick={() => window.location.reload()}

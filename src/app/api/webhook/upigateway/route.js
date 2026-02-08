@@ -46,15 +46,6 @@ export async function POST(request) {
     const userId = formData.get("udf2");
     const extraDataStr = formData.get("udf3");
 
-    console.log("[UPI Webhook] Received:", {
-      status,
-      clientTxnId,
-      amount,
-      upiTxnId,
-      tournamentId,
-      userId,
-    });
-
     // Validate required fields
     if (!clientTxnId || !status) {
       console.error("[UPI Webhook] Missing required fields");
@@ -84,9 +75,7 @@ export async function POST(request) {
 
     const paymentRequest = paymentRequests.documents[0];
 
-    // Check if already processed
     if (paymentRequest.paymentStatus === "verified") {
-      console.log("[UPI Webhook] Already processed:", clientTxnId);
       return NextResponse.json({ success: true, message: "Already processed" });
     }
 
@@ -123,8 +112,6 @@ export async function POST(request) {
           }
         );
 
-        console.log("[UPI Webhook] Registration created for:", clientTxnId);
-
         // Send Discord notifications
         try {
           // Dynamically import the discord actions
@@ -150,8 +137,6 @@ export async function POST(request) {
             );
             if (roleResult?.error) {
               console.warn("[UPI Webhook] Discord role assignment failed:", roleResult.error);
-            } else {
-              console.log("[UPI Webhook] Discord role assigned successfully");
             }
           }
 
@@ -162,8 +147,6 @@ export async function POST(request) {
             clientTxnId,
             userProfile?.discordId || null
           );
-          
-          console.log("[UPI Webhook] Discord notification sent for:", registrantName);
         } catch (discordError) {
           console.warn("[UPI Webhook] Discord notification failed:", discordError);
           // Don't fail the webhook if Discord fails
@@ -175,18 +158,16 @@ export async function POST(request) {
       }
 
     } else {
-      // Payment failed - use 'rejected' (existing enum value)
+      // Payment failed - use 'failed' (new enum value)
       await databases.updateDocument(
         DATABASE_ID,
         PAYMENT_REQUESTS_COLLECTION_ID,
         paymentRequest.$id,
         {
-          paymentStatus: "rejected",
+          paymentStatus: "failed",
           rejectionReason: `Payment failed via UPI. Status: ${status}`,
         }
       );
-
-      console.log("[UPI Webhook] Payment marked as rejected:", clientTxnId);
     }
 
     return NextResponse.json({ success: true });
