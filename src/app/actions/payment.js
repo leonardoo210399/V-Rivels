@@ -124,10 +124,18 @@ export async function checkPaymentStatusAction(clientTxnId, txnDate = new Date()
     const formattedDate = formatDateForEkqr(txnDate);
     const result = await checkEkqrStatus(clientTxnId, formattedDate);
 
+    // Log the full response for debugging
+    console.log("[checkPaymentStatusAction] Full response:", JSON.stringify(result, null, 2));
+
+    // Status could be in different locations depending on API response
+    const status = result.data?.status || result.status || "unknown";
+
+    console.log("[checkPaymentStatusAction] Extracted status:", status);
+
     return {
       success: true,
-      status: result.data?.status || "unknown",
-      data: result.data,
+      status: status.toLowerCase(), // Normalize to lowercase
+      data: result.data || result,
     };
   } catch (error) {
     console.error("[checkPaymentStatusAction] Error:", error);
