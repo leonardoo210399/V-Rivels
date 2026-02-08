@@ -918,7 +918,7 @@
                 {
                     "key": "teamName",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": false,
                     "size": 128,
                     "default": null,
@@ -929,7 +929,7 @@
                     "type": "string",
                     "required": false,
                     "array": false,
-                    "size": 1000,
+                    "size": 2000,
                     "default": null,
                     "encrypt": false
                 },
@@ -948,8 +948,10 @@
                     "array": false,
                     "elements": [
                         "pending",
+                        "approved",
                         "verified",
-                        "rejected"
+                        "rejected",
+                        "failed"
                     ],
                     "format": "enum",
                     "default": "pending"
@@ -957,7 +959,7 @@
                 {
                     "key": "transactionId",
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "array": false,
                     "size": 100,
                     "default": null,
@@ -969,6 +971,51 @@
                     "required": false,
                     "array": false,
                     "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ekqrOrderId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "amount",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "upiTxnId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customerVpa",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "webhookReceivedAt",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
                     "default": null,
                     "encrypt": false
                 }
