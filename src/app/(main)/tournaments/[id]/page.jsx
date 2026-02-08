@@ -228,18 +228,8 @@ export default function TournamentDetailPage({ params }) {
         }
       } catch (error) {
         console.error("Failed to load tournament", error);
-        // Demo Fallback
-        setTournament({
-          $id: id,
-          name: "Demo Tournament",
-          date: new Date(Date.now() + 86400000).toISOString(),
-          prizePool: "$1,000",
-          maxTeams: 16,
-          gameType: "5v5",
-          status: "scheduled",
-          description:
-            "This is a demo tournament description since we couldn't connect to the database.",
-        });
+        // Clean error handling - do NOT fall back to demo data
+        setError("Failed to load tournament details.");
       } finally {
         setLoading(false);
       }
