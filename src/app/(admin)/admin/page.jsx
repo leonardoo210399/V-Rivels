@@ -5,6 +5,7 @@ import { Users, Trophy, Swords, Zap, Send } from "lucide-react";
 import Loader from "@/components/Loader";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
+import MaintenanceToggle from "@/components/admin/MaintenanceToggle";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";
@@ -138,6 +139,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Maintenance Toggle */}
+      <MaintenanceToggle />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white">
