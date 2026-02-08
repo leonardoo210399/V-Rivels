@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
 import {
   X,
   Smartphone,
   CheckCircle,
-  Copy,
   QrCode,
   IndianRupee,
   ArrowRight,
@@ -13,54 +13,207 @@ import {
   ShieldCheck,
   Lock,
   HelpCircle,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Clock,
+  Download,
 } from "lucide-react";
 
-// UPI Configuration
-const UPI_CONFIG = {
-  vpa: "9028410543@okbizaxis",
-  payeeName: "V-rivals Arena",
-  currency: "INR",
-};
-
+/**
+ * UPI Payment Modal - EdgeGateway Integration
+ * 
+ * This modal:
+ * 1. Calls the server action to create a payment order
+ * 2. Displays the QR for user to pay
+ * 3. Shows deep links for UPI apps (GPay, PhonePe, Paytm)
+ * 4. User is redirected back after payment confirmation
+ */
 export default function UPIPaymentModal({
   isOpen,
   onClose,
+  tournamentId,
   tournamentName,
   entryFee,
-  onPaymentComplete,
-  isProcessing = false,
-  error = null, // New error prop
+  userId,
+  userEmail,
+  userName,
+  teamName = "",
+  metadata = {},
+  onPaymentStarted,
 }) {
-  const [transactionId, setTransactionId] = useState("");
-  const [validationError, setValidationError] = useState(""); // Local validation error
-  const [copied, setCopied] = useState(false);
-  const [step, setStep] = useState(1); // 1: Pay, 2: Enter Transaction ID
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [paymentData, setPaymentData] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [paymentComplete, setPaymentComplete] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [utr, setUtr] = useState("");
+  const [showUtrField, setShowUtrField] = useState(false);
+  const [isSubmittingUtr, setIsSubmittingUtr] = useState(false);
 
-  if (!isOpen) return null;
+  // Handle expiration
+  useEffect(() => {
+    if (timeLeft === 0 && paymentData && !paymentComplete) {
+      const markAsExpired = async () => {
+        try {
+          const { updatePaymentStatusAction } = await import("@/app/actions/payment");
+          await updatePaymentStatusAction(paymentData.clientTxnId, "failed");
+        } catch (err) {
+          // Silent fail - webhook will handle if needed
+        }
+      };
+      markAsExpired();
+    }
+  }, [timeLeft, paymentData, paymentComplete]);
 
-  const handleCopyUPI = async () => {
+  // Timer countdown
+  useEffect(() => {
+    if (!paymentData || timeLeft <= 0 || paymentComplete) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [paymentData, paymentComplete]);
+
+  // Poll for payment status
+  const checkStatus = async (isManual = false) => {
+    if (!paymentData?.clientTxnId || paymentComplete) return false;
+
     try {
-      await navigator.clipboard.writeText(UPI_CONFIG.vpa);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (isManual) setChecking(true);
+      
+      const { checkPaymentStatusAction } = await import("@/app/actions/payment");
+      const result = await checkPaymentStatusAction(paymentData.clientTxnId);
+      
+      const successStatuses = ["success", "completed", "approved", "paid"];
+      const failureStatuses = ["failure", "failed", "rejected"];
+      const currentStatus = result.status?.toLowerCase();
+
+      if (result.success && successStatuses.includes(currentStatus)) {
+        setPaymentComplete(true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        return true;
+      }
+      
+      if (failureStatuses.includes(currentStatus)) {
+        if (isManual) {
+          alert("The payment gateway reported a failure. If you have already paid, please use the 'Enter UTR manually' option below to submit your receipt.");
+        }
+        return false;
+      }
+      
+      if (isManual) {
+        alert("Payment not detected yet. It can take up to a minute to reflect after completion. Please wait a moment or ensure you've paid.");
+      }
+      return false;
     } catch (err) {
-      console.error("Failed to copy:", err);
+      if (isManual) alert("Error checking status. Please try again.");
+      return false;
+    } finally {
+      if (isManual) setChecking(false);
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const tid = transactionId.trim();
-    if (!tid) return;
-
-    // Standard UPI UTR/Transaction ID is 12 digits
-    if (!/^\d{12}$/.test(tid)) {
-      setValidationError("Please enter a valid 12-digit UTR / Transaction ID");
+  useEffect(() => {
+    if (!paymentData?.clientTxnId || paymentComplete || timeLeft <= 0) {
       return;
     }
 
-    setValidationError("");
-    onPaymentComplete(tid);
+    // Check immediately, then every 5 seconds
+    checkStatus();
+    
+    const pollInterval = setInterval(async () => {
+      const done = await checkStatus();
+      if (done) clearInterval(pollInterval);
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [paymentData, paymentComplete]);
+
+  // Extract VPA from UPI Link
+  const getUPIId = () => {
+    const link = paymentData?.intentLinks?.upiLink || "";
+    if (!link.startsWith("upi://pay")) return null;
+    try {
+      const url = new URL(link.replace("upi://pay", "http://pay"));
+      return url.searchParams.get("pa");
+    } catch (e) {
+      // Fallback regex
+      const match = link.match(/pa=([^&]+)/);
+      return match ? match[1] : null;
+    }
+  };
+
+  // Format time as M:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPaymentData(null);
+      setError(null);
+      setLoading(false);
+      setTimeLeft(300);
+      setPaymentComplete(false);
+      setChecking(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleInitiatePayment = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Import server actions dynamically to avoid SSR issues
+      const { createPaymentOrderAction } = await import("@/app/actions/payment");
+
+      const result = await createPaymentOrderAction({
+        tournamentId,
+        tournamentName,
+        userId,
+        amount: entryFee,
+        customerName: userName || "Player",
+        customerEmail: userEmail || "player@vrivalsarena.com",
+        customerMobile: "9999999999", // Default since we don't collect phone
+        teamName,
+        metadata,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create payment");
+      }
+
+      setPaymentData(result);
+      
+      if (onPaymentStarted) {
+        onPaymentStarted(result.clientTxnId);
+      }
+    } catch (err) {
+      let customError = err.message || "Failed to initiate payment";
+      if (customError.includes("No merchant available")) {
+        customError = "Gateway Error: No active payment collectors available for this amount right now. Please notify the administrators or try again in a few minutes.";
+      }
+      setError(customError);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenPaymentUrl = () => {
+    if (paymentData?.paymentUrl) {
+      window.open(paymentData.paymentUrl, "_blank");
+    }
   };
 
   return (
@@ -72,308 +225,411 @@ export default function UPIPaymentModal({
       />
 
       {/* Modal */}
-      <div className="animate-in fade-in zoom-in-95 relative h-[90vh] w-full max-w-md duration-300 md:h-auto md:max-w-4xl">
-        <div className="relative flex h-full w-full flex-col overflow-x-hidden overflow-y-auto rounded-2xl border border-white/10 bg-slate-900 shadow-2xl md:h-auto md:max-h-[85vh] md:flex-row md:overflow-hidden">
+      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-md md:max-w-3xl duration-300">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
           {/* Glow Effects */}
           <div className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-rose-500/20 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-cyan-500/20 blur-3xl" />
 
-          {/* LEFT COLUMN: Summary & QR (Desktop) */}
-          <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 relative flex shrink-0 flex-col border-b border-white/10 bg-slate-950/50 md:w-[40%] md:overflow-y-auto md:border-r md:border-b-0">
-            {/* Header (Mobile Only) */}
-            <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-4 md:hidden">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-lg shadow-rose-500/20">
-                  <IndianRupee className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold tracking-tight text-white">
-                    Payment
-                  </h2>
-                  <p className="text-[10px] font-medium tracking-wide text-slate-400 uppercase">
-                    {tournamentName}
-                  </p>
-                </div>
+          {/* Header */}
+          <div className="relative flex items-center justify-between border-b border-white/10 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-lg shadow-rose-500/20">
+                <IndianRupee className="h-5 w-5 text-white" />
               </div>
-              <button
-                onClick={onClose}
-                className="rounded-lg p-2 text-slate-400 transition-all hover:bg-white/5 hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Content Container */}
-            <div className="flex flex-1 flex-col items-center justify-center p-4 md:p-6">
-              {/* Header (Desktop Only) */}
-              <div className="mb-4 hidden w-full items-center gap-3 md:flex">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 shadow-lg shadow-rose-500/20">
-                  <IndianRupee className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-base font-black tracking-tight text-white uppercase">
-                    Complete Payment
-                  </h2>
-                  <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                    {tournamentName}
-                  </p>
-                </div>
-              </div>
-
-              {/* Amount Display */}
-              <div className="mb-4 w-full rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-center md:mb-5 md:p-4">
-                <p className="mb-1 text-[10px] font-black tracking-widest text-rose-500/60 uppercase">
-                  Total Amount
+              <div>
+                <h2 className="text-sm font-bold tracking-tight text-white">
+                  Payment
+                </h2>
+                <p className="text-[10px] font-medium tracking-wide text-slate-400 uppercase">
+                  {tournamentName}
                 </p>
-                <p className="text-3xl font-black tracking-tight text-white md:text-4xl">
-                  ₹{entryFee}
-                </p>
-              </div>
-
-              {/* QR Code (Visible on both, adapted size) */}
-              <div className="group relative mb-2 h-32 w-32 shrink-0 overflow-hidden rounded-xl border border-white/5 bg-white p-2 shadow-2xl transition-transform hover:scale-105 md:h-40 md:w-40 md:rounded-2xl">
-                <img
-                  src="/img/qr-code.png"
-                  alt="UPI QR Code"
-                  className="h-full w-full object-contain"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                  <p className="text-xs font-black tracking-widest text-white uppercase">
-                    Scan to Pay
-                  </p>
-                </div>
-              </div>
-              <p className="mb-3 text-[10px] font-medium tracking-widest text-slate-500 uppercase">
-                Scan with any UPI app
-              </p>
-
-              {/* Transfer to UPI ID section moved up */}
-              <div className="mb-4 w-full">
-                <p className="mb-2 text-center text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                  Or Transfer to UPI ID
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 rounded-xl border border-white/5 bg-slate-900/50 px-3 py-2.5">
-                    <p className="font-mono text-xs font-bold tracking-wide text-white">
-                      {UPI_CONFIG.vpa}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleCopyUPI}
-                    className={`rounded-xl border p-2.5 transition-all ${
-                      copied
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                        : "border-white/5 bg-slate-900/50 text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    {copied ? (
-                      <CheckCircle className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Trust Signals section moved down */}
-              <div className="flex w-full flex-col gap-2 rounded-xl border border-white/5 bg-slate-900/50 p-3">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">
-                    Paying to
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-white">
-                      {UPI_CONFIG.payeeName}
-                    </span>
-                    <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase">
-                    Accepted via
-                  </span>
-                  <div className="flex gap-2">
-                    {["GPay", "PhonePe", "Paytm", "BHIM"].map((app) => (
-                      <span
-                        key={app}
-                        className="text-[10px] font-medium text-slate-400"
-                      >
-                        {app}
-                      </span>
-                    ))}
-                  </div>
-                </div>
               </div>
             </div>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-2 text-slate-400 transition-all hover:bg-white/5 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          {/* RIGHT COLUMN: Action Area */}
-          <div className="relative flex flex-1 flex-col bg-slate-900/50 md:w-[60%] md:overflow-hidden">
-            {/* Close Button (Desktop Only) */}
-            <div className="absolute top-4 right-4 z-10 hidden md:block">
-              <button
-                onClick={onClose}
-                className="rounded-lg p-2 text-slate-400 transition-all hover:bg-white/5 hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
+          {/* Content */}
+          <div className="p-4 md:p-6">
+            {/* Amount Display */}
+            <div className="mb-3 md:mb-6 rounded-xl border border-rose-500/20 bg-rose-500/5 p-2 md:p-4 text-center">
+              <p className="text-[10px] font-black tracking-widest text-rose-500/60 uppercase">
+                Entry Fee
+              </p>
+              <p className="text-2xl md:text-4xl font-black tracking-tight text-white">
+                ₹{entryFee}
+              </p>
             </div>
 
-            <div className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 flex-1 p-4 md:overflow-y-auto md:p-6">
-              <div className="flex h-full flex-col">
-                {/* Instructions */}
-                <div className="mb-4">
+            {/* Error Display */}
+            {error && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
+                <p className="text-xs text-rose-500">{error}</p>
+              </div>
+            )}
+
+            {/* State: Not Started */}
+            {!paymentData && !loading && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-white/5 bg-slate-950/50 p-4">
                   <p className="mb-3 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                    How to complete payment
+                    Secure UPI Payment
                   </p>
-                  <div className="rounded-xl border border-white/5 bg-slate-950/50 p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-500">
-                          1
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-white uppercase">
-                            Scan or Copy
-                          </p>
-                          <p className="text-justify text-[10px] text-slate-400">
-                            Use the QR code or copy the UPI ID above to make the
-                            transfer.
-                          </p>
-                        </div>
+                  <ul className="space-y-2 text-xs text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-emerald-500" />
+                      Instant payment confirmation
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-emerald-500" />
+                      Supports all UPI apps (GPay, PhonePe, Paytm)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-emerald-500" />
+                      Auto-registration on payment success
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  onClick={handleInitiatePayment}
+                  disabled={loading || (error && error.includes("Gateway Error"))}
+                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:grayscale"
+                >
+                  <ShieldCheck className="h-5 w-5" />
+                  <span className="text-sm font-black tracking-wide uppercase">
+                    Proceed to Pay ₹{entryFee}
+                  </span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </button>
+              </div>
+            )}
+
+            {/* State: Loading */}
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+                <p className="mt-4 text-sm font-bold text-slate-400">
+                  Creating payment order...
+                </p>
+              </div>
+            )}
+
+            {/* State: Payment Complete */}
+            {paymentComplete && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
+                  <CheckCircle className="h-10 w-10 text-emerald-500" />
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-emerald-500">Payment Successful!</h3>
+                <p className="text-sm text-slate-400">Refreshing page...</p>
+                <Loader2 className="mt-4 h-5 w-5 animate-spin text-emerald-500" />
+              </div>
+            )}
+
+            {/* State: Payment Ready */}
+            {paymentData && !paymentComplete && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Left Column: QR Code */}
+                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 p-3 md:p-4">
+                  {/* Expired State Overlay */}
+                  {timeLeft <= 0 && (
+                    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/90 p-4 text-center backdrop-blur-md">
+                      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/20">
+                        <Clock className="h-7 w-7 text-rose-500" />
                       </div>
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-500">
-                          2
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-white uppercase">
-                            Make Payment
-                          </p>
-                          <p className="text-justify text-[10px] text-slate-400">
-                            Transfer exact amount of <b>₹{entryFee}</b> using
-                            your preferred UPI app.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-500">
-                          3
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-white uppercase">
-                            Verify Transaction
-                          </p>
-                          <p className="text-justify text-[10px] text-slate-400">
-                            Note down the 12-digit Transaction ID / UTR number
-                            and verify it here.
-                          </p>
-                        </div>
+                      <h3 className="mb-1 text-base font-bold text-white">Payment Timed Out</h3>
+                      <p className="mb-4 text-[11px] leading-relaxed text-slate-400">
+                        The QR code has expired. No worries, you haven't been charged.
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={async () => {
+                            try {
+                              setChecking(true);
+                              const { checkPaymentStatusAction } = await import("@/app/actions/payment");
+                              const result = await checkPaymentStatusAction(paymentData.clientTxnId);
+                              const successStatuses = ["success", "completed", "approved", "paid"];
+                              if (result.success && successStatuses.includes(result.status?.toLowerCase())) {
+                                setPaymentComplete(true);
+                                setTimeout(() => window.location.reload(), 2000);
+                              } else {
+                                alert("Payment not received. Please restart if you haven't paid.");
+                              }
+                            } catch (err) {
+                              alert("Could not check status. Please try again.");
+                            } finally {
+                              setChecking(false);
+                            }
+                          }}
+                          disabled={checking}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-slate-800 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-slate-700 active:scale-95 disabled:opacity-50"
+                        >
+                          {checking ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                          {checking ? "Checking..." : "Check Payment Status"}
+                        </button>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="flex items-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-bold text-white transition-all hover:bg-rose-600 active:scale-95"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Restart Payment
+                        </button>
                       </div>
                     </div>
+                  )}
+
+                  {/* Header */}
+                  <div className="mb-2 md:mb-3 text-center">
+                    <p className="text-base md:text-lg font-bold text-white">{userName || "Player"}</p>
+                    <p className="text-xs md:text-sm text-slate-400">Scan to pay ₹{entryFee}</p>
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="mx-auto mb-2 md:mb-3 flex items-center justify-center rounded-xl bg-white p-3 md:p-4" style={{ width: "clamp(160px, 40vw, 220px)", height: "clamp(160px, 40vw, 220px)" }}>
+                    {paymentData.intentLinks?.upiLink ? (
+                      <QRCodeSVG
+                        value={paymentData.intentLinks.upiLink}
+                        size={190}
+                        style={{ width: "100%", height: "100%" }}
+                        level="M"
+                        includeMargin={false}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full w-full text-xs text-rose-500">
+                        Details Unavailable
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Timer & VPA Copy */}
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <Clock className={`h-4 w-4 ${timeLeft < 60 ? "text-rose-500" : "text-emerald-500"}`} />
+                      <span className={`text-sm font-bold ${timeLeft < 60 ? "text-rose-500" : "text-slate-300"}`}>
+                        Valid for {formatTime(timeLeft)}
+                      </span>
+                    </div>
+
+                    {getUPIId() && (
+                      <button
+                        onClick={() => {
+                          const vpa = getUPIId();
+                          navigator.clipboard.writeText(vpa);
+                          alert(`UPI ID ${vpa} copied to clipboard!`);
+                        }}
+                        className="flex items-center gap-2 rounded-lg border border-white/5 bg-slate-800/50 px-3 py-1.5 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-700 hover:text-white"
+                      >
+                        <Smartphone className="h-3 w-3" />
+                        Copy UPI ID: {getUPIId()}
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Verification Form */}
-                <form onSubmit={handleSubmit} className="mt-auto flex flex-col">
-                  <div className="mb-4 space-y-4 border-t border-white/5 pt-4">
-                    <div>
-                      <h3 className="mb-0.5 text-base font-black text-white uppercase">
-                        Verification
-                      </h3>
-                      <p className="mb-3 text-[10px] text-slate-400">
-                        Enter the reference number to verify your payment.
-                      </p>
-                      {(error || validationError) && (
-                        <div className="animate-in slide-in-from-top-2 mb-4 flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
-                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
-                          <p className="text-[10px] font-bold text-rose-500">
-                            {error || validationError}
-                          </p>
-                        </div>
+                {/* Right Column: Instructions & Actions - Desktop */}
+                <div className="hidden md:flex flex-col justify-between space-y-3">
+                  <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 p-4">
+                    <h3 className="mb-2 text-sm font-bold text-white">How to Pay</h3>
+                    <ol className="space-y-1.5 text-xs text-slate-400">
+                      <li className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-400">1</span>
+                        <span>Open any UPI app (GPay, PhonePe, Paytm)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-400">2</span>
+                        <span>Scan the QR code shown here</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-[10px] font-bold text-rose-400">3</span>
+                        <span>Complete the payment of ₹{entryFee}</span>
+                      </li>
+                    </ol>
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => checkStatus(true)}
+                      disabled={checking}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-emerald-500 disabled:opacity-50"
+                    >
+                      {checking ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
                       )}
+                      {checking ? "Verifying..." : "I've Completed Payment"}
+                    </button>
+                    <button
+                      onClick={handleOpenPaymentUrl}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-800/50 px-4 py-2.5 text-xs font-medium text-slate-400 transition-all hover:bg-slate-700 hover:text-white"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open generic payment page
+                    </button>
 
-                      <label className="mb-1.5 block text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                        UPI Transaction ID / UTR Number
-                      </label>
-                      <input
-                        type="text"
-                        value={transactionId}
-                        onChange={(e) => {
-                          const val = e.target.value
-                            .replace(/\D/g, "")
-                            .slice(0, 12);
-                          setTransactionId(val);
-                          if (validationError) setValidationError("");
-                        }}
-                        placeholder="e.g. 401234567890"
-                        className={`w-full rounded-xl border bg-slate-950 px-3 py-3 font-mono text-sm text-white placeholder-slate-600 transition-all focus:ring-2 focus:outline-none ${
-                          error || validationError
-                            ? "border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20"
-                            : "border-white/10 focus:border-rose-500/50 focus:ring-rose-500/20"
-                        }`}
-                        required
-                      />
-                    </div>
+                    {/* UTR Fallback Button */}
+                    {!showUtrField && (
+                      <div className="flex justify-center pt-2">
+                        <button
+                          onClick={() => setShowUtrField(true)}
+                          className="text-[10px] font-bold text-slate-500 underline decoration-slate-500/30 transition-all hover:text-slate-300"
+                        >
+                          Paying but not detecting? Enter UTR manually
+                        </button>
+                      </div>
+                    )}
 
-                    <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                      <div className="space-y-0.5">
-                        <p className="text-[10px] font-bold text-amber-500 uppercase">
-                          Important
-                        </p>
-                        <p className="text-justify text-[10px] leading-relaxed text-amber-500/80">
-                          We will manually verify this transaction ID against
-                          our records. Registration will be confirmed only after
-                          successful verification. This usually takes 5-15
-                          minutes.
+                    {showUtrField && (
+                      <div className="animate-in fade-in slide-in-from-top-2 space-y-2 rounded-xl border border-white/5 bg-slate-950/50 p-3">
+                        <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          12-Digit UTR/Transaction ID
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            maxLength={12}
+                            value={utr}
+                            onChange={(e) => setUtr(e.target.value.replace(/\D/g, ""))}
+                            placeholder="3xxxxxxxxxxx"
+                            className="flex-1 rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                          />
+                          <button
+                            onClick={async () => {
+                              if (utr.length < 12) {
+                                alert("Please enter a valid 12-digit UTR number.");
+                                return;
+                              }
+                              setIsSubmittingUtr(true);
+                              try {
+                                const { submitUtrAction } = await import("@/app/actions/payment");
+                                const result = await submitUtrAction(paymentData.clientTxnId, utr);
+                                if (result.success) {
+                                  alert("UTR submitted! We'll verify and approve your registration shortly.");
+                                  // Trigger one final check
+                                  checkStatus(true);
+                                } else {
+                                  alert(result.error || "Failed to submit UTR");
+                                }
+                              } catch (e) {
+                                alert("Error submitting UTR. Please try again.");
+                              } finally {
+                                setIsSubmittingUtr(false);
+                              }
+                            }}
+                            disabled={isSubmittingUtr || utr.length < 12}
+                            className="rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-500 disabled:opacity-50"
+                          >
+                            {isSubmittingUtr ? "..." : "Submit"}
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-slate-600 italic">
+                          Found in your UPI app receipt/history as "UTR" or "Ref No."
                         </p>
                       </div>
-                    </div>
+                    )}
                   </div>
+                </div>
+
+                {/* Mobile Only Actions - Below QR */}
+                <div className="md:hidden space-y-3">
+                  {/* GPay Button */}
+                  {paymentData.intentLinks?.gpayLink && (
+                    <a
+                      href={paymentData.intentLinks.gpayLink}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 text-sm font-bold text-gray-800 shadow-md active:scale-95"
+                    >
+                      <img 
+                        src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" 
+                        alt="GPay" 
+                        className="h-6 w-auto" 
+                      />
+                      Open GPay
+                    </a>
+                  )}
+
+                  {/* PhonePe Button */}
+                  {paymentData.intentLinks?.phonepeLink && (
+                    <a
+                      href={paymentData.intentLinks.phonepeLink}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#5f259f] px-4 py-3 text-sm font-bold text-white shadow-md active:scale-95"
+                    >
+                      <img 
+                        src="https://download.logo.wine/logo/PhonePe/PhonePe-Logo.wine.png" 
+                        alt="PhonePe" 
+                        className="h-6 w-auto invert brightness-0 saturate-100 filter" 
+                      />
+                      Open PhonePe
+                    </a>
+                  )}
+
+                  {/* Paytm Button */}
+                  {paymentData.intentLinks?.paytmLink && (
+                    <a
+                      href={paymentData.intentLinks.paytmLink}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#00baf2] px-4 py-3 text-sm font-bold text-white shadow-md active:scale-95"
+                    >
+                      <img 
+                        src="https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg" 
+                        alt="Paytm" 
+                        className="h-5 w-auto" 
+                      />
+                      Open Paytm
+                    </a>
+                  )}
+
+                  {/* Fallback Intent */}
+                  {!paymentData.intentLinks?.gpayLink && paymentData.intentLinks?.upiLink && (
+                     <a
+                     href={paymentData.intentLinks.upiLink}
+                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg active:scale-95"
+                   >
+                     <Smartphone className="h-5 w-5" />
+                     Open Any UPI App
+                   </a>
+                  )}
 
                   <button
-                    type="submit"
-                    disabled={transactionId.length !== 12 || isProcessing}
-                    className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-3 font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => checkStatus(true)}
+                    disabled={checking}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-3 text-sm font-bold text-white border border-white/10 active:scale-95 disabled:opacity-50"
                   >
-                    {isProcessing ? (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        <span className="text-xs font-black tracking-wide uppercase">
-                          Processing...
-                        </span>
-                      </>
+                    {checking ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4" />
-                        <span className="text-xs font-black tracking-wide uppercase">
-                          Confirm & Register
-                        </span>
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                      </>
+                      <RefreshCw className="h-4 w-4" />
                     )}
+                    {checking ? "Checking Status..." : "I've Completed Payment"}
                   </button>
-                </form>
+                </div>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Footer (Right Side) */}
-            <div className="flex shrink-0 items-center justify-between border-t border-white/5 bg-slate-950/50 px-6 py-4">
-              <Link
-                href="/support"
-                target="_blank"
-                className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase transition-colors hover:text-white"
-              >
-                <HelpCircle className="h-3.5 w-3.5" />
-                Need Help?
-              </Link>
-              <div className="flex items-center gap-2">
-                <Lock className="h-3 w-3 text-emerald-500" />
-                <p className="text-[10px] font-bold tracking-wide text-slate-400 uppercase">
-                  SSL Secured
-                </p>
-              </div>
+          {/* Footer */}
+          <div className="flex items-center justify-between border-t border-white/5 bg-slate-950/50 px-6 py-4">
+            <Link
+              href="/support"
+              target="_blank"
+              className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase transition-colors hover:text-white"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              Need Help?
+            </Link>
+            <div className="flex items-center gap-2">
+              <Lock className="h-3 w-3 text-emerald-500" />
+              <p className="text-[10px] font-bold tracking-wide text-slate-400 uppercase">
+                Secured by EdgeGateway
+              </p>
             </div>
           </div>
         </div>
