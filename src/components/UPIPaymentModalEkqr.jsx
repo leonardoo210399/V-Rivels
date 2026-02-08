@@ -455,70 +455,48 @@ export default function UPIPaymentModalEkqr({
 
                 {/* Mobile Only Actions - Below QR */}
                 <div className="md:hidden space-y-3">
-                  {/* UPI App Buttons - Mobile only */}
-                  {(paymentData.intentLinks?.gpayLink || paymentData.intentLinks?.phonepeLink) && (
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {paymentData.intentLinks?.gpayLink && (
-                        <a
-                          href={paymentData.intentLinks.gpayLink}
-                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:bg-slate-700"
-                        >
-                          <span className="text-base md:text-lg">💳</span>
-                          <span className="text-[9px] font-bold text-slate-300">GPay</span>
-                        </a>
-                      )}
-                      {paymentData.intentLinks?.phonepeLink && (
-                        <a
-                          href={paymentData.intentLinks.phonepeLink}
-                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:bg-slate-700"
-                        >
-                          <span className="text-base md:text-lg">📱</span>
-                          <span className="text-[9px] font-bold text-slate-300">PhonePe</span>
-                        </a>
-                      )}
-                      {paymentData.intentLinks?.paytmLink && (
-                        <a
-                          href={paymentData.intentLinks.paytmLink}
-                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:bg-slate-700"
-                        >
-                          <span className="text-base md:text-lg">💰</span>
-                          <span className="text-[9px] font-bold text-slate-300">Paytm</span>
-                        </a>
-                      )}
-                      {paymentData.intentLinks?.bhimLink && (
-                        <a
-                          href={paymentData.intentLinks.bhimLink}
-                          className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-slate-800/50 p-2 text-center transition-all hover:border-white/20 hover:bg-slate-700"
-                        >
-                          <span className="text-base md:text-lg">🏦</span>
-                          <span className="text-[9px] font-bold text-slate-300">BHIM</span>
-                        </a>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Action Buttons - Mobile */}
+                  {/* Share QR Button - Mobile only */}
                   <button
-                    onClick={() => window.location.reload()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 md:py-3 text-xs md:text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-emerald-500"
+                    onClick={async () => {
+                      if (!qrImage) return;
+                      try {
+                        // Convert base64 to blob
+                        const base64Response = await fetch(qrImage);
+                        const blob = await base64Response.blob();
+                        const file = new File([blob], "payment-qr.png", { type: "image/png" });
+
+                        // Check if sharing is supported
+                        if (navigator.share) {
+                          await navigator.share({
+                            title: "Payment QR",
+                            text: `Scan to pay ₹${entryFee} for ${tournamentName}`,
+                            files: [file],
+                          });
+                        } else {
+                          // Fallback for browsers that don't support sharing files
+                          alert("Sharing not supported on this browser. Please take a screenshot.");
+                        }
+                      } catch (err) {
+                        console.error("Error sharing QR:", err);
+                      }
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-900/30 transition-all hover:bg-indigo-500 active:scale-95"
                   >
-                    <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                    I've Completed Payment
+                    <ExternalLink className="h-4 w-4" />
+                    Share QR to Pay
                   </button>
                   
-                  <button
-                    onClick={handleOpenPaymentUrl}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-800/50 px-4 py-2 md:py-2.5 text-[10px] md:text-xs font-medium text-slate-400 transition-all hover:bg-slate-700 hover:text-white"
-                  >
-                    <ExternalLink className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                    Open payment page
-                  </button>
-
-                  {/* Compact Info */}
                   <p className="text-center text-[10px] text-slate-500">
-                    <AlertCircle className="mr-1 inline h-3 w-3" />
-                    Payment confirms automatically within 1 minute
+                    Share to GPay, PhonePe, or Paytm to pay
                   </p>
+
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-emerald-500 active:scale-95"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    I've Completed Payment
+                  </button>
                 </div>
               </div>
             )}
