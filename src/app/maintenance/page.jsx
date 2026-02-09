@@ -188,12 +188,12 @@ export default function MaintenancePage() {
   }, { scope: containerRef, dependencies: [isPlaying] });
 
   return (
-    <div ref={containerRef} className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center font-sans selection:bg-rose-500 selection:text-white">
+    <div ref={containerRef} className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-x-hidden py-12 bg-slate-950 px-4 text-center font-sans selection:bg-rose-500 selection:text-white">
       {/* Custom Cursor Glow */}
       <div ref={cursorRef} className="pointer-events-none fixed top-0 left-0 z-50 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-500/10 blur-[100px] mix-blend-screen" />
 
       {/* Background Ambience */}
-      <div ref={backgroundRef} className="absolute inset-0 z-0">
+      <div ref={backgroundRef} className="fixed inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] h-[50vw] w-[50vw] rounded-full bg-rose-600/10 blur-[120px] filter" />
         <div className="absolute bottom-[-10%] right-[-10%] h-[50vw] w-[50vw] rounded-full bg-indigo-600/10 blur-[120px] filter" />
         <div className="absolute top-1/2 left-1/2 h-[800px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900/50 blur-3xl filter" />
@@ -279,7 +279,7 @@ export default function MaintenancePage() {
         )}
 
         {/* Hero Card */}
-        <div ref={cardRef} className={`group relative w-full overflow-hidden rounded-3xl border border-white/10 bg-slate-900/40 p-8 shadow-2xl backdrop-blur-2xl transition-all duration-500 md:p-12 transform-gpu ${isPlaying ? "opacity-0 pointer-events-none" : "hover:border-rose-500/30 hover:shadow-[0_0_50px_-10px_rgba(244,63,94,0.15)]"}`}>
+        <div ref={cardRef} className={`group relative w-full overflow-hidden rounded-3xl border border-white/10 bg-slate-900/40 p-6 md:p-12 shadow-2xl backdrop-blur-2xl transition-all duration-500 transform-gpu ${isPlaying ? "opacity-0 pointer-events-none" : "hover:border-rose-500/30 hover:shadow-[0_0_50px_-10px_rgba(244,63,94,0.15)]"}`}>
             
           {/* Scan Line */}
           <div className="scan-line absolute top-[-20%] left-0 z-20 h-[20%] w-full bg-gradient-to-b from-transparent via-rose-500/10 to-transparent blur-sm pointer-events-none" />
@@ -306,13 +306,13 @@ export default function MaintenancePage() {
 
           {/* Text Content */}
           <div className="space-y-6">
-            <h1 ref={titleRef} className="font-anton text-5xl uppercase tracking-wide text-white md:text-7xl drop-shadow-xl">
+            <h1 ref={titleRef} className="font-anton text-4xl uppercase tracking-wide text-white md:text-7xl drop-shadow-xl">
               System <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-rose-400">Upgrade</span>
             </h1>
             
             <div className="mx-auto h-1 w-24 rounded-full bg-gradient-to-r from-rose-500 to-transparent" />
 
-            <p ref={descRef} className="mx-auto max-w-lg text-lg font-medium text-slate-400 leading-relaxed">
+            <p ref={descRef} className="mx-auto max-w-lg text-base md:text-lg font-medium text-slate-400 leading-relaxed">
               We are currently deploying critical updates to the VRivals Arena. 
               The battlefield is temporarily closed while we reinforce the infrastructure.
             </p>
@@ -349,10 +349,12 @@ export default function MaintenancePage() {
         </div>
 
         {/* Footer Support Link */}
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-300">
-          <ShieldAlert className="h-4 w-4" />
-          <span>Need immediate assistance?</span>
-          <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 text-sm font-medium text-slate-500 transition-colors hover:text-slate-300">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4" />
+            <span>Need immediate assistance?</span>
+          </div>
+          <div className="flex gap-4 mt-2 md:mt-0">
              <a href="mailto:support@vrivalsarena.com" className="text-rose-500 underline decoration-rose-500/30 underline-offset-4 transition-all hover:text-rose-400 hover:decoration-rose-500">Email Support</a>
              <span className="text-slate-700">|</span>
              <a href="https://discord.gg/tBJ5NpudpZ" target="_blank" rel="noopener noreferrer" className="text-indigo-400 underline decoration-indigo-400/30 underline-offset-4 transition-all hover:text-indigo-300 hover:decoration-indigo-400">Join Discord Support</a>
