@@ -95,80 +95,16 @@ export async function POST(request) {
     }
 
     if (status === "success") {
-      // Update payment request to verified with all tracking info
-      await databases.updateDocument(
-        DATABASE_ID,
-        PAYMENT_REQUESTS_COLLECTION_ID,
-        paymentRequest.$id,
-        {
-          paymentStatus: "verified",
-          upiTxnId: upiTxnId || "",
-          customerVpa: customerVpa || "",
-          webhookReceivedAt: new Date().toISOString(),
-        }
-      );
+      // Import the shared processor dynamically to avoid circular deps if any (though none expected here)
+      const { processSuccessfulPayment } = await import("@/lib/payment_processor");
+      
+      const result = await processSuccessfulPayment(paymentRequest, {
+        upiTxnId,
+        customerVpa
+      });
 
-      // Create the tournament registration
-      try {
-        await databases.createDocument(
-          DATABASE_ID,
-          REGISTRATIONS_COLLECTION_ID,
-          sdk.ID.unique(),
-          {
-            tournamentId: paymentRequest.tournamentId,
-            userId: paymentRequest.userId,
-            teamName: paymentRequest.teamName || "",
-            metadata: paymentRequest.metadata || "{}",
-            registeredAt: new Date().toISOString(),
-            paymentStatus: "verified",
-            checkedIn: false,
-          }
-        );
-
-        // Send Discord notifications
-        try {
-          // Dynamically import the discord actions
-          const { announceRegistrationApprovedAction, assignTournamentRoleAction } = await import("@/app/actions/discord");
-          const { getUserProfile } = await import("@/lib/users");
-          const { getTournament } = await import("@/lib/tournaments");
-
-          // Get tournament info and user profile
-          const tournament = await getTournament(paymentRequest.tournamentId);
-          const userProfile = await getUserProfile(paymentRequest.userId);
-
-          // Determine registrant name based on game type
-          const isTeamMode = ["5v5", "2v2", "3v3"].includes(tournament?.gameType);
-          const metadata = paymentRequest.metadata ? JSON.parse(paymentRequest.metadata) : {};
-          const registrantName = isTeamMode 
-            ? paymentRequest.teamName 
-            : metadata?.playerName || paymentRequest.teamName;
-
-          // Assign Discord role if configured
-          if (userProfile?.discordId && tournament?.discordRoleId) {
-            const roleResult = await assignTournamentRoleAction(
-              tournament.discordRoleId,
-              userProfile.discordId
-            );
-            if (roleResult?.error) {
-              console.warn("[EdgeGateway Webhook] Discord role assignment failed:", roleResult.error);
-            }
-          }
-
-          // Send registration announcement
-          await announceRegistrationApprovedAction(
-            tournament?.name || "Tournament",
-            registrantName,
-            clientTxnId,
-            userProfile?.discordId || null
-          );
-        } catch (discordError) {
-          console.warn("[EdgeGateway Webhook] Discord notification failed:", discordError);
-          // Don't fail the webhook if Discord fails
-        }
-        
-      } catch (regError) {
-        console.error("[EdgeGateway Webhook] Failed to create registration:", regError);
-        // Payment is still marked as verified, admin can manually create registration
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
     } else {

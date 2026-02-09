@@ -122,7 +122,43 @@ export async function checkPaymentStatusAction(clientTxnId) {
     // EdgeGateway Response Analysis:
     // Root 'status': "success" means the API call worked.
     // Transaction status is inside 'data'.
-    const txnStatus = result.data?.status || result.data?.order_status || "pending";
+    // Some gateways return data.status, some return data.order_status
+    const txnData = result.data || {};
+    const txnStatus = txnData.status || txnData.order_status || "pending";
+    const isSuccess = ["success", "completed", "approved", "paid"].includes(txnStatus.toLowerCase());
+
+    if (isSuccess) {
+      // Payment is successful at gateway. Let's ensure our DB reflects this.
+      // This acts as a fallback if webhook failed or hasn't arrived yet.
+      
+      const client = getAppwriteClient();
+      const databases = new sdk.Databases(client);
+
+      // Find the payment request
+      const paymentRequests = await databases.listDocuments(
+        DATABASE_ID,
+        PAYMENT_REQUESTS_COLLECTION_ID,
+        [sdk.Query.equal("transactionId", clientTxnId)]
+      );
+
+      if (paymentRequests.total > 0) {
+        const paymentRequest = paymentRequests.documents[0];
+        
+        // Only process if not already verified
+        if (paymentRequest.paymentStatus !== "verified") {
+          console.log(`[checkPaymentStatusAction] Payment ${clientTxnId} confirmed at gateway but pending in DB. Processing...`);
+          
+          const { processSuccessfulPayment } = await import("@/lib/payment_processor");
+          
+          // We might not have full details like customer vpa from the check status call, 
+          // but we can at least verify the payment.
+          await processSuccessfulPayment(paymentRequest, {
+            upiTxnId: txnData.utr || txnData.upi_txn_id || "",
+            customerVpa: txnData.customer_vpa || ""
+          });
+        }
+      }
+    }
 
     return {
       success: true,
