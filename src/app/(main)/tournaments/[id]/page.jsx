@@ -41,6 +41,7 @@ import {
   RotateCcw,
   Swords,
   Map,
+  CreditCard,
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
@@ -1310,6 +1311,14 @@ export default function TournamentDetailPage({ params }) {
                           We are verifying your payment. We usually take 5-15
                           mins to verify.
                         </p>
+
+                        <button
+                          onClick={handleRetryPayment}
+                          className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-500 transition-all hover:bg-amber-500 hover:text-white md:text-xs"
+                        >
+                          <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                          Resume Payment / Scanner
+                        </button>
 
                         <div className="mt-3 flex items-center gap-1.5 opacity-60">
                           <div className="h-1 w-1 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />

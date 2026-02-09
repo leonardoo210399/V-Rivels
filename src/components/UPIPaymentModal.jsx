@@ -221,7 +221,7 @@ export default function UPIPaymentModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
+        // onClick={onClose} // Disabled to prevent accidental closure during payment
       />
 
       {/* Modal */}

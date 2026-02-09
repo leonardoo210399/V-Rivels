@@ -1,7 +1,5 @@
-
 import { ID, Query } from "node-appwrite";
-
-// Import Appwrite server SDK
+import crypto from "crypto";
 const sdk = require("node-appwrite");
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
@@ -17,6 +15,11 @@ function getAppwriteClient() {
     .setKey(process.env.APPWRITE_API_KEY);
   return client;
 }
+
+// Helper to generate deterministic ID
+const generateRegistrationId = (tournamentId, userId) => {
+  return crypto.createHash('md5').update(`${tournamentId}_${userId}`).digest('hex').substring(0, 32);
+};
 
 /**
  * Process a successful payment
@@ -41,44 +44,39 @@ export async function processSuccessfulPayment(paymentRequest, paymentDetails = 
         paymentStatus: "verified",
         upiTxnId: paymentDetails.upiTxnId || "",
         customerVpa: paymentDetails.customerVpa || "",
-        webhookReceivedAt: new Date().toISOString(), // Keeping the field name consistent, though it might be from polling
+        webhookReceivedAt: new Date().toISOString(),
       }
     );
 
     // 2. Create the tournament registration
     try {
-      // Check if registration already exists to avoid duplicates
-      // (This is a safety check, though Appwrite might handle unique constraints if set)
-      const existingRegs = await databases.listDocuments(
-        DATABASE_ID,
-        REGISTRATIONS_COLLECTION_ID,
-        [
-          Query.equal("tournamentId", paymentRequest.tournamentId),
-          Query.equal("userId", paymentRequest.userId)
-        ]
-      );
+      // Use deterministic ID to prevent race conditions (Webhook vs Polling)
+      const registrationId = generateRegistrationId(paymentRequest.tournamentId, paymentRequest.userId);
 
-      if (existingRegs.total > 0) {
-        console.log(`[PaymentProcessor] Registration already exists for ${paymentRequest.userId} in ${paymentRequest.tournamentId}`);
-        return { success: true, message: "Payment verified, registration already existed" };
-      }
-
-      await databases.createDocument(
-        DATABASE_ID,
-        REGISTRATIONS_COLLECTION_ID,
-        ID.unique(),
-        {
-          tournamentId: paymentRequest.tournamentId,
-          userId: paymentRequest.userId,
-          teamName: paymentRequest.teamName || "",
-          metadata: paymentRequest.metadata || "{}",
-          registeredAt: new Date().toISOString(),
-          paymentStatus: "verified",
-          checkedIn: false,
+      try {
+        await databases.createDocument(
+            DATABASE_ID,
+            REGISTRATIONS_COLLECTION_ID,
+            registrationId, 
+            {
+            tournamentId: paymentRequest.tournamentId,
+            userId: paymentRequest.userId,
+            teamName: paymentRequest.teamName || "",
+            metadata: paymentRequest.metadata || "{}",
+            registeredAt: new Date().toISOString(),
+            paymentStatus: "verified",
+            checkedIn: false,
+            }
+        );
+         console.log(`[PaymentProcessor] Registration created for ${paymentRequest.userId}`);
+      } catch (createError) {
+        // If error is 409 (Conflict), it means it already exists - which is fine!
+        if (createError.code === 409 || createError.type === 'document_already_exists') {
+             console.log(`[PaymentProcessor] Registration already exists (race condition handled) for ${paymentRequest.userId}`);
+             return { success: true, message: "Payment verified, registration already existed" };
         }
-      );
-
-      console.log(`[PaymentProcessor] Registration created for ${paymentRequest.userId}`);
+        throw createError; // Re-throw real errors
+      }
 
       // 3. Send Discord notifications
       try {
