@@ -145,7 +145,6 @@ export default function TournamentDetailPage({ params }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPaymentData, setPendingPaymentData] = useState(null);
   const [paymentRequest, setPaymentRequest] = useState(null);
-  const [refreshingStatus, setRefreshingStatus] = useState(false);
 
   const [matches, setMatches] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
@@ -274,7 +273,6 @@ export default function TournamentDetailPage({ params }) {
   // Check Discord membership function (can be called manually)
   const refreshStatus = async () => {
     if (!user) return;
-    setRefreshingStatus(true);
     try {
       const [regs, payReq] = await Promise.all([
         getRegistrations(id),
@@ -289,8 +287,6 @@ export default function TournamentDetailPage({ params }) {
       }
     } catch (e) {
       console.error("Failed to refresh status:", e);
-    } finally {
-      setRefreshingStatus(false);
     }
   };
 
@@ -519,30 +515,8 @@ export default function TournamentDetailPage({ params }) {
       setPaymentRequest(payReq);
     } catch (err) {
       setError(err.message);
-      // alert(err.message); // Removed in favor of inline modal error
     } finally {
       setRegistering(false);
-    }
-  };
-
-  const handleRetryPayment = () => {
-    if (!paymentRequest) return;
-    try {
-      const meta = JSON.parse(paymentRequest.metadata);
-      
-      // SANITIZE META: Remove old manual UTR data so we don't trigger immediate pending state
-      const { manuallySubmittedUtr, manuallySubmittedAt, ...cleanMeta } = meta;
-      
-      setPendingPaymentData({
-        name: paymentRequest.teamName,
-        metadata: cleanMeta,
-      });
-      setShowPaymentModal(true);
-    } catch (e) {
-      console.error("Failed to parse metadata for retry", e);
-      alert(
-        "Could not load previous details. Please refresh and try registering again.",
-      );
     }
   };
 
@@ -1299,58 +1273,15 @@ export default function TournamentDetailPage({ params }) {
                           <p className="text-[10px] font-black tracking-[0.2em] uppercase md:text-xs">
                             Verification Pending
                           </p>
-                          <button
-                            onClick={refreshStatus}
-                            disabled={refreshingStatus}
-                            className="group/refresh flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 transition-all hover:bg-amber-500/20 active:scale-90 disabled:opacity-50 md:h-8 md:w-8"
-                            title="Refresh Status"
-                          >
-                            <RotateCcw
-                              className={`h-3.5 w-3.5 transition-transform group-hover/refresh:rotate-180 md:h-4 md:w-4 ${refreshingStatus ? "animate-spin" : ""}`}
-                            />
-                          </button>
                         </div>
 
                         <p className="text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
                           We are verifying your payment. We usually take 5-15
                           mins to verify.
                         </p>
-
-                        <button
-                          onClick={handleRetryPayment}
-                          className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-500 transition-all hover:bg-amber-500 hover:text-white md:text-xs"
-                        >
-                          <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                          Resume Payment / Scanner
-                        </button>
                         <p className="mt-2 text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
                           Status will update shortly
                         </p>
-                        
-                        <div className="mt-4 pt-4 border-t border-amber-500/10">
-                           <button
-                             onClick={async () => {
-                               if(!confirm("Are you sure you want to cancel this payment request? You will need to start over.")) return;
-                               setRefreshingStatus(true);
-                               try {
-                                 const { updatePaymentStatusAction } = await import("@/app/actions/payment");
-                                 const res = await updatePaymentStatusAction(paymentRequest.transactionId, "failed");
-                                 if (res.success) {
-                                     alert("Request cancelled. Refreshing...");
-                                     window.location.reload();
-                                 } else {
-                                     throw new Error(res.error || "Unknown error");
-                                 }
-                               } catch(e) {
-                                 alert("Failed to cancel: " + e.message);
-                                 setRefreshingStatus(false);
-                               }
-                             }}
-                             className="text-[9px] font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest"
-                           >
-                             Cancel Request & Start Over
-                           </button>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1367,17 +1298,9 @@ export default function TournamentDetailPage({ params }) {
                         {paymentRequest?.rejectionReason ||
                           "Your payment was rejected. Please contact support."}
                       </p>
-
-                      <button
-                        onClick={handleRetryPayment}
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-500 hover:text-white md:text-xs"
-                      >
-                        <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
-                        Retry / Fix Payment
-                      </button>
                       <Link
                         href="/support"
-                        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
                       >
                         <Info className="h-3 w-3 md:h-4 md:w-4" />
                         Help / Support
@@ -1678,14 +1601,7 @@ export default function TournamentDetailPage({ params }) {
           userId={user?.$id}
           userEmail={user?.email}
           userName={pendingPaymentData?.name || userProfile?.ingameName || "Player"}
-          teamName={pendingPaymentData?.name || ""}
-          metadata={pendingPaymentData?.metadata || {}}
-          onPaymentStarted={(clientTxnId) => {
-            // Optionally store clientTxnId for tracking
-            if (pendingPaymentData) {
-               // We might want to save this temporarily or just let the modal handle polling
-            }
-          }}
+          onPaymentComplete={handlePaymentComplete}
         />
       )}
     </div>
