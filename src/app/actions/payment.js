@@ -4,7 +4,7 @@ import {
   createPaymentOrder,
   checkOrderStatus,
   generateClientTxnId,
-} from "@/lib/edgegateway";
+} from "@/lib/imb";
 
 const sdk = require("node-appwrite");
 
@@ -21,7 +21,7 @@ function getAppwriteClient() {
 }
 
 /**
- * Create a UPI payment order via EdgeGateway
+ * Create a UPI payment order via IMB Payment Gateway
  * This is a server action to keep the API key secure
  * 
  * @param {Object} params
@@ -51,18 +51,14 @@ export async function createPaymentOrderAction({
     const clientTxnId = generateClientTxnId();
     const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_BASE_URL}/tournaments/${tournamentId}?payment=complete`;
 
-    // Create order via EdgeGateway API
+    // Create order via IMB Payment Gateway API
     const orderData = await createPaymentOrder({
-      clientTxnId,
+      orderId: clientTxnId,
       amount: String(amount),
-      productInfo: `${tournamentName} - Entry Fee`,
-      customerName: customerName || "Player",
-      customerEmail: customerEmail || "player@vrivalsarena.com",
       customerMobile: customerMobile || "9999999999",
       redirectUrl,
-      udf1: tournamentId.slice(0, 25), // Max 25 chars
-      udf2: userId.slice(0, 25),
-      udf3: "", // Can store additional data if needed
+      remark1: customerEmail || "player@vrivalsarena.com", // Storing email in remark1
+      remark2: `${tournamentName} | ${userId}`, // Storing tournament & user info in remark2
     });
 
     // Store payment request in database
@@ -81,7 +77,7 @@ export async function createPaymentOrderAction({
         requestedAt: new Date().toISOString(),
         paymentStatus: "pending",
         transactionId: clientTxnId,
-        ekqrOrderId: String(orderData.order_id || ""),
+        ekqrOrderId: String(orderData.orderId || ""), // Retaining field name for compatibility, storing IMB orderId
         amount: String(amount),
       }
     );
@@ -89,15 +85,17 @@ export async function createPaymentOrderAction({
     return {
       success: true,
       paymentUrl: orderData.payment_url,
-      orderId: orderData.order_id,
+      orderId: orderData.orderId,
       clientTxnId,
-      // EdgeGateway provides deep links directly
+      // IMB provides direct links at the root of the result object
       intentLinks: {
-        upiLink: orderData.upi_intent?.bhim_link || orderData.payment_url, // Fallback for QR generation
-        bhimLink: orderData.upi_intent?.bhim_link,
-        gpayLink: orderData.upi_intent?.gpay_link,
-        phonepeLink: orderData.upi_intent?.phonepe_link,
-        paytmLink: orderData.upi_intent?.paytm_link,
+        upiLink: orderData.bhim_link || orderData.payment_url, // Bhim link is standard UPI string
+        bhimLink: orderData.bhim_link,
+        paytmLink: orderData.paytm_link,
+        checkLink: orderData.check_link,
+        // Mapping gpay/phonepe if they become available or we construct them from bhim_link
+        gpayLink: null, 
+        phonepeLink: null,
       },
     };
   } catch (error) {
@@ -110,7 +108,7 @@ export async function createPaymentOrderAction({
 }
 
 /**
- * Check payment status via EdgeGateway
+ * Check payment status via IMB Payment Gateway
  * 
  * @param {string} clientTxnId - The transaction ID
  * @returns {Promise<{success: boolean, status?: string, data?: Object, error?: string}>}
@@ -119,51 +117,56 @@ export async function checkPaymentStatusAction(clientTxnId) {
   try {
     const result = await checkOrderStatus(clientTxnId);
 
-    // EdgeGateway Response Analysis:
-    // Root 'status': "success" means the API call worked.
-    // Transaction status is inside 'data'.
-    // Some gateways return data.status, some return data.order_status
-    const txnData = result.data || {};
-    const txnStatus = txnData.status || txnData.order_status || "pending";
-    const isSuccess = ["success", "completed", "approved", "paid"].includes(txnStatus.toLowerCase());
+    // IMB Response Analysis:
+    // { status: "COMPLETED", message: "...", result: { txnStatus: "COMPLETED", status: "SUCCESS", ... } }
+    const txnData = result.result || {};
+    const mainStatus = result.status; // "COMPLETED" or "PENDING" or "FAILED"
+    const innerStatus = txnData.status || txnData.txnStatus; // "SUCCESS" inside result
+
+    const isSuccess = (mainStatus === "COMPLETED" && innerStatus === "SUCCESS") || 
+                      (mainStatus === "true" && innerStatus === "SUCCESS");
+
+    const client = getAppwriteClient();
+    const databases = new sdk.Databases(client);
+
+    // Locate the payment request in our DB
+    const paymentRequests = await databases.listDocuments(
+      DATABASE_ID,
+      PAYMENT_REQUESTS_COLLECTION_ID,
+      [sdk.Query.equal("transactionId", clientTxnId)]
+    );
+
+    const paymentRequest = paymentRequests.documents[0];
 
     if (isSuccess) {
-      // Payment is successful at gateway. Let's ensure our DB reflects this.
-      // This acts as a fallback if webhook failed or hasn't arrived yet.
-      
-      const client = getAppwriteClient();
-      const databases = new sdk.Databases(client);
-
-      // Find the payment request
-      const paymentRequests = await databases.listDocuments(
-        DATABASE_ID,
-        PAYMENT_REQUESTS_COLLECTION_ID,
-        [sdk.Query.equal("transactionId", clientTxnId)]
-      );
-
-      if (paymentRequests.total > 0) {
-        const paymentRequest = paymentRequests.documents[0];
-        
-        // Only process if not already verified
+      if (paymentRequest) {
         if (paymentRequest.paymentStatus !== "verified") {
           console.log(`[checkPaymentStatusAction] Payment ${clientTxnId} confirmed at gateway but pending in DB. Processing...`);
           
           const { processSuccessfulPayment } = await import("@/lib/payment_processor");
           
-          // We might not have full details like customer vpa from the check status call, 
-          // but we can at least verify the payment.
           await processSuccessfulPayment(paymentRequest, {
-            upiTxnId: txnData.utr || txnData.upi_txn_id || "",
-            customerVpa: txnData.customer_vpa || ""
+            upiTxnId: txnData.utr || "",
+            customerVpa: "" // IMB might not return VPA in check status, that's okay
           });
         }
+      }
+    } else if (paymentRequest) {
+      const metadata = paymentRequest.metadata ? JSON.parse(paymentRequest.metadata) : {};
+      
+      if (paymentRequest.upiTxnId || metadata.manuallySubmittedUtr) {
+        return {
+          success: true,
+          status: "manual_verification",
+          data: { ...txnData, message: "Under manual verification" }
+        };
       }
     }
 
     return {
       success: true,
-      status: txnStatus.toLowerCase(),
-      data: result.data || result,
+      status: isSuccess ? "success" : "pending",
+      data: result,
     };
   } catch (error) {
     console.error("[checkPaymentStatusAction] Error:", error);
@@ -174,10 +177,6 @@ export async function checkPaymentStatusAction(clientTxnId) {
   }
 }
 
-/**
- * Update payment request status in Appwrite
- * Used to mark as expired or failed
- */
 /**
  * Update payment request status in Appwrite
  * Used to mark as expired or failed
@@ -208,6 +207,10 @@ export async function updatePaymentStatusAction(clientTxnId, targetStatus) {
         docId,
         { paymentStatus: targetStatus }
       );
+      
+      const { revalidatePath } = await import("next/cache");
+      revalidatePath(`/tournaments/[id]`, "page"); 
+      
       return { success: true, status: targetStatus };
     } catch (updateError) {
       if (updateError.type === 'document_invalid_structure' && targetStatus !== 'rejected') {
@@ -245,7 +248,19 @@ export async function submitUtrAction(clientTxnId, utr) {
       return { success: false, error: "Payment request not found" };
     }
 
-    const docId = response.documents[0].$id;
+    const paymentRequest = response.documents[0];
+    const docId = paymentRequest.$id;
+
+    // EDGE CASE: If already verified/completed, do NOT allow overwrite
+    if (["verified", "completed", "success"].includes(paymentRequest.paymentStatus)) {
+      return { success: false, error: "Payment is already verified. No need to submit UTR." };
+    }
+    
+    // EDGE CASE: If same UTR is already submitted for THIS request, return success (idempotent)
+    const currentMeta = paymentRequest.metadata ? JSON.parse(paymentRequest.metadata || "{}") : {};
+    if (currentMeta.manuallySubmittedUtr === utr) {
+       return { success: true };
+    }
 
     await databases.updateDocument(
       DATABASE_ID,
@@ -253,8 +268,9 @@ export async function submitUtrAction(clientTxnId, utr) {
       docId,
       { 
         upiTxnId: utr,
+        paymentStatus: "pending", // Reset to pending so it's not "failed"
         metadata: JSON.stringify({ 
-          ...JSON.parse(response.documents[0].metadata || "{}"),
+          ...currentMeta,
           manuallySubmittedUtr: utr,
           manuallySubmittedAt: new Date().toISOString()
         })

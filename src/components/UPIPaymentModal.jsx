@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 /**
- * UPI Payment Modal - EdgeGateway Integration
+ * UPI Payment Modal - IMB Payment Gateway Integration
  * 
  * This modal:
  * 1. Calls the server action to create a payment order
@@ -47,6 +47,7 @@ export default function UPIPaymentModal({
   const [paymentData, setPaymentData] = useState(null);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   const [paymentComplete, setPaymentComplete] = useState(false);
+  const [isManualVerification, setIsManualVerification] = useState(false);
   const [checking, setChecking] = useState(false);
   const [utr, setUtr] = useState("");
   const [showUtrField, setShowUtrField] = useState(false);
@@ -54,7 +55,7 @@ export default function UPIPaymentModal({
 
   // Handle expiration
   useEffect(() => {
-    if (timeLeft === 0 && paymentData && !paymentComplete) {
+    if (timeLeft === 0 && paymentData && !paymentComplete && !isManualVerification) {
       const markAsExpired = async () => {
         try {
           const { updatePaymentStatusAction } = await import("@/app/actions/payment");
@@ -65,22 +66,22 @@ export default function UPIPaymentModal({
       };
       markAsExpired();
     }
-  }, [timeLeft, paymentData, paymentComplete]);
+  }, [timeLeft, paymentData, paymentComplete, isManualVerification]);
 
   // Timer countdown
   useEffect(() => {
-    if (!paymentData || timeLeft <= 0 || paymentComplete) return;
+    if (!paymentData || timeLeft <= 0 || paymentComplete || isManualVerification) return;
     
     const timer = setInterval(() => {
       setTimeLeft((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [paymentData, paymentComplete]);
+  }, [paymentData, paymentComplete, isManualVerification]);
 
   // Poll for payment status
   const checkStatus = async (isManual = false) => {
-    if (!paymentData?.clientTxnId || paymentComplete) return false;
+    if (!paymentData?.clientTxnId || paymentComplete || isManualVerification) return false;
 
     try {
       if (isManual) setChecking(true);
@@ -92,6 +93,14 @@ export default function UPIPaymentModal({
       const failureStatuses = ["failure", "failed", "rejected"];
       const currentStatus = result.status?.toLowerCase();
 
+      if (currentStatus === "manual_verification") {
+        setIsManualVerification(true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 3000);
+        return true;
+      }
+
       if (result.success && successStatuses.includes(currentStatus)) {
         setPaymentComplete(true);
         setTimeout(() => {
@@ -100,6 +109,13 @@ export default function UPIPaymentModal({
         return true;
       }
       
+      if (currentStatus === "rejected") {
+        setError("Your payment verification was rejected by the admin. Please try again or contact support.");
+        setIsManualVerification(false); // Stop showing pending screen
+        return true; // Stop polling
+      }
+      
+      // Only alert on failure if manual check and NOT rejected (captured above)
       if (failureStatuses.includes(currentStatus)) {
         if (isManual) {
           alert("The payment gateway reported a failure. If you have already paid, please use the 'Enter UTR manually' option below to submit your receipt.");
@@ -120,7 +136,7 @@ export default function UPIPaymentModal({
   };
 
   useEffect(() => {
-    if (!paymentData?.clientTxnId || paymentComplete || timeLeft <= 0) {
+    if (!paymentData?.clientTxnId || paymentComplete || isManualVerification || timeLeft <= 0) {
       return;
     }
 
@@ -133,7 +149,7 @@ export default function UPIPaymentModal({
     }, 5000);
 
     return () => clearInterval(pollInterval);
-  }, [paymentData, paymentComplete]);
+  }, [paymentData, paymentComplete, isManualVerification]);
 
   // Extract VPA from UPI Link
   const getUPIId = () => {
@@ -164,6 +180,7 @@ export default function UPIPaymentModal({
       setLoading(false);
       setTimeLeft(300);
       setPaymentComplete(false);
+      setIsManualVerification(false);
       setChecking(false);
     }
   }, [isOpen]);
@@ -201,9 +218,6 @@ export default function UPIPaymentModal({
       }
     } catch (err) {
       let customError = err.message || "Failed to initiate payment";
-      if (customError.includes("No merchant available")) {
-        customError = "Gateway Error: No active payment collectors available for this amount right now. Please notify the administrators or try again in a few minutes.";
-      }
       setError(customError);
     } finally {
       setLoading(false);
@@ -333,8 +347,23 @@ export default function UPIPaymentModal({
               </div>
             )}
 
+            {/* State: Manual Verification */}
+            {isManualVerification && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-500/20">
+                  <Clock className="h-10 w-10 text-yellow-500" />
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-yellow-500">Verification Pending</h3>
+                <p className="text-sm text-slate-400 text-center px-4">
+                  We have received your UTR. Your registration will be approved after admin verification.
+                </p>
+                <p className="text-xs text-slate-500 mt-2">Refreshing page...</p>
+                <Loader2 className="mt-4 h-5 w-5 animate-spin text-yellow-500" />
+              </div>
+            )}
+
             {/* State: Payment Ready */}
-            {paymentData && !paymentComplete && (
+            {paymentData && !paymentComplete && !isManualVerification && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Left Column: QR Code */}
                 <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 p-3 md:p-4">
@@ -543,9 +572,9 @@ export default function UPIPaymentModal({
                 {/* Mobile Only Actions - Below QR */}
                 <div className="md:hidden space-y-3">
                   {/* GPay Button */}
-                  {paymentData.intentLinks?.gpayLink && (
+                  {paymentData.intentLinks?.upiLink && (
                     <a
-                      href={paymentData.intentLinks.gpayLink}
+                      href={paymentData.intentLinks.upiLink}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 text-sm font-bold text-gray-800 shadow-md active:scale-95"
                     >
                       <img 
@@ -554,21 +583,6 @@ export default function UPIPaymentModal({
                         className="h-6 w-auto" 
                       />
                       Open GPay
-                    </a>
-                  )}
-
-                  {/* PhonePe Button */}
-                  {paymentData.intentLinks?.phonepeLink && (
-                    <a
-                      href={paymentData.intentLinks.phonepeLink}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#5f259f] px-4 py-3 text-sm font-bold text-white shadow-md active:scale-95"
-                    >
-                      <img 
-                        src="https://download.logo.wine/logo/PhonePe/PhonePe-Logo.wine.png" 
-                        alt="PhonePe" 
-                        className="h-6 w-auto invert brightness-0 saturate-100 filter" 
-                      />
-                      Open PhonePe
                     </a>
                   )}
 
@@ -587,8 +601,8 @@ export default function UPIPaymentModal({
                     </a>
                   )}
 
-                  {/* Fallback Intent */}
-                  {!paymentData.intentLinks?.gpayLink && paymentData.intentLinks?.upiLink && (
+                  {/* Fallback Intent - already covered by GPay button which now uses upiLink if gpayLink is missing, but keeping a generic "Any App" button is good practice if neither specific one is preferred */}
+                  {!paymentData.intentLinks?.paytmLink && (
                      <a
                      href={paymentData.intentLinks.upiLink}
                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg active:scale-95"
@@ -610,6 +624,67 @@ export default function UPIPaymentModal({
                     )}
                     {checking ? "Checking Status..." : "I've Completed Payment"}
                   </button>
+
+                  {/* UTR Fallback Button Mobile */}
+                    {!showUtrField && (
+                      <div className="flex justify-center pt-2">
+                        <button
+                          onClick={() => setShowUtrField(true)}
+                          className="text-[10px] font-bold text-slate-500 underline decoration-slate-500/30 transition-all hover:text-slate-300"
+                        >
+                          Paying but not detecting? Enter UTR manually
+                        </button>
+                      </div>
+                    )}
+
+                    {showUtrField && (
+                      <div className="animate-in fade-in slide-in-from-top-2 space-y-2 rounded-xl border border-white/5 bg-slate-950/50 p-3">
+                        <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                          12-Digit UTR/Transaction ID
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            maxLength={12}
+                            value={utr}
+                            onChange={(e) => setUtr(e.target.value.replace(/\D/g, ""))}
+                            placeholder="3xxxxxxxxxxx"
+                            className="flex-1 rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none"
+                          />
+                          <button
+                            onClick={async () => {
+                              if (utr.length < 12) {
+                                alert("Please enter a valid 12-digit UTR number.");
+                                return;
+                              }
+                              setIsSubmittingUtr(true);
+                              try {
+                                const { submitUtrAction } = await import("@/app/actions/payment");
+                                const result = await submitUtrAction(paymentData.clientTxnId, utr);
+                                if (result.success) {
+                                  alert("UTR submitted! We'll verify and approve your registration shortly.");
+                                  // Trigger one final check
+                                  checkStatus(true);
+                                } else {
+                                  alert(result.error || "Failed to submit UTR");
+                                }
+                              } catch (e) {
+                                alert("Error submitting UTR. Please try again.");
+                              } finally {
+                                setIsSubmittingUtr(false);
+                              }
+                            }}
+                            disabled={isSubmittingUtr || utr.length < 12}
+                            className="rounded-lg bg-emerald-600 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-500 disabled:opacity-50"
+                          >
+                            {isSubmittingUtr ? "..." : "Submit"}
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-slate-600 italic">
+                          Found in your UPI app receipt/history as "UTR" or "Ref No."
+                        </p>
+                      </div>
+                    )}
                 </div>
               </div>
             )}
@@ -628,7 +703,7 @@ export default function UPIPaymentModal({
             <div className="flex items-center gap-2">
               <Lock className="h-3 w-3 text-emerald-500" />
               <p className="text-[10px] font-bold tracking-wide text-slate-400 uppercase">
-                Secured by EdgeGateway
+                Secured by IMB Payment
               </p>
             </div>
           </div>
