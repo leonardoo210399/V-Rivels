@@ -41,6 +41,7 @@ import {
   RotateCcw,
   Swords,
   Map,
+  CreditCard,
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
@@ -528,9 +529,13 @@ export default function TournamentDetailPage({ params }) {
     if (!paymentRequest) return;
     try {
       const meta = JSON.parse(paymentRequest.metadata);
+      
+      // SANITIZE META: Remove old manual UTR data so we don't trigger immediate pending state
+      const { manuallySubmittedUtr, manuallySubmittedAt, ...cleanMeta } = meta;
+      
       setPendingPaymentData({
         name: paymentRequest.teamName,
-        metadata: meta,
+        metadata: cleanMeta,
       });
       setShowPaymentModal(true);
     } catch (e) {
@@ -599,7 +604,7 @@ export default function TournamentDetailPage({ params }) {
   const isPaymentPending =
     !isRegistered && paymentRequest?.paymentStatus === "pending";
   const isPaymentRejected =
-    !isRegistered && paymentRequest?.paymentStatus === "rejected";
+    !isRegistered && (paymentRequest?.paymentStatus === "rejected" || paymentRequest?.paymentStatus === "failed");
   const isFull = registrations.length >= tournament.maxTeams;
 
   // Check-in logic: Use specific checkInStart time if available
@@ -1311,11 +1316,40 @@ export default function TournamentDetailPage({ params }) {
                           mins to verify.
                         </p>
 
-                        <div className="mt-3 flex items-center gap-1.5 opacity-60">
-                          <div className="h-1 w-1 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-                          <p className="text-[8px] font-black tracking-widest uppercase md:text-[9px]">
-                            Status will update shortly
-                          </p>
+                        <button
+                          onClick={handleRetryPayment}
+                          className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-500 transition-all hover:bg-amber-500 hover:text-white md:text-xs"
+                        >
+                          <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                          Resume Payment / Scanner
+                        </button>
+                        <p className="mt-2 text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
+                          Status will update shortly
+                        </p>
+                        
+                        <div className="mt-4 pt-4 border-t border-amber-500/10">
+                           <button
+                             onClick={async () => {
+                               if(!confirm("Are you sure you want to cancel this payment request? You will need to start over.")) return;
+                               setRefreshingStatus(true);
+                               try {
+                                 const { updatePaymentStatusAction } = await import("@/app/actions/payment");
+                                 const res = await updatePaymentStatusAction(paymentRequest.transactionId, "failed");
+                                 if (res.success) {
+                                     alert("Request cancelled. Refreshing...");
+                                     window.location.reload();
+                                 } else {
+                                     throw new Error(res.error || "Unknown error");
+                                 }
+                               } catch(e) {
+                                 alert("Failed to cancel: " + e.message);
+                                 setRefreshingStatus(false);
+                               }
+                             }}
+                             className="text-[9px] font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest"
+                           >
+                             Cancel Request & Start Over
+                           </button>
                         </div>
                       </div>
                     </div>

@@ -209,6 +209,16 @@ export default function RequestsTab({
                         {req.transactionId}
                       </span>
                     </p>
+                    {(req.upiTxnId || meta?.manuallySubmittedUtr) && (
+                      <div className="mt-2 w-fit rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5">
+                        <p className="text-[10px] font-black uppercase text-amber-500 tracking-wider">
+                          Manual Verification Required
+                        </p>
+                        <p className="font-mono text-xs text-white">
+                          UTR: {req.upiTxnId || meta?.manuallySubmittedUtr}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
