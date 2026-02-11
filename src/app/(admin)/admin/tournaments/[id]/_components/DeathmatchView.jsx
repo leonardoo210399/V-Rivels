@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Skull,
   Check,
@@ -123,7 +124,7 @@ export default function DeathmatchView({
       await loadData();
       setEditingArena(false);
     } catch (e) {
-      alert("Failed to save arena details: " + e.message);
+      toast.error("Failed to save arena details: " + e.message);
     } finally {
       setUpdating(false);
     }
@@ -240,9 +241,9 @@ export default function DeathmatchView({
 
       setEditing(false);
       setBulkEditValues({});
-      alert("Scores saved and tournament marked as completed!");
+      toast.success("Scores saved and tournament marked as completed!");
     } catch (e) {
-      alert("Failed to update scores: " + e.message);
+      toast.error("Failed to update scores: " + e.message);
     } finally {
       setUpdating(false);
     }
