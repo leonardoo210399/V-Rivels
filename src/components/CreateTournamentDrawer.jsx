@@ -25,6 +25,7 @@ import {
   Trash2,
   Map as MapIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import Loader from "@/components/Loader";
 
 // Import the same parser logic used in the detail page
@@ -408,7 +409,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
             });
           } catch (dbError) {
             console.error("Failed to save Discord ID to DB:", dbError);
-            alert(
+            toast.warning(
               "Tournament created, but failed to save Discord Link to database. \n\nCheck if 'discordChannelId' and 'discordRoleId' attributes exist in Appwrite Tournaments Collection.",
             );
           }
@@ -453,7 +454,7 @@ export default function CreateTournamentDrawer({ isOpen, onClose, onSuccess }) {
       });
     } catch (error) {
       console.error("Failed to create tournament", error);
-      alert("Failed to create tournament");
+      toast.error("Failed to create tournament");
     } finally {
       setLoading(false);
     }
