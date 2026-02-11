@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { FileText, Check, X, Clock } from "lucide-react";
-import { toast } from "sonner";
 import {
   updateRegistrationPaymentStatus,
   registerForTournament,
@@ -36,36 +35,8 @@ export default function RequestsTab({
     }
   };
 
-  const handleApproveRequest = (request) => {
-    const existingReg = registrations.find((r) => r.userId === request.userId);
-
-    if (existingReg) {
-      toast("User Already Registered", {
-        description: `User is already registered as "${existingReg.teamName}". Update their existing registration to VERIFIED?`,
-        action: {
-          label: "Yes, Update",
-          onClick: () => executeApproval(request, existingReg),
-        },
-        cancel: {
-          label: "Cancel",
-        },
-        duration: 8000,
-      });
-    } else {
-      toast("Approve Payment?", {
-        description: "Approve this payment and register the user?",
-        action: {
-          label: "Approve",
-          onClick: () => executeApproval(request, null),
-        },
-        cancel: {
-          label: "Cancel",
-        },
-      });
-    }
-  };
-
-  const executeApproval = async (request, existingReg) => {
+  const handleApproveRequest = async (request) => {
+    if (!confirm("Approve this payment and register the user?")) return;
     setUpdating(true);
 
     // Optimistic Update
@@ -76,12 +47,28 @@ export default function RequestsTab({
     );
 
     try {
+      // Check if user is already registered
+      const existingReg = registrations.find(
+        (r) => r.userId === request.userId,
+      );
+
       if (existingReg) {
-        await updateRegistrationPaymentStatus(
-          existingReg.$id,
-          "verified",
-          request.utr,
-        );
+        if (
+          confirm(
+            `User is already registered as "${existingReg.teamName}". Update their existing registration to VERIFIED?`,
+          )
+        ) {
+          await updateRegistrationPaymentStatus(
+            existingReg.$id,
+            "verified",
+            request.transactionId,
+          );
+        } else {
+          setUpdating(false); // cancel optimistic?
+          // Ideally revert optimistic update here but for admin panel it's fine to just reload or let it be 'verified' in UI until refresh
+          await loadData(false);
+          return;
+        }
       } else {
         // 1. Create New Registration
         await registerForTournament(
@@ -90,7 +77,7 @@ export default function RequestsTab({
           request.teamName,
           {
             metadata: request.metadata,
-            transactionId: request.utr,
+            transactionId: request.transactionId,
             paymentStatus: "verified",
           },
         );
@@ -108,8 +95,8 @@ export default function RequestsTab({
             userProfile.discordId,
           );
           if (discordResult && discordResult.error) {
-            toast.warning(
-              `Payment verified, but Discord Role assignment failed: ${discordResult.error}`,
+            alert(
+              `Payment verified, but Discord Role assignment failed: ${discordResult.error}\n\nAsk the user to join the Discord server.`,
             );
           }
         }
@@ -123,6 +110,7 @@ export default function RequestsTab({
         ? request.teamName
         : meta?.playerName || request.teamName;
 
+      // Get discordId - userProfile was fetched above, but it's scoped inside try, so we fetch again
       let discordId = null;
       try {
         const profile = await getUserProfile(request.userId);
@@ -135,7 +123,7 @@ export default function RequestsTab({
         await announceRegistrationApprovedAction(
           tournament.name,
           registrantName,
-          request.utr,
+          request.transactionId,
           discordId,
         );
       } catch (announceErr) {
@@ -143,10 +131,10 @@ export default function RequestsTab({
       }
 
       await loadData(false);
-      toast.success("User registered/updated successfully!");
+      alert("User registered/updated successfully!");
     } catch (e) {
       console.error(e);
-      toast.error("Failed to approve: " + e.message);
+      alert("Failed to approve: " + e.message);
     } finally {
       setUpdating(false);
     }
@@ -216,30 +204,18 @@ export default function RequestsTab({
                       Requested {new Date(req.requestedAt).toLocaleString()}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      Transaction ID (UTR):{" "}
+                      Transaction ID:{" "}
                       <span className="font-mono text-white">
-                        {req.utr || "N/A"}
+                        {req.transactionId}
                       </span>
                     </p>
-                    {req.imbOrderId && (
-                      <p className="text-[10px] text-slate-500">
-                        IMB Order: <span className="font-mono">{req.imbOrderId}</span>
-                      </p>
-                    )}
-                    {req.verifiedAt && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black tracking-widest text-emerald-500 uppercase">
-                           Verified {new Date(req.verifiedAt).toLocaleString()} ({req.verificationMethod})
-                        </div>
-                      </div>
-                    )}
-                    {meta?.manuallySubmittedUtr && (
+                    {(req.upiTxnId || meta?.manuallySubmittedUtr) && (
                       <div className="mt-2 w-fit rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5">
                         <p className="text-[10px] font-black uppercase text-amber-500 tracking-wider">
-                          Manual Submission
+                          Manual Verification Required
                         </p>
                         <p className="font-mono text-xs text-white">
-                          UTR: {meta?.manuallySubmittedUtr}
+                          UTR: {req.upiTxnId || meta?.manuallySubmittedUtr}
                         </p>
                       </div>
                     )}

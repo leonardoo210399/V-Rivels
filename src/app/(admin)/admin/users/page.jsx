@@ -16,7 +16,6 @@ import {
   Check,
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { getMatches } from "@/lib/valorant";
 import { formatDate } from "@/lib/utils";
 
@@ -57,7 +56,7 @@ export default function AdminUsersPage() {
       setMatchesData((prev) => ({ ...prev, [user.$id]: res.data || [] }));
     } catch (error) {
       console.error("Failed to fetch matches", error);
-      toast.error(
+      alert(
         "Failed to fetch custom matches. Ensure player has a valid account linked.",
       );
     } finally {

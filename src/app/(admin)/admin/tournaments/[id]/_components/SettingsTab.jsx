@@ -10,7 +10,6 @@ import {
   ExternalLink,
   Map,
 } from "lucide-react";
-import { toast } from "sonner";
 import { mapImages } from "@/assets/images/maps";
 import { sendTournamentMessageAction } from "@/app/actions/discord";
 import { updateTournament } from "@/lib/tournaments";
@@ -95,26 +94,19 @@ export default function SettingsTab({
     onSaveSettings(editForm);
   };
 
-  const handleSendCheckInAlert = () => {
+  const handleSendCheckInAlert = async () => {
     if (!tournament.discordChannelId) {
-      toast.error("No Discord channel linked to this tournament.");
+      alert("No Discord channel linked to this tournament.");
       return;
     }
 
-    toast("Send Check-In Alert?", {
-      description:
-        "This will ping everyone with the tournament role on Discord.",
-      action: {
-        label: "Send Alert",
-        onClick: () => executeSendCheckInAlert(),
-      },
-      cancel: {
-        label: "Cancel",
-      },
-    });
-  };
+    if (
+      !confirm(
+        "Send Check-in live alert to Discord? This will ping everyone with the tournament role.",
+      )
+    )
+      return;
 
-  const executeSendCheckInAlert = async () => {
     try {
       setLocalUpdating(true);
       await sendTournamentMessageAction(
@@ -127,9 +119,9 @@ export default function SettingsTab({
       await updateTournament(tournament.$id, { checkInAlertSent: true });
       setTournament((prev) => ({ ...prev, checkInAlertSent: true }));
 
-      toast.success("Check-in alert sent successfully!");
+      alert("Check-in alert sent successfully!");
     } catch (err) {
-      toast.error("Failed to send alert: " + (err.message || "Unknown error"));
+      alert("Failed to send alert: " + (err.message || "Unknown error"));
     } finally {
       setLocalUpdating(false);
     }

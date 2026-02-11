@@ -16,7 +16,6 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import Loader from "@/components/Loader";
 
@@ -273,8 +272,8 @@ export default function CreateTournamentPage() {
       router.push("/tournaments");
     } catch (error) {
       console.error("Failed to create tournament", error);
-      toast.error(
-        "Failed to create tournament. Please check your permissions or try again.",
+      alert(
+        "Failed to create tournament (Check console - likely permission or DB issue)",
       );
     } finally {
       setLoading(false);

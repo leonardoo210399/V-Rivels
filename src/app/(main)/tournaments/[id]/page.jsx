@@ -10,7 +10,6 @@ import {
 import {
   createPaymentRequest,
   getPaymentRequestsForUser,
-  deletePaymentRequest,
 } from "@/lib/payment_requests";
 import {
   deleteTournamentChannelsAction,
@@ -40,13 +39,10 @@ import {
   ExternalLink,
   Info,
   RotateCcw,
-  RefreshCw,
   Swords,
   Map,
   CreditCard,
-  QrCode,
 } from "lucide-react";
-import { toast } from "sonner";
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
@@ -280,20 +276,6 @@ export default function TournamentDetailPage({ params }) {
     if (!user) return;
     setRefreshingStatus(true);
     try {
-      // 1. If we have a pending payment, ask the backend to actively check the gateway status
-      if (paymentRequest && paymentRequest.paymentStatus === "pending") {
-        try {
-          await fetch("/api/payments/check-status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: paymentRequest.$id }),
-          });
-        } catch (apiErr) {
-          console.warn("Active status check failed, falling back to local refresh:", apiErr);
-        }
-      }
-
-      // 2. Fetch latest data from Appwrite (this will get any updates made by check-status or webhooks)
       const [regs, payReq] = await Promise.all([
         getRegistrations(id),
         getPaymentRequestsForUser(id, user.$id),
@@ -386,7 +368,7 @@ export default function TournamentDetailPage({ params }) {
       newMembers[index].tag = cleanTag; // Normalize tag
       newMembers[index].card = acc.data?.card?.id || acc.data?.card || null;
     } catch (err) {
-      toast.error(`Account ${member.name}#${member.tag} not found!`);
+      alert(`Account ${member.name}#${member.tag} not found!`);
       newMembers[index].verified = false;
     } finally {
       newMembers[index].loading = false;
@@ -519,30 +501,60 @@ export default function TournamentDetailPage({ params }) {
   };
 
   const handlePaymentComplete = async (transactionId) => {
-    // The payment is already verified by the backend
-    setShowPaymentModal(false);
-    setPendingPaymentData(null);
-    
-    // Force a data refresh to update the registration status in the current view
-    await refreshStatus();
+    if (!pendingPaymentData) return;
+    setRegistering(true);
+    try {
+      await createPaymentRequest(
+        id,
+        user.$id,
+        pendingPaymentData.name,
+        pendingPaymentData.metadata,
+        transactionId,
+      );
+      setSuccess(true);
+      setShowPaymentModal(false);
+      setPendingPaymentData(null);
+      // Refresh payment request
+      const payReq = await getPaymentRequestsForUser(id, user.$id);
+      setPaymentRequest(payReq);
+    } catch (err) {
+      setError(err.message);
+      // alert(err.message); // Removed in favor of inline modal error
+    } finally {
+      setRegistering(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleRetryPayment = () => {
+    if (!paymentRequest) return;
+    try {
+      const meta = JSON.parse(paymentRequest.metadata);
+      
+      // SANITIZE META: Remove old manual UTR data so we don't trigger immediate pending state
+      const { manuallySubmittedUtr, manuallySubmittedAt, ...cleanMeta } = meta;
+      
+      setPendingPaymentData({
+        name: paymentRequest.teamName,
+        metadata: cleanMeta,
+      });
+      setShowPaymentModal(true);
+    } catch (e) {
+      console.error("Failed to parse metadata for retry", e);
+      alert(
+        "Could not load previous details. Please refresh and try registering again.",
+      );
+    }
+  };
+
+  const handleDelete = async () => {
     if (!isAdmin) return;
-    toast("Delete Tournament?", {
-      description: "Are you sure? This action cannot be undone.",
-      action: {
-        label: "Yes, Delete",
-        onClick: () => executeDelete(),
-      },
-      cancel: {
-        label: "Cancel",
-      },
-      duration: 5000,
-    });
-  };
+    if (
+      !confirm(
+        "Are you sure you want to delete this tournament? This action cannot be undone.",
+      )
+    )
+      return;
 
-  const executeDelete = async () => {
     setDeleting(true);
     try {
       // 1. Delete Discord Channels if they exist
@@ -553,20 +565,13 @@ export default function TournamentDetailPage({ params }) {
             tournament.discordVoiceChannelId,
           ]);
           if (result && result.error) {
-            setDeleting(false);
-            toast.error(`Discord Deletion Failed: ${result.error}`, {
-              description:
-                "Do you want to delete the tournament from the database anyway?",
-              action: {
-                label: "Force Delete",
-                onClick: async () => {
-                  setDeleting(true);
-                  await finalizeDelete();
-                },
-              },
-              duration: 8000,
-            });
-            return;
+            const proceed = confirm(
+              `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway? (Channels will remain manually)`,
+            );
+            if (!proceed) {
+              setDeleting(false);
+              return;
+            }
           }
         } catch (discordErr) {
           console.warn("Failed to delete discord channels:", discordErr);
@@ -574,46 +579,15 @@ export default function TournamentDetailPage({ params }) {
         }
       }
 
-      await finalizeDelete();
-    } catch (err) {
-      console.error("Failed to delete tournament", err);
-      toast.error("Failed to delete tournament");
-      setDeleting(false);
-    }
-  };
-
-  const finalizeDelete = async () => {
-    try {
+      // 2. Delete from DB
       await deleteTournament(id);
       router.push("/tournaments");
     } catch (err) {
       console.error("Failed to delete tournament", err);
-      toast.error("Failed to delete tournament from DB");
+      alert("Failed to delete tournament");
       setDeleting(false);
     }
   };
-
-  const userRegistration = registrations.find((r) => r.userId === user?.$id);
-  const isRegistered = !!userRegistration;
-  const isCheckedIn = userRegistration?.checkedIn;
-  const isPaymentPending =
-    !isRegistered && paymentRequest?.paymentStatus === "pending";
-  const isPaymentRejected =
-    !isRegistered &&
-    (paymentRequest?.paymentStatus === "rejected" ||
-      paymentRequest?.paymentStatus === "failed");
-  const isFull = registrations.length >= tournament?.maxTeams;
-
-  // Polling for pending payments
-  useEffect(() => {
-    let interval;
-    if (isPaymentPending && !isRegistered) {
-      interval = setInterval(() => {
-        refreshStatus();
-      }, 10000); // Check every 10 seconds
-    }
-    return () => clearInterval(interval);
-  }, [isPaymentPending, isRegistered]);
 
   if (loading) {
     return <Loader />;
@@ -623,6 +597,15 @@ export default function TournamentDetailPage({ params }) {
     return (
       <div className="p-8 text-center text-white">Tournament not found</div>
     );
+
+  const userRegistration = registrations.find((r) => r.userId === user?.$id);
+  const isRegistered = !!userRegistration;
+  const isCheckedIn = userRegistration?.checkedIn;
+  const isPaymentPending =
+    !isRegistered && paymentRequest?.paymentStatus === "pending";
+  const isPaymentRejected =
+    !isRegistered && (paymentRequest?.paymentStatus === "rejected" || paymentRequest?.paymentStatus === "failed");
+  const isFull = registrations.length >= tournament.maxTeams;
 
   // Check-in logic: Use specific checkInStart time if available
   const now = new Date();
@@ -660,7 +643,7 @@ export default function TournamentDetailPage({ params }) {
       const regs = await getRegistrations(id);
       setRegistrations(regs.documents);
     } catch (e) {
-      toast.error("Check-in failed: " + e.message);
+      alert("Check-in failed: " + e.message);
     } finally {
       setCheckingIn(false);
     }
@@ -1285,7 +1268,7 @@ export default function TournamentDetailPage({ params }) {
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(lobbyCode);
-                            toast.success("Party code copied to clipboard!");
+                            alert("Party code copied to clipboard!");
                           }}
                           className="shrink-0 rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-[9px] font-black tracking-widest text-slate-300 uppercase transition-all hover:bg-white/10 hover:text-white"
                         >
@@ -1302,85 +1285,72 @@ export default function TournamentDetailPage({ params }) {
                 </div>
               ) : isPaymentPending ? (
                 <div className="flex flex-col gap-3 md:gap-4">
-                  <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-slate-900/40 p-5 backdrop-blur-md md:p-6">
-                    {/* Left Accent Bar */}
-                    <div className="absolute inset-y-0 left-0 w-1 bg-amber-500/50" />
-                    
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-3">
-                        {/* Alert Icon with Pulse */}
-                        <div className="relative shrink-0">
-                          <AlertCircle className="h-5 w-5 text-amber-500" />
-                          <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
-                        </div>
-                        <p className="text-xs font-black tracking-[0.2em] text-white uppercase md:text-sm">
-                          Verification Pending
-                        </p>
+                  <div className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-500 md:rounded-2xl md:p-5">
+                    <div className="flex items-start gap-4">
+                      {/* Alert Icon with Pulse */}
+                      <div className="relative mt-0.5 shrink-0">
+                        <AlertCircle className="h-4.5 w-4.5 md:h-5 md:w-5" />
+                        <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
                       </div>
 
-                      <div className="space-y-2">
-                        <p className="text-[10px] leading-relaxed font-medium text-slate-400 md:text-xs">
+                      {/* Content Section */}
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center justify-between">
+                          <p className="text-[10px] font-black tracking-[0.2em] uppercase md:text-xs">
+                            Verification Pending
+                          </p>
+                          <button
+                            onClick={refreshStatus}
+                            disabled={refreshingStatus}
+                            className="group/refresh flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 transition-all hover:bg-amber-500/20 active:scale-90 disabled:opacity-50 md:h-8 md:w-8"
+                            title="Refresh Status"
+                          >
+                            <RotateCcw
+                              className={`h-3.5 w-3.5 transition-transform group-hover/refresh:rotate-180 md:h-4 md:w-4 ${refreshingStatus ? "animate-spin" : ""}`}
+                            />
+                          </button>
+                        </div>
+
+                        <p className="text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
                           We are verifying your payment. We usually take 5-15
                           mins to verify.
                         </p>
-                        <p className="text-[10px] font-bold text-amber-500/80 md:text-xs">
-                          Status will update shortly
-                        </p>
-                      </div>
 
-                      <div className="flex flex-col gap-3 pt-2">
                         <button
-                          onClick={() => setShowPaymentModal(true)}
-                          className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-amber-500 px-6 py-3 text-[11px] font-black tracking-widest text-slate-950 uppercase transition-all hover:bg-amber-400 active:scale-[0.98]"
+                          onClick={handleRetryPayment}
+                          className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[10px] font-bold text-amber-500 transition-all hover:bg-amber-500 hover:text-white md:text-xs"
                         >
-                          <QrCode className="h-4 w-4 transition-transform group-hover:scale-110" />
+                          <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4" />
                           Resume Payment / Scanner
                         </button>
-
-                        <button
-                          onClick={() => refreshStatus()}
-                          disabled={refreshingStatus}
-                          className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-[11px] font-black tracking-widest text-white uppercase transition-all hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
-                        >
-                          <RefreshCw
-                            className={`h-4 w-4 ${refreshingStatus ? "animate-spin" : ""}`}
-                          />
-                          {refreshingStatus ? "Checking Status..." : "Refresh Status"}
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            toast("Cancel Payment Request?", {
-                              description:
-                                "Are you sure you want to cancel this payment request and start over?",
-                              action: {
-                                label: "Yes, Cancel",
-                                onClick: async () => {
-                                  setRefreshingStatus(true);
-                                  try {
-                                    await deletePaymentRequest(
-                                      paymentRequest.$id,
-                                    );
-                                    await refreshStatus();
-                                  } catch (e) {
-                                    toast.error(
-                                      "Failed to cancel request: " + e.message,
-                                    );
-                                  } finally {
-                                    setRefreshingStatus(false);
-                                  }
-                                },
-                              },
-                              cancel: {
-                                label: "No",
-                              },
-                              duration: 5000,
-                            });
-                          }}
-                          className="mt-2 text-center text-[10px] font-bold text-slate-500 transition-colors hover:text-rose-500 uppercase tracking-[0.2em]"
-                        >
-                          Cancel Request & Start Over
-                        </button>
+                        <p className="mt-2 text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
+                          Status will update shortly
+                        </p>
+                        
+                        <div className="mt-4 pt-4 border-t border-amber-500/10">
+                           <button
+                             onClick={async () => {
+                               if(!confirm("Are you sure you want to cancel this payment request? You will need to start over.")) return;
+                               setRefreshingStatus(true);
+                               try {
+                                 const { updatePaymentStatusAction } = await import("@/app/actions/payment");
+                                 const res = await updatePaymentStatusAction(paymentRequest.transactionId, "failed");
+                                 if (res.success) {
+                                     alert("Request cancelled. Refreshing...");
+                                     window.location.reload();
+                                 } else {
+                                     throw new Error(res.error || "Unknown error");
+                                 }
+                               } catch(e) {
+                                 alert("Failed to cancel: " + e.message);
+                                 setRefreshingStatus(false);
+                               }
+                             }}
+                             className="text-[9px] font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest"
+                           >
+                             Cancel Request & Start Over
+                           </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1397,9 +1367,17 @@ export default function TournamentDetailPage({ params }) {
                         {paymentRequest?.rejectionReason ||
                           "Your payment was rejected. Please contact support."}
                       </p>
+
+                      <button
+                        onClick={handleRetryPayment}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-[10px] font-bold text-rose-500 transition-all hover:bg-rose-500 hover:text-white md:text-xs"
+                      >
+                        <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                        Retry / Fix Payment
+                      </button>
                       <Link
                         href="/support"
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
+                        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
                       >
                         <Info className="h-3 w-3 md:h-4 md:w-4" />
                         Help / Support
@@ -1693,7 +1671,6 @@ export default function TournamentDetailPage({ params }) {
             setShowPaymentModal(false);
             setPendingPaymentData(null);
             setError(null);
-            refreshStatus();
           }}
           tournamentId={tournament.$id}
           tournamentName={tournament.name}
@@ -1701,7 +1678,14 @@ export default function TournamentDetailPage({ params }) {
           userId={user?.$id}
           userEmail={user?.email}
           userName={pendingPaymentData?.name || userProfile?.ingameName || "Player"}
-          onPaymentComplete={handlePaymentComplete}
+          teamName={pendingPaymentData?.name || ""}
+          metadata={pendingPaymentData?.metadata || {}}
+          onPaymentStarted={(clientTxnId) => {
+            // Optionally store clientTxnId for tracking
+            if (pendingPaymentData) {
+               // We might want to save this temporarily or just let the modal handle polling
+            }
+          }}
         />
       )}
     </div>

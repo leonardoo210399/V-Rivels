@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
   updateTournament,
@@ -28,10 +27,7 @@ export function useTournamentActions(id, tournament, setTournament, registration
 
   const handleStartTournament = async (matchFormat = "BO1") => {
     if (tournament.bracketGenerated || matches.length > 0) {
-
-      toast.error(
-        "Bracket already exists. Reset it first if you want to regenerate.",
-      );
+      alert("Bracket already exists. Reset it first if you want to regenerate.");
       return;
     }
 
@@ -137,17 +133,14 @@ export function useTournamentActions(id, tournament, setTournament, registration
           tournament.discordRoleId,
         );
         if (result && result.error) {
-          toast.error(`Discord Deletion Failed: ${result.error}`);
-          // Proceeding to delete tournament anyway as this is a force cancel?
-          // Actually, if discord fails we probably want to warn user but since this is 'deleteStep' logic
-          // which seems to be a custom stepper, it might be better to just show toast.
-          // Since I can't easily wait for user input in this loop without breaking function structure too much,
-          // I'll just assume failure here stops the process or we ignore it.
-          // The original code used confirm to ask "Delete anyway?".
-          // I will use a toast that says "Discord deletion failed. Retry or manually delete?" and stop.
-          setDeleteStep(0);
-          setUpdating(false);
-          return;
+          const proceed = confirm(
+            `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway?`
+          );
+          if (!proceed) {
+            setDeleteStep(0);
+            setUpdating(false);
+            return;
+          }
         }
       } catch (discordErr) {
         console.warn("Failed to delete discord channels:", discordErr);
@@ -166,7 +159,7 @@ export function useTournamentActions(id, tournament, setTournament, registration
 
   const handleManualDiscordDelete = async () => {
     if (!tournament.discordChannelId && !tournament.discordVoiceChannelId) {
-      toast.error("No Discord channel IDs found for this tournament.");
+      alert("No Discord channel IDs found for this tournament.");
       return;
     }
 
@@ -201,8 +194,7 @@ export function useTournamentActions(id, tournament, setTournament, registration
           discordVoiceChannelId: null,
           discordRoleId: null,
         }));
-
-        toast.success("Discord Channels Deleted successfully!");
+        alert("Discord Channels Deleted successfully!");
         setDiscordDeleteStep(0);
       }
     } catch (error) {
@@ -230,10 +222,9 @@ export function useTournamentActions(id, tournament, setTournament, registration
       await updateTournament(id, dataToUpdate);
 
       setTournament((prev) => ({ ...prev, ...dataToUpdate }));
-
-      toast.success("Tournament updated successfully!");
+      alert("Tournament updated successfully!");
     } catch (e) {
-      toast.error("Failed to update tournament: " + e.message);
+      alert("Failed to update tournament: " + e.message);
     } finally {
       setUpdating(false);
     }

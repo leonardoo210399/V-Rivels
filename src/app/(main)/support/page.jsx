@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Mail, MessageSquare, HelpCircle, FileText, Send } from "lucide-react";
-import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 
 export default function SupportPage() {
@@ -57,7 +56,7 @@ export default function SupportPage() {
       setTimeout(() => setSuccess(false), 5000); // Hide success msg after 5s
     } catch (error) {
       console.error("Failed to submit ticket", error);
-      toast.error("Something went wrong. Please try again or email us directly.");
+      alert("Something went wrong. Please try again or email us directly.");
     } finally {
       setLoading(false);
     }

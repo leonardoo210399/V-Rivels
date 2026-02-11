@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ShieldCheck, Loader as LoaderIcon } from "lucide-react";
-import { toast } from "sonner";
 import { updatePaymentRequestStatus } from "@/lib/payment_requests";
 
 const REJECTION_REASONS = [
@@ -31,7 +30,7 @@ export default function RejectionModal({
       rejectionReason === "Other" ? customRejectionReason : rejectionReason;
 
     if (!finalReason.trim()) {
-      toast.error("Please provide a rejection reason");
+      alert("Please provide a rejection reason");
       return;
     }
 
@@ -52,7 +51,7 @@ export default function RejectionModal({
       onClose();
     } catch (e) {
       console.error(e);
-      toast.error("Failed to reject: " + e.message);
+      alert("Failed to reject: " + e.message);
     } finally {
       setUpdating(false);
     }

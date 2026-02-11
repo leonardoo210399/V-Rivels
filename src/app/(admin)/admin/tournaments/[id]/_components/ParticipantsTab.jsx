@@ -8,7 +8,6 @@ import {
   Trash2,
   ShieldCheck,
 } from "lucide-react";
-import { toast } from "sonner";
 import {
   updateRegistrationPaymentStatus,
   deleteRegistration,
@@ -45,27 +44,19 @@ export default function ParticipantsTab({
         ),
       );
     } catch (e) {
-      toast.error("Failed to update payment: " + e.message);
+      alert("Failed to update payment: " + e.message);
     } finally {
       setUpdating(false);
     }
   };
 
-  const handleRevokeRegistration = (registration) => {
-    toast("Revoke Registration?", {
-      description:
-        "Are you sure? This will delete the entry and reject the payment.",
-      action: {
-        label: "Yes, Revoke",
-        onClick: () => executeRevoke(registration),
-      },
-      cancel: {
-        label: "Cancel",
-      },
-    });
-  };
-
-  const executeRevoke = async (registration) => {
+  const handleRevokeRegistration = async (registration) => {
+    if (
+      !confirm(
+        "Are you sure you want to REVOKE this registration? This will delete the entry and reject the payment.",
+      )
+    )
+      return;
 
     setUpdating(true);
     try {
@@ -87,10 +78,10 @@ export default function ParticipantsTab({
       }
 
       await loadData(false);
-      toast.success("Registration revoked successfully.");
+      alert("Registration revoked successfully.");
     } catch (e) {
       console.error(e);
-      toast.error("Failed to revoke: " + e.message);
+      alert("Failed to revoke: " + e.message);
     } finally {
       setUpdating(false);
     }
