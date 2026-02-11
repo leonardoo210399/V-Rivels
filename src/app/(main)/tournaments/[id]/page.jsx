@@ -10,6 +10,7 @@ import {
 import {
   createPaymentRequest,
   getPaymentRequestsForUser,
+  deletePaymentRequest,
 } from "@/lib/payment_requests";
 import {
   deleteTournamentChannelsAction,
@@ -42,6 +43,7 @@ import {
   Swords,
   Map,
   CreditCard,
+  QrCode,
 } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
@@ -145,6 +147,7 @@ export default function TournamentDetailPage({ params }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pendingPaymentData, setPendingPaymentData] = useState(null);
   const [paymentRequest, setPaymentRequest] = useState(null);
+  const [refreshingStatus, setRefreshingStatus] = useState(false);
 
   const [matches, setMatches] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
@@ -273,6 +276,7 @@ export default function TournamentDetailPage({ params }) {
   // Check Discord membership function (can be called manually)
   const refreshStatus = async () => {
     if (!user) return;
+    setRefreshingStatus(true);
     try {
       const [regs, payReq] = await Promise.all([
         getRegistrations(id),
@@ -287,6 +291,8 @@ export default function TournamentDetailPage({ params }) {
       }
     } catch (e) {
       console.error("Failed to refresh status:", e);
+    } finally {
+      setRefreshingStatus(false);
     }
   };
 
@@ -497,27 +503,12 @@ export default function TournamentDetailPage({ params }) {
   };
 
   const handlePaymentComplete = async (transactionId) => {
-    if (!pendingPaymentData) return;
-    setRegistering(true);
-    try {
-      await createPaymentRequest(
-        id,
-        user.$id,
-        pendingPaymentData.name,
-        pendingPaymentData.metadata,
-        transactionId,
-      );
-      setSuccess(true);
-      setShowPaymentModal(false);
-      setPendingPaymentData(null);
-      // Refresh payment request
-      const payReq = await getPaymentRequestsForUser(id, user.$id);
-      setPaymentRequest(payReq);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setRegistering(false);
-    }
+    // The payment is already verified by the backend
+    setShowPaymentModal(false);
+    setPendingPaymentData(null);
+    
+    // Force a data refresh to update the registration status in the current view
+    await refreshStatus();
   };
 
   const handleDelete = async () => {
@@ -563,6 +554,28 @@ export default function TournamentDetailPage({ params }) {
     }
   };
 
+  const userRegistration = registrations.find((r) => r.userId === user?.$id);
+  const isRegistered = !!userRegistration;
+  const isCheckedIn = userRegistration?.checkedIn;
+  const isPaymentPending =
+    !isRegistered && paymentRequest?.paymentStatus === "pending";
+  const isPaymentRejected =
+    !isRegistered &&
+    (paymentRequest?.paymentStatus === "rejected" ||
+      paymentRequest?.paymentStatus === "failed");
+  const isFull = registrations.length >= tournament?.maxTeams;
+
+  // Polling for pending payments
+  useEffect(() => {
+    let interval;
+    if (isPaymentPending && !isRegistered) {
+      interval = setInterval(() => {
+        refreshStatus();
+      }, 10000); // Check every 10 seconds
+    }
+    return () => clearInterval(interval);
+  }, [isPaymentPending, isRegistered]);
+
   if (loading) {
     return <Loader />;
   }
@@ -571,15 +584,6 @@ export default function TournamentDetailPage({ params }) {
     return (
       <div className="p-8 text-center text-white">Tournament not found</div>
     );
-
-  const userRegistration = registrations.find((r) => r.userId === user?.$id);
-  const isRegistered = !!userRegistration;
-  const isCheckedIn = userRegistration?.checkedIn;
-  const isPaymentPending =
-    !isRegistered && paymentRequest?.paymentStatus === "pending";
-  const isPaymentRejected =
-    !isRegistered && (paymentRequest?.paymentStatus === "rejected" || paymentRequest?.paymentStatus === "failed");
-  const isFull = registrations.length >= tournament.maxTeams;
 
   // Check-in logic: Use specific checkInStart time if available
   const now = new Date();
@@ -1259,29 +1263,70 @@ export default function TournamentDetailPage({ params }) {
                 </div>
               ) : isPaymentPending ? (
                 <div className="flex flex-col gap-3 md:gap-4">
-                  <div className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-amber-500 md:rounded-2xl md:p-5">
-                    <div className="flex items-start gap-4">
-                      {/* Alert Icon with Pulse */}
-                      <div className="relative mt-0.5 shrink-0">
-                        <AlertCircle className="h-4.5 w-4.5 md:h-5 md:w-5" />
-                        <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
+                  <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-slate-900/40 p-5 backdrop-blur-md md:p-6">
+                    {/* Left Accent Bar */}
+                    <div className="absolute inset-y-0 left-0 w-1 bg-amber-500/50" />
+                    
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-3">
+                        {/* Alert Icon with Pulse */}
+                        <div className="relative shrink-0">
+                          <AlertCircle className="h-5 w-5 text-amber-500" />
+                          <div className="absolute inset-0 animate-ping rounded-full bg-amber-500/20" />
+                        </div>
+                        <p className="text-xs font-black tracking-[0.2em] text-white uppercase md:text-sm">
+                          Verification Pending
+                        </p>
                       </div>
 
-                      {/* Content Section */}
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex items-center justify-between">
-                          <p className="text-[10px] font-black tracking-[0.2em] uppercase md:text-xs">
-                            Verification Pending
-                          </p>
-                        </div>
-
-                        <p className="text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
+                      <div className="space-y-2">
+                        <p className="text-[10px] leading-relaxed font-medium text-slate-400 md:text-xs">
                           We are verifying your payment. We usually take 5-15
                           mins to verify.
                         </p>
-                        <p className="mt-2 text-[9px] leading-relaxed font-medium opacity-80 md:text-[10px]">
+                        <p className="text-[10px] font-bold text-amber-500/80 md:text-xs">
                           Status will update shortly
                         </p>
+                      </div>
+
+                      <div className="flex flex-col gap-3 pt-2">
+                        <button
+                          onClick={() => setShowPaymentModal(true)}
+                          className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-amber-500 px-6 py-3 text-[11px] font-black tracking-widest text-slate-950 uppercase transition-all hover:bg-amber-400 active:scale-[0.98]"
+                        >
+                          <QrCode className="h-4 w-4 transition-transform group-hover:scale-110" />
+                          Resume Payment / Scanner
+                        </button>
+
+                        <button
+                          onClick={() => refreshStatus()}
+                          disabled={refreshingStatus}
+                          className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-[11px] font-black tracking-widest text-white uppercase transition-all hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
+                        >
+                          <RotateCcw
+                            className={`h-4 w-4 ${refreshingStatus ? "animate-spin" : ""}`}
+                          />
+                          {refreshingStatus ? "Checking Status..." : "Refresh Status"}
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            if (confirm("Are you sure you want to cancel this payment request and start over?")) {
+                              try {
+                                setRefreshingStatus(true);
+                                await deletePaymentRequest(paymentRequest.$id);
+                                await refreshStatus();
+                              } catch (e) {
+                                alert("Failed to cancel request: " + e.message);
+                              } finally {
+                                setRefreshingStatus(false);
+                              }
+                            }
+                          }}
+                          className="mt-2 text-center text-[10px] font-bold text-slate-500 transition-colors hover:text-rose-500 uppercase tracking-[0.2em]"
+                        >
+                          Cancel Request & Start Over
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1594,6 +1639,7 @@ export default function TournamentDetailPage({ params }) {
             setShowPaymentModal(false);
             setPendingPaymentData(null);
             setError(null);
+            refreshStatus();
           }}
           tournamentId={tournament.$id}
           tournamentName={tournament.name}

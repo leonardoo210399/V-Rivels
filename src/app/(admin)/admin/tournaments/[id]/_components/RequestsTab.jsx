@@ -61,7 +61,7 @@ export default function RequestsTab({
           await updateRegistrationPaymentStatus(
             existingReg.$id,
             "verified",
-            request.transactionId,
+            request.utr, // Mapping utr from payment_requests to transactionId in registrations
           );
         } else {
           setUpdating(false); // cancel optimistic?
@@ -77,7 +77,7 @@ export default function RequestsTab({
           request.teamName,
           {
             metadata: request.metadata,
-            transactionId: request.transactionId,
+            transactionId: request.utr, // Mapping utr from payment_requests to transactionId in registrations
             paymentStatus: "verified",
           },
         );
@@ -123,7 +123,7 @@ export default function RequestsTab({
         await announceRegistrationApprovedAction(
           tournament.name,
           registrantName,
-          request.transactionId,
+          request.utr,
           discordId,
         );
       } catch (announceErr) {
@@ -204,18 +204,30 @@ export default function RequestsTab({
                       Requested {new Date(req.requestedAt).toLocaleString()}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      Transaction ID:{" "}
+                      Transaction ID (UTR):{" "}
                       <span className="font-mono text-white">
-                        {req.transactionId}
+                        {req.utr || "N/A"}
                       </span>
                     </p>
-                    {(req.upiTxnId || meta?.manuallySubmittedUtr) && (
+                    {req.imbOrderId && (
+                      <p className="text-[10px] text-slate-500">
+                        IMB Order: <span className="font-mono">{req.imbOrderId}</span>
+                      </p>
+                    )}
+                    {req.verifiedAt && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black tracking-widest text-emerald-500 uppercase">
+                           Verified {new Date(req.verifiedAt).toLocaleString()} ({req.verificationMethod})
+                        </div>
+                      </div>
+                    )}
+                    {meta?.manuallySubmittedUtr && (
                       <div className="mt-2 w-fit rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5">
                         <p className="text-[10px] font-black uppercase text-amber-500 tracking-wider">
-                          Manual Verification Required
+                          Manual Submission
                         </p>
                         <p className="font-mono text-xs text-white">
-                          UTR: {req.upiTxnId || meta?.manuallySubmittedUtr}
+                          UTR: {meta?.manuallySubmittedUtr}
                         </p>
                       </div>
                     )}
