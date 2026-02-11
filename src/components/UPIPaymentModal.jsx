@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { X, Smartphone, CheckCircle, QrCode, IndianRupee, ArrowRight, AlertCircle, ShieldCheck, Lock, HelpCircle, Loader2, ExternalLink } from "lucide-react";
+import { X, Smartphone, CheckCircle, QrCode, IndianRupee, ArrowRight, AlertCircle, ShieldCheck, Lock, HelpCircle, Loader2, ExternalLink, Download } from "lucide-react";
 
 /**
  * UPI Payment Modal - Automated IMB Payment Flow
@@ -117,6 +117,26 @@ export default function UPIPaymentModal({
     }
   };
 
+  const handleDownloadQr = async () => {
+    if (!paymentData?.bhim_link) return;
+    try {
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(paymentData.bhim_link)}`;
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `payment-qr-${paymentData.orderId || 'tournament'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+      alert("Failed to download QR code. Please take a screenshot instead.");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -218,23 +238,39 @@ export default function UPIPaymentModal({
                         </p>
                     </div>
 
-                    {/* Actions Grid */}
-                    <div className="grid grid-cols-2 gap-2.5 w-full">
+                    {/* Actions Grid - Mobile Only (Ultimate Premium Style) */}
+                    <div className="grid grid-cols-1 gap-2 w-full md:hidden">
                       <a
                         href={paymentData?.paytm_link}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-slate-950/40 py-2.5 transition-all hover:bg-slate-950 hover:border-cyan-500/50"
+                        className="group relative flex items-center justify-center gap-2.5 rounded-full bg-[#1a1b1e] border border-white/10 py-3 transition-all hover:bg-black active:scale-[0.98] shadow-2xl overflow-hidden"
                       >
-                        <Smartphone className="h-3.5 w-3.5 text-cyan-400" />
-                        <span className="text-[9px] font-bold text-slate-300">Open Paytm</span>
+                        <span className="text-sm font-medium text-white/90 tracking-tight">Pay with</span>
+                        <div className="flex items-center justify-center leading-none">
+                           <span className="text-[20px] font-[1000] italic tracking-tighter flex mb-0.5">
+                             <span className="text-[#002970]">Pay</span>
+                             <span className="text-[#00baf2]">tm</span>
+                           </span>
+                        </div>
+                        
+                        {/* Shine Effect Animation */}
+                        <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
                       </a>
-                      <a
-                        href={paymentData?.bhim_link}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-slate-950/40 py-2.5 transition-all hover:bg-slate-950 hover:border-rose-500/50"
+
+                      <button
+                        onClick={handleDownloadQr}
+                        className="flex items-center justify-center gap-2 rounded-full border border-white/5 bg-white/5 py-2.5 transition-all hover:bg-white/10 active:scale-95"
                       >
-                        <QrCode className="h-3.5 w-3.5 text-rose-400" />
-                        <span className="text-[9px] font-bold text-slate-300">Other Apps</span>
-                      </a>
+                        <Download className="h-3 w-3 text-slate-500" />
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Download QR for Gallery</span>
+                      </button>
                     </div>
+
+                    <style jsx>{`
+                      @keyframes shimmer {
+                        0% { transform: translateX(-100%); }
+                        100% { transform: translateX(100%); }
+                      }
+                    `}</style>
                   </div>
                 )}
               </div>

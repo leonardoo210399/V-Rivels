@@ -278,6 +278,20 @@ export default function TournamentDetailPage({ params }) {
     if (!user) return;
     setRefreshingStatus(true);
     try {
+      // 1. If we have a pending payment, ask the backend to actively check the gateway status
+      if (paymentRequest && paymentRequest.paymentStatus === "pending") {
+        try {
+          await fetch("/api/payments/check-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: paymentRequest.$id }),
+          });
+        } catch (apiErr) {
+          console.warn("Active status check failed, falling back to local refresh:", apiErr);
+        }
+      }
+
+      // 2. Fetch latest data from Appwrite (this will get any updates made by check-status or webhooks)
       const [regs, payReq] = await Promise.all([
         getRegistrations(id),
         getPaymentRequestsForUser(id, user.$id),
