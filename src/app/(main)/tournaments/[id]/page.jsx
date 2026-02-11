@@ -40,11 +40,13 @@ import {
   ExternalLink,
   Info,
   RotateCcw,
+  RefreshCw,
   Swords,
   Map,
   CreditCard,
   QrCode,
 } from "lucide-react";
+import { toast } from "sonner";
 import { FaDiscord } from "react-icons/fa";
 import Loader from "@/components/Loader";
 import DeathmatchStandings from "@/components/DeathmatchStandings";
@@ -384,7 +386,7 @@ export default function TournamentDetailPage({ params }) {
       newMembers[index].tag = cleanTag; // Normalize tag
       newMembers[index].card = acc.data?.card?.id || acc.data?.card || null;
     } catch (err) {
-      alert(`Account ${member.name}#${member.tag} not found!`);
+      toast.error(`Account ${member.name}#${member.tag} not found!`);
       newMembers[index].verified = false;
     } finally {
       newMembers[index].loading = false;
@@ -525,15 +527,22 @@ export default function TournamentDetailPage({ params }) {
     await refreshStatus();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!isAdmin) return;
-    if (
-      !confirm(
-        "Are you sure you want to delete this tournament? This action cannot be undone.",
-      )
-    )
-      return;
+    toast("Delete Tournament?", {
+      description: "Are you sure? This action cannot be undone.",
+      action: {
+        label: "Yes, Delete",
+        onClick: () => executeDelete(),
+      },
+      cancel: {
+        label: "Cancel",
+      },
+      duration: 5000,
+    });
+  };
 
+  const executeDelete = async () => {
     setDeleting(true);
     try {
       // 1. Delete Discord Channels if they exist
@@ -544,13 +553,20 @@ export default function TournamentDetailPage({ params }) {
             tournament.discordVoiceChannelId,
           ]);
           if (result && result.error) {
-            const proceed = confirm(
-              `Discord Channel Deletion Failed: ${result.error}\n\nDo you want to delete the tournament anyway? (Channels will remain manually)`,
-            );
-            if (!proceed) {
-              setDeleting(false);
-              return;
-            }
+            setDeleting(false);
+            toast.error(`Discord Deletion Failed: ${result.error}`, {
+              description:
+                "Do you want to delete the tournament from the database anyway?",
+              action: {
+                label: "Force Delete",
+                onClick: async () => {
+                  setDeleting(true);
+                  await finalizeDelete();
+                },
+              },
+              duration: 8000,
+            });
+            return;
           }
         } catch (discordErr) {
           console.warn("Failed to delete discord channels:", discordErr);
@@ -558,12 +574,21 @@ export default function TournamentDetailPage({ params }) {
         }
       }
 
-      // 2. Delete from DB
+      await finalizeDelete();
+    } catch (err) {
+      console.error("Failed to delete tournament", err);
+      toast.error("Failed to delete tournament");
+      setDeleting(false);
+    }
+  };
+
+  const finalizeDelete = async () => {
+    try {
       await deleteTournament(id);
       router.push("/tournaments");
     } catch (err) {
       console.error("Failed to delete tournament", err);
-      alert("Failed to delete tournament");
+      toast.error("Failed to delete tournament from DB");
       setDeleting(false);
     }
   };
@@ -635,7 +660,7 @@ export default function TournamentDetailPage({ params }) {
       const regs = await getRegistrations(id);
       setRegistrations(regs.documents);
     } catch (e) {
-      alert("Check-in failed: " + e.message);
+      toast.error("Check-in failed: " + e.message);
     } finally {
       setCheckingIn(false);
     }
@@ -1260,7 +1285,7 @@ export default function TournamentDetailPage({ params }) {
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(lobbyCode);
-                            alert("Party code copied to clipboard!");
+                            toast.success("Party code copied to clipboard!");
                           }}
                           className="shrink-0 rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 text-[9px] font-black tracking-widest text-slate-300 uppercase transition-all hover:bg-white/10 hover:text-white"
                         >
@@ -1317,25 +1342,40 @@ export default function TournamentDetailPage({ params }) {
                           disabled={refreshingStatus}
                           className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-[11px] font-black tracking-widest text-white uppercase transition-all hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
                         >
-                          <RotateCcw
+                          <RefreshCw
                             className={`h-4 w-4 ${refreshingStatus ? "animate-spin" : ""}`}
                           />
                           {refreshingStatus ? "Checking Status..." : "Refresh Status"}
                         </button>
 
                         <button
-                          onClick={async () => {
-                            if (confirm("Are you sure you want to cancel this payment request and start over?")) {
-                              try {
-                                setRefreshingStatus(true);
-                                await deletePaymentRequest(paymentRequest.$id);
-                                await refreshStatus();
-                              } catch (e) {
-                                alert("Failed to cancel request: " + e.message);
-                              } finally {
-                                setRefreshingStatus(false);
-                              }
-                            }
+                          onClick={() => {
+                            toast("Cancel Payment Request?", {
+                              description:
+                                "Are you sure you want to cancel this payment request and start over?",
+                              action: {
+                                label: "Yes, Cancel",
+                                onClick: async () => {
+                                  setRefreshingStatus(true);
+                                  try {
+                                    await deletePaymentRequest(
+                                      paymentRequest.$id,
+                                    );
+                                    await refreshStatus();
+                                  } catch (e) {
+                                    toast.error(
+                                      "Failed to cancel request: " + e.message,
+                                    );
+                                  } finally {
+                                    setRefreshingStatus(false);
+                                  }
+                                },
+                              },
+                              cancel: {
+                                label: "No",
+                              },
+                              duration: 5000,
+                            });
                           }}
                           className="mt-2 text-center text-[10px] font-bold text-slate-500 transition-colors hover:text-rose-500 uppercase tracking-[0.2em]"
                         >

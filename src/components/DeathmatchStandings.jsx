@@ -10,6 +10,7 @@ import {
   X,
   Clock,
 } from "lucide-react";
+import { toast } from "sonner";
 import { updateParticipantScore } from "@/lib/brackets";
 
 export default function DeathmatchStandings({
@@ -33,7 +34,7 @@ export default function DeathmatchStandings({
       setEditingId(null);
       window.location.reload(); // Refresh to show new standings
     } catch (e) {
-      alert("Failed to update score: " + e.message);
+      toast.error("Failed to update score: " + e.message);
     } finally {
       setUpdating(false);
     }

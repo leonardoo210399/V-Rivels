@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FileText, Check, X, Clock } from "lucide-react";
+import { toast } from "sonner";
 import {
   updateRegistrationPaymentStatus,
   registerForTournament,
@@ -35,8 +36,36 @@ export default function RequestsTab({
     }
   };
 
-  const handleApproveRequest = async (request) => {
-    if (!confirm("Approve this payment and register the user?")) return;
+  const handleApproveRequest = (request) => {
+    const existingReg = registrations.find((r) => r.userId === request.userId);
+
+    if (existingReg) {
+      toast("User Already Registered", {
+        description: `User is already registered as "${existingReg.teamName}". Update their existing registration to VERIFIED?`,
+        action: {
+          label: "Yes, Update",
+          onClick: () => executeApproval(request, existingReg),
+        },
+        cancel: {
+          label: "Cancel",
+        },
+        duration: 8000,
+      });
+    } else {
+      toast("Approve Payment?", {
+        description: "Approve this payment and register the user?",
+        action: {
+          label: "Approve",
+          onClick: () => executeApproval(request, null),
+        },
+        cancel: {
+          label: "Cancel",
+        },
+      });
+    }
+  };
+
+  const executeApproval = async (request, existingReg) => {
     setUpdating(true);
 
     // Optimistic Update
@@ -47,28 +76,12 @@ export default function RequestsTab({
     );
 
     try {
-      // Check if user is already registered
-      const existingReg = registrations.find(
-        (r) => r.userId === request.userId,
-      );
-
       if (existingReg) {
-        if (
-          confirm(
-            `User is already registered as "${existingReg.teamName}". Update their existing registration to VERIFIED?`,
-          )
-        ) {
-          await updateRegistrationPaymentStatus(
-            existingReg.$id,
-            "verified",
-            request.utr, // Mapping utr from payment_requests to transactionId in registrations
-          );
-        } else {
-          setUpdating(false); // cancel optimistic?
-          // Ideally revert optimistic update here but for admin panel it's fine to just reload or let it be 'verified' in UI until refresh
-          await loadData(false);
-          return;
-        }
+        await updateRegistrationPaymentStatus(
+          existingReg.$id,
+          "verified",
+          request.utr,
+        );
       } else {
         // 1. Create New Registration
         await registerForTournament(
@@ -77,7 +90,7 @@ export default function RequestsTab({
           request.teamName,
           {
             metadata: request.metadata,
-            transactionId: request.utr, // Mapping utr from payment_requests to transactionId in registrations
+            transactionId: request.utr,
             paymentStatus: "verified",
           },
         );
@@ -95,8 +108,8 @@ export default function RequestsTab({
             userProfile.discordId,
           );
           if (discordResult && discordResult.error) {
-            alert(
-              `Payment verified, but Discord Role assignment failed: ${discordResult.error}\n\nAsk the user to join the Discord server.`,
+            toast.warning(
+              `Payment verified, but Discord Role assignment failed: ${discordResult.error}`,
             );
           }
         }
@@ -110,7 +123,6 @@ export default function RequestsTab({
         ? request.teamName
         : meta?.playerName || request.teamName;
 
-      // Get discordId - userProfile was fetched above, but it's scoped inside try, so we fetch again
       let discordId = null;
       try {
         const profile = await getUserProfile(request.userId);
@@ -131,10 +143,10 @@ export default function RequestsTab({
       }
 
       await loadData(false);
-      alert("User registered/updated successfully!");
+      toast.success("User registered/updated successfully!");
     } catch (e) {
       console.error(e);
-      alert("Failed to approve: " + e.message);
+      toast.error("Failed to approve: " + e.message);
     } finally {
       setUpdating(false);
     }

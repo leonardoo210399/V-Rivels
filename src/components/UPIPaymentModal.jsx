@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { X, Smartphone, CheckCircle, QrCode, IndianRupee, ArrowRight, AlertCircle, ShieldCheck, Lock, HelpCircle, Loader2, ExternalLink, Download } from "lucide-react";
+import { toast } from "sonner";
 
 /**
  * UPI Payment Modal - Automated IMB Payment Flow
@@ -133,7 +134,7 @@ export default function UPIPaymentModal({
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download failed:", err);
-      alert("Failed to download QR code. Please take a screenshot instead.");
+      toast.error("Failed to download QR code. Please take a screenshot instead.");
     }
   };
 
@@ -278,12 +279,12 @@ export default function UPIPaymentModal({
           </div>
 
 
-          {/* Footer */}
-          <div className="flex items-center justify-center border-t border-white/5 bg-slate-950/50 px-6 py-4 mt-2">
-            <div className="flex items-center gap-2">
-              <Lock className="h-3 w-3 text-emerald-500" />
-              <p className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">
-                Payment verified automatically via API
+          {/* Footer - Professional Security Bar */}
+          <div className="flex items-center justify-center border-t border-white/5 bg-black/40 px-6 py-3.5">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/5 border border-emerald-500/10">
+              <ShieldCheck className="h-3 w-3 text-emerald-500/80" />
+              <p className="text-[8px] font-black tracking-[0.15em] text-emerald-500/70 uppercase">
+                Secure Automated Gateway | Powered by IMB
               </p>
             </div>
           </div>
