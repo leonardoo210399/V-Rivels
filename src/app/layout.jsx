@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import PageWrapper from "@/components/PageWrapper";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+import { Toaster } from "sonner";
 import "./app.css";
 
 const inter = Inter({
@@ -112,6 +113,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>{children}</AuthProvider>
         <SpeedInsights />
         <Analytics />
+        <Toaster richColors position="top-right" theme="dark" />
       </body>
     </html>
   );

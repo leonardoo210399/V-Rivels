@@ -4,6 +4,7 @@ import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import Loader from "@/components/Loader";
 import { Mail, Clock, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SupportTicketsPage() {
     const [tickets, setTickets] = useState([]);
@@ -32,17 +33,30 @@ export default function SupportTicketsPage() {
         }
     }
 
-    const handleDelete = async (id) => {
-        if(!confirm("Are you sure you want to delete this ticket?")) return;
+    const handleDelete = (id) => {
+        toast("Delete Ticket?", {
+            description: "Are you sure you want to delete this ticket?",
+            action: {
+                label: "Delete",
+                onClick: () => executeDelete(id),
+            },
+            cancel: {
+                label: "Cancel",
+            },
+        });
+    };
+
+    const executeDelete = async (id) => {
         try {
             await databases.deleteDocument(
                 process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID,
                 COLLECTION_ID,
                 id
             );
-            setTickets(tickets.filter(t => t.$id !== id));
+            setTickets(tickets.filter((t) => t.$id !== id));
+            toast.success("Ticket deleted successfully");
         } catch (error) {
-            alert("Failed to delete ticket");
+            toast.error("Failed to delete ticket");
         }
     };
 

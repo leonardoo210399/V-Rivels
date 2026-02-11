@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Users, Trophy, Swords, Zap, Send } from "lucide-react";
+import { toast } from "sonner";
 import Loader from "@/components/Loader";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
@@ -86,14 +87,22 @@ export default function AdminDashboard() {
     },
   ];
 
-  const handleCleanup = async () => {
-    if (
-      !window.confirm(
-        "This will permanently delete registrations associated with tournaments that no longer exist. Continue?",
-      )
-    )
-      return;
+  const handleCleanup = () => {
+    toast("Cleanup Orphaned Records?", {
+      description:
+        "This will permanently delete registrations associated with tournaments that no longer exist.",
+      action: {
+        label: "Yes, Cleanup",
+        onClick: () => executeCleanup(),
+      },
+      cancel: {
+        label: "Cancel",
+      },
+      duration: 5000,
+    });
+  };
 
+  const executeCleanup = async () => {
     try {
       setLoading(true);
       const [tRes, rRes] = await Promise.all([
@@ -108,7 +117,7 @@ export default function AdminDashboard() {
       );
 
       if (orphans.length === 0) {
-        alert("No orphaned records found!");
+        toast.info("No orphaned records found!");
         return;
       }
 
@@ -123,11 +132,13 @@ export default function AdminDashboard() {
         ),
       );
 
-      alert(`Successfully deleted ${orphans.length} orphaned registrations!`);
+      toast.success(
+        `Successfully deleted ${orphans.length} orphaned registrations!`,
+      );
       fetchCounts();
     } catch (e) {
       console.error("Cleanup failed", e);
-      alert(
+      toast.error(
         "Failed to cleanup: " +
           e.message +
           "\n\nNote: Ensure the Admin has 'Delete' permission on the Registrations collection in Appwrite.",

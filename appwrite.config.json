@@ -926,12 +926,13 @@
                     "encrypt": false
                 },
                 {
-                    "key": "requestedAt",
-                    "type": "datetime",
-                    "required": true,
+                    "key": "amount",
+                    "type": "string",
+                    "required": false,
                     "array": false,
-                    "format": "",
-                    "default": null
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
                 },
                 {
                     "key": "paymentStatus",
@@ -940,7 +941,6 @@
                     "array": false,
                     "elements": [
                         "pending",
-                        "approved",
                         "verified",
                         "rejected",
                         "failed"
@@ -949,7 +949,7 @@
                     "default": "pending"
                 },
                 {
-                    "key": "transactionId",
+                    "key": "utr",
                     "type": "string",
                     "required": false,
                     "array": false,
@@ -958,12 +958,55 @@
                     "encrypt": false
                 },
                 {
-                    "key": "rejectionReason",
+                    "key": "imbOrderId",
                     "type": "string",
                     "required": false,
                     "array": false,
-                    "size": 1000,
+                    "size": 100,
                     "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customerMobile",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "customerEmail",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "requestedAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "verifiedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "verificationMethod",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": "auto",
                     "encrypt": false
                 },
                 {
@@ -976,53 +1019,37 @@
                     "encrypt": false
                 },
                 {
-                    "key": "ekqrOrderId",
+                    "key": "rejectionReason",
                     "type": "string",
                     "required": false,
                     "array": false,
-                    "size": 100,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "amount",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 50,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "upiTxnId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 100,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "customerVpa",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 100,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "webhookReceivedAt",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 100,
+                    "size": 1000,
                     "default": null,
                     "encrypt": false
                 }
             ],
-            "indexes": []
-        },
+            "indexes": [
+                {
+                    "key": "idx_user_tournament",
+                    "type": "key",
+                    "attributes": ["userId", "tournamentId"],
+                    "orders": ["ASC", "ASC"]
+                },
+                {
+                    "key": "idx_status",
+                    "type": "key",
+                    "attributes": ["paymentStatus"],
+                    "orders": ["ASC"]
+                },
+                {
+                    "key": "idx_imb_order",
+                    "type": "unique",
+                    "attributes": ["imbOrderId"],
+                    "orders": ["ASC"]
+                }
+            ]
+        }
+,
         {
             "$id": "support_tickets",
             "$permissions": [
@@ -1088,6 +1115,24 @@
                     "array": false,
                     "format": "",
                     "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "site_settings",
+            "$permissions": [],
+            "databaseId": "valo-website-database",
+            "name": "Site Settings",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "maintenanceMode",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": []

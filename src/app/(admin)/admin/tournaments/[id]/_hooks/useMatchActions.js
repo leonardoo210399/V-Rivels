@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   updateMatchStatus,
   updateMatchDetails,
@@ -187,8 +188,9 @@ export function useMatchActions(
         setTournament((prev) => ({ ...prev, status: newStatus }));
       }
       setMatches(updatedMatches);
+
     } catch (e) {
-      alert("Failed to update status: " + e.message);
+      toast.error("Failed to update status: " + e.message);
     } finally {
       setUpdating(false);
     }
@@ -250,27 +252,43 @@ export function useMatchActions(
     }
   };
 
-  const handleFinalizeMatch = async () => {
+  const handleFinalizeMatch = () => {
     if (!selectedMatch) return;
     // Basic validation
     if (matchEditData.scoreA === matchEditData.scoreB) {
-      alert("Cannot finalize a draw. Please ensure there is a winner.");
+      toast.error("Cannot finalize a draw. Please ensure there is a winner.");
       return;
     }
 
-    if (!confirm("Are you sure you want to finalize this match? This will advance the winner to the next round and award stats.")) return;
+    toast("Finalize Match?", {
+      description:
+        "This will advance the winner to the next round and award stats.",
+      action: {
+        label: "Finalize",
+        onClick: () => executeFinalizeMatch(),
+      },
+      cancel: {
+        label: "Cancel",
+      },
+    });
+  };
 
+  const executeFinalizeMatch = async () => {
     setSavingMatch(true);
     try {
-        await finalizeMatch(selectedMatch.$id, parseInt(matchEditData.scoreA), parseInt(matchEditData.scoreB));
-        await loadData(); // Reload to see bracket update
-        alert("Match finalized and winner advanced!");
-        closeMatchEditor();
+      await finalizeMatch(
+        selectedMatch.$id,
+        parseInt(matchEditData.scoreA),
+        parseInt(matchEditData.scoreB),
+      );
+      await loadData(); // Reload to see bracket update
+      toast.success("Match finalized and winner advanced!");
+      closeMatchEditor();
     } catch (e) {
-        console.error("Finalize Error:", e);
-        alert("Failed to finalize: " + e.message);
+      console.error("Finalize Error:", e);
+      toast.error("Failed to finalize: " + e.message);
     } finally {
-        setSavingMatch(false);
+      setSavingMatch(false);
     }
   };
   
@@ -455,10 +473,10 @@ export function useMatchActions(
     try {
       await startMatchVeto(matchId);
       await loadData();
-      alert("Map veto started for this match!");
+      toast.success("Map veto started for this match!");
     } catch (error) {
       console.error("Failed to start veto:", error);
-      alert("Failed to start veto: " + error.message);
+      toast.error("Failed to start veto: " + error.message);
     } finally {
       setUpdating(false);
     }
@@ -481,28 +499,45 @@ export function useMatchActions(
       setMatchResetSteps((prev) => ({ ...prev, [matchId]: 0 }));
     } catch (error) {
       console.error("Failed to reset match:", error);
-      alert("Failed to reset match: " + error.message);
+      toast.error("Failed to reset match: " + error.message);
       setMatchResetSteps((prev) => ({ ...prev, [matchId]: 0 }));
     } finally {
       setUpdating(false);
     }
   };
 
-  const handleSaveMatchScore = async (matchId) => {
+  const handleSaveMatchScore = (matchId) => {
     const scores = matchScores[matchId];
     const currentMatch = matches.find((m) => m.$id === matchId);
     if (!currentMatch) return;
 
-    const scoreA = scores?.scoreA !== undefined ? parseInt(scores.scoreA) : currentMatch.scoreA || 0;
-    const scoreB = scores?.scoreB !== undefined ? parseInt(scores.scoreB) : currentMatch.scoreB || 0;
+    const scoreA =
+      scores?.scoreA !== undefined
+        ? parseInt(scores.scoreA)
+        : currentMatch.scoreA || 0;
+    const scoreB =
+      scores?.scoreB !== undefined
+        ? parseInt(scores.scoreB)
+        : currentMatch.scoreB || 0;
 
     if (scoreA === scoreB) {
-      alert("Cannot finalize a match with a tie score!");
+      toast.error("Cannot finalize a match with a tie score!");
       return;
     }
 
-    if (!confirm(`Finalize match with score ${scoreA} - ${scoreB}?`)) return;
+    toast("Finalize Match Score?", {
+      description: `Finalize match with score ${scoreA} - ${scoreB}?`,
+      action: {
+        label: "Finalize",
+        onClick: () => executeSaveMatchScore(matchId, scoreA, scoreB, currentMatch),
+      },
+      cancel: {
+        label: "Cancel",
+      },
+    });
+  };
 
+  const executeSaveMatchScore = async (matchId, scoreA, scoreB, currentMatch) => {
     setUpdating(true);
     try {
       await finalizeMatch(matchId, scoreA, scoreB);
@@ -512,38 +547,40 @@ export function useMatchActions(
         const teamAName = participantMap[currentMatch.teamA]?.name || "Team A";
         const teamBName = participantMap[currentMatch.teamB]?.name || "Team B";
         const winnerName = scoreA > scoreB ? teamAName : teamBName;
-        
+
         let message = `🏆 **MATCH RESULT**\n\n**${teamAName}** vs **${teamBName}**\n\n**Winner:** ${winnerName} 👑\n**Score:** ${scoreA} - ${scoreB}`;
 
         // Attempt to add detailed stats (Map Scores)
         try {
-            const parsedStats = parsePlayerStats(currentMatch);
-            if (parsedStats.seriesScores && parsedStats.seriesScores.length > 0) {
-                const mapsPlayed = parsedStats.seriesScores.filter(s => s.a > 0 || s.b > 0);
-                if (mapsPlayed.length > 0) {
-                  message += `\n\n**Map Breakdown:**`;
-                  mapsPlayed.forEach((s, i) => {
-                      message += `\nMap ${i + 1}: ${s.a} - ${s.b}`;
-                  });
-                }
+          const parsedStats = parsePlayerStats(currentMatch);
+          if (parsedStats.seriesScores && parsedStats.seriesScores.length > 0) {
+            const mapsPlayed = parsedStats.seriesScores.filter(
+              (s) => s.a > 0 || s.b > 0,
+            );
+            if (mapsPlayed.length > 0) {
+              message += `\n\n**Map Breakdown:**`;
+              mapsPlayed.forEach((s, i) => {
+                message += `\nMap ${i + 1}: ${s.a} - ${s.b}`;
+              });
             }
+          }
         } catch (e) {
-            console.warn("Error parsing match stats for discord:", e);
+          console.warn("Error parsing match stats for discord:", e);
         }
 
         const origin = window.location.origin;
         const matchLink = `${origin}/tournaments/${tournament.$id}/match/${matchId}`;
         const tournamentLink = `${origin}/tournaments/${tournament.$id}`;
         message += `\n\n🔗 **View Match Details:** [Click Here](${matchLink})`;
-        
+
         const publicMessage = `🏆 **MATCH RESULT**\n**[${tournament.name}](${tournamentLink})**\n*Round ${currentMatch.round || "1"} • ${currentMatch.matchFormat || "Auto"}*\n\n**${teamAName}** vs **${teamBName}**\n\n**Winner:** ${winnerName} 👑\n**Score:** ${scoreA} - ${scoreB}\n\n🔗 **View Match Details:** [Click Here](${matchLink})`;
 
         // Send to Tournament Channel (if exists) AND Public Results Channel
         await broadcastMatchResultAction(
-          tournament.discordChannelId, 
-          message, 
+          tournament.discordChannelId,
+          message,
           tournament.discordRoleId,
-          publicMessage
+          publicMessage,
         );
       } catch (err) {
         console.error("Failed to send Discord result notification:", err);
@@ -555,10 +592,10 @@ export function useMatchActions(
         delete next[matchId];
         return next;
       });
-      alert("Match finalized and winner advanced!");
+      toast.success("Match finalized and winner advanced!");
     } catch (error) {
       console.error("Failed to finalize match:", error);
-      alert("Failed to finalize match: " + error.message);
+      toast.error("Failed to finalize match: " + error.message);
     } finally {
       setUpdating(false);
     }
@@ -602,7 +639,7 @@ export function useMatchActions(
       });
     } catch (error) {
       console.error("Failed to save party code:", error);
-      alert("Failed to save: " + error.message);
+      toast.error("Failed to save: " + error.message);
     } finally {
       setUpdating(false);
     }
@@ -645,7 +682,7 @@ export function useMatchActions(
       await loadData();
     } catch (e) {
       console.error("Skirmish lottery failed", e);
-      alert("Failed to run map lottery: " + e.message);
+      toast.error("Failed to run map lottery: " + e.message);
     } finally {
       setUpdating(false);
     }

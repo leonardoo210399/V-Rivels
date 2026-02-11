@@ -5,18 +5,18 @@ const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 // Using the ID we defined in appwrite.config.json
 const PAYMENT_REQUESTS_COLLECTION_ID = "payment_requests"; 
 
-export async function createPaymentRequest(tournamentId, userId, teamName, metadata, transactionId) {
-  // Check for duplicate transaction ID
+export async function createPaymentRequest(tournamentId, userId, teamName, metadata, utr) {
+  // Check for duplicate UTR
   const existing = await databases.listDocuments(
     DATABASE_ID,
     PAYMENT_REQUESTS_COLLECTION_ID,
     [
-        Query.equal("transactionId", transactionId)
+        Query.equal("utr", utr)
     ]
   );
 
   if (existing.total > 0) {
-      throw new Error("This Transaction ID has already been used. Please check your details.");
+      throw new Error("This UTR number has already been used. Please check your details.");
   }
 
   return await databases.createDocument(
@@ -30,7 +30,7 @@ export async function createPaymentRequest(tournamentId, userId, teamName, metad
       metadata: JSON.stringify(metadata),
       requestedAt: new Date().toISOString(),
       paymentStatus: "pending",
-      transactionId,
+      utr,
     }
   );
 }
@@ -84,4 +84,12 @@ export async function getAllPendingPaymentRequests() {
         ]
     );
     return response.documents;
+}
+
+export async function deletePaymentRequest(requestId) {
+  return await databases.deleteDocument(
+    DATABASE_ID,
+    PAYMENT_REQUESTS_COLLECTION_ID,
+    requestId
+  );
 }
