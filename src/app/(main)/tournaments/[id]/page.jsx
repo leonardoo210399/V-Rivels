@@ -1722,6 +1722,7 @@ export default function TournamentDetailPage({ params }) {
           userId={user?.$id}
           userEmail={user?.email}
           userName={pendingPaymentData?.name || userProfile?.ingameName || "Player"}
+          registrationMetadata={pendingPaymentData?.metadata || null}
           onPaymentComplete={handlePaymentComplete}
         />
       )}

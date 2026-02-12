@@ -15,6 +15,7 @@ export default function UPIPaymentModal({
   userId,
   userEmail,
   userName,
+  registrationMetadata,
   onPaymentComplete,
 }) {
   const [loading, setLoading] = useState(false);
@@ -85,10 +86,7 @@ export default function UPIPaymentModal({
           teamName: userName, // Using userName as fallback for teamName
           customer_email: userEmail,
           customer_mobile: "9999999999", // Placeholder, ideally user should provide this
-          metadata: {
-            userName,
-            userEmail
-          }
+          metadata: registrationMetadata || { userName, userEmail }
         }),
       });
 
