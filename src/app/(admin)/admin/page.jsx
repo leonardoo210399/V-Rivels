@@ -9,6 +9,7 @@ import { Query } from "appwrite";
 import MaintenanceToggle from "@/components/admin/MaintenanceToggle";
 import { getStatus } from "@/lib/valorant";
 import Link from "next/link";
+import { syncLeaderboardWithDB } from "@/lib/maintenance";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";
