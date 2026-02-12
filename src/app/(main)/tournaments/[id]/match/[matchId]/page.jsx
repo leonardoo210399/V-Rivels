@@ -586,7 +586,7 @@ export default function MatchLobbyPage({ params }) {
         <div className="grid gap-8 lg:grid-cols-12 xl:gap-10">
           {/* LEFT COLUMN: Team A Roster (Sticky) */}
           <div className="order-2 space-y-6 lg:order-1 lg:col-span-3">
-            <div className="sticky top-6 space-y-4">
+            <div className="sticky top-20 space-y-4">
               <div className="flex items-center justify-start gap-2 border-b border-rose-500/20 pb-2">
                 <div className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
                 <h3 className="text-xs font-black tracking-[0.2em] text-rose-500 uppercase">
@@ -929,14 +929,14 @@ export default function MatchLobbyPage({ params }) {
 
           {/* RIGHT COLUMN: Team B Roster (Sticky) */}
           <div className="order-3 space-y-6 lg:col-span-3">
-            <div className="sticky top-6 space-y-4">
+            <div className="sticky top-20 space-y-4">
               <div className="flex items-center justify-end gap-2 border-b border-cyan-500/20 pb-2">
                 <h3 className="text-xs font-black tracking-[0.2em] text-cyan-400 uppercase">
                   Team B Roster
                 </h3>
                 <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
               </div>
-              <div className="rounded-2xl border border-r-4 border-cyan-400/30 border-cyan-500/10 bg-gradient-to-b from-cyan-500/5 to-transparent p-2 md:p-4">
+              <div className="rounded-2xl border border-r-4 border-cyan-400/30 border-cyan-500/40 bg-gradient-to-b from-cyan-500/5 to-transparent p-2 md:p-4">
                 <PlayerRoster
                   teamA={null}
                   teamB={teamB}

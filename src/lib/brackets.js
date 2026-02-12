@@ -276,7 +276,7 @@ export async function updateMatchVeto(matchId, vetoData, vetoStarted = null) {
     );
 }
 
-export async function updateParticipantScore(registrationId, kills, deaths) {
+export async function updateParticipantScore(registrationId, kills, deaths, score = null) {
     const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
     
     // Fetch current registration to get existing metadata
@@ -292,6 +292,7 @@ export async function updateParticipantScore(registrationId, kills, deaths) {
     
     metadata.kills = kills;
     metadata.deaths = deaths;
+    if (score !== null) metadata.score = score;
 
     return await databases.updateDocument(
         DATABASE_ID,

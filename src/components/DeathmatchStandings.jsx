@@ -50,7 +50,7 @@ export default function DeathmatchStandings({
     };
     const metaA = parseMeta(a.metadata);
     const metaB = parseMeta(b.metadata);
-    return (metaB.kills || 0) - (metaA.kills || 0);
+    return (metaB.score || 0) - (metaA.score || 0) || (metaB.kills || 0) - (metaA.kills || 0);
   });
 
   return (
@@ -116,6 +116,7 @@ export default function DeathmatchStandings({
               <th className="px-4 py-4">Player</th>
               <th className="w-20 px-4 py-4 text-center">Kills</th>
               <th className="w-20 px-4 py-4 text-center">Deaths</th>
+              <th className="w-20 px-4 py-4 text-center">Score</th>
               <th className="px-4 py-4 text-right">Status</th>
             </tr>
           </thead>
@@ -220,6 +221,11 @@ export default function DeathmatchStandings({
                     ) : (
                       metadata.deaths || 0
                     )}
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <span className={`text-base font-black italic ${(metadata.score || 0) > 0 ? "text-amber-400" : "text-slate-600"}`}>
+                      {metadata.score || 0}
+                    </span>
                   </td>
                   <td className="px-4 py-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
