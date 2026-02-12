@@ -677,8 +677,45 @@ export default function TournamentDetailPage({ params }) {
     }
   };
 
+  const eventSchema = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: tournament.name,
+    startDate: tournament.date,
+    endDate: tournament.endDate || tournament.date, // Fallback if no end date
+    eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: {
+      "@type": "VirtualLocation",
+      url: `https://www.vrivalsarena.com/tournaments/${tournament.$id}`,
+    },
+    image: [tournament.banner || "https://www.vrivalsarena.com/og-image.png"],
+    description: tournament.description || `Join the ${tournament.name} Valorant tournament on VRivals Arena.`,
+    offers: {
+      "@type": "Offer",
+      price: tournament.entryFee || "0",
+      priceCurrency: "INR",
+      url: `https://www.vrivalsarena.com/tournaments/${tournament.$id}`,
+      availability: isFull
+        ? "https://schema.org/SoldOut"
+        : "https://schema.org/InStock",
+      validFrom: tournament.$createdAt,
+    },
+    organizer: {
+      "@type": "Organization",
+      name: "VRivals Arena",
+      url: "https://www.vrivalsarena.com",
+    },
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+      />
+      <div className="min-h-screen bg-slate-950">
+
       {/* Hero Header - Responsive */}
       <section className="relative h-[32vh] min-h-[240px] w-full overflow-hidden border-b border-white/5 pt-14 md:h-[45vh] md:min-h-[400px] md:pt-16">
         <div className="absolute inset-0 z-0">
@@ -1727,5 +1764,6 @@ export default function TournamentDetailPage({ params }) {
         />
       )}
     </div>
+    </>
   );
 }
