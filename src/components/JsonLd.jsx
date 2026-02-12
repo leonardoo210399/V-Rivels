@@ -10,8 +10,13 @@ export default function JsonLd() {
       "https://instagram.com/vrivalsarena",
       "https://discord.gg/vrivalsarena",
     ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: "support@vrivalsarena.com",
+      contactType: "customer support",
+    },
     description:
-      "Join VRivals Arena for the ultimate Valorant tournament experience. Compete in daily scrims, track your stats, find teams, and climb the leaderboards.",
+      "Play in daily Valorant Scrims and Tournaments in India. Join free entry & prize pool tournaments, find teammates, track stats, and earn money playing Valorant on VRivals Arena.",
   };
 
   return (
