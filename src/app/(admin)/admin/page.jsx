@@ -7,6 +7,7 @@ import Loader from "@/components/Loader";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import MaintenanceToggle from "@/components/admin/MaintenanceToggle";
+import { syncLeaderboardWithDB } from "@/lib/maintenance";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";
@@ -148,6 +149,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSyncLeaderboard = () => {
+    toast("Synchronize Leaderboard?", {
+      description:
+        "This will recalculate all player wins and earnings based on actual matches in the database. Recommended if stats feel out of sync.",
+      action: {
+        label: "Sync Now",
+        onClick: () => executeSync(),
+      },
+      cancel: {
+        label: "Cancel",
+      },
+      duration: 5000,
+    });
+  };
+
+  const executeSync = async () => {
+    try {
+      setLoading(true);
+      const result = await syncLeaderboardWithDB();
+      toast.success(
+        `Sync Complete! Analyzed ${result.totalUsersAnalyzed} users and updated ${result.usersUpdated} profiles.`,
+      );
+      fetchCounts();
+    } catch (e) {
+      console.error("Sync failed", e);
+      toast.error("Failed to sync leaderboard: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Maintenance Toggle */}
@@ -236,12 +268,15 @@ export default function AdminDashboard() {
                 Cleanup Records
               </p>
             </button>
-            <button className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5">
+            <button 
+                onClick={handleSyncLeaderboard}
+                className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5"
+            >
               <p className="mb-1 text-xs font-bold text-slate-500 uppercase">
-                System
+                Leaderboard
               </p>
               <p className="text-sm font-bold text-white group-hover:text-rose-500">
-                Settings
+                Sync Stats
               </p>
             </button>
           </div>
