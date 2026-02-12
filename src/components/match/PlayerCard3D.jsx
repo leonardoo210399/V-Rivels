@@ -81,7 +81,7 @@ export default function PlayerCard3D({
       onMouseLeave={handleMouseLeave}
     >
       <div
-        className={`relative overflow-hidden rounded-2xl border ${colors.border} glass transition-all duration-500 ${
+        className={`relative overflow-hidden rounded-xl border ${colors.border} glass transition-all duration-500 ${
           isCaptain ? colors.glow : ""
         } hover:scale-105`}
         style={{
@@ -108,15 +108,15 @@ export default function PlayerCard3D({
         )}
 
         {/* Card Content */}
-        <div className="relative z-10 p-4">
+        <div className="relative z-10 p-3">
           <div
-            className={`mb-3 flex items-start gap-3 ${mirrored ? "flex-row-reverse" : ""}`}
+            className={`mb-2 flex items-start gap-2.5 ${mirrored ? "flex-row-reverse" : ""}`}
           >
             {/* Player Avatar */}
             <div
               className={`shrink-0 overflow-hidden rounded-xl border ${colors.border} bg-slate-900/50 p-0 backdrop-blur-sm`}
             >
-              <div className="flex h-12 w-12 items-center justify-center overflow-hidden">
+              <div className="flex h-10 w-10 items-center justify-center overflow-hidden">
                 {stats?.agentId && agentImage ? (
                   /* Show Agent Played after match stats are updated */
                   <img
@@ -153,7 +153,7 @@ export default function PlayerCard3D({
               <div
                 className={`mb-1 flex items-center gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}
               >
-                <h3 className="truncate text-base font-black text-white uppercase md:text-lg">
+                <h3 className="truncate text-sm font-black text-white uppercase">
                   {player?.ign ||
                     player?.ingameName ||
                     player?.name ||
@@ -164,7 +164,7 @@ export default function PlayerCard3D({
                 )}
               </div>
               <p
-                className={`text-xs font-bold ${colors.text} tracking-wider uppercase ${mirrored ? "text-right" : ""}`}
+                className={`text-[10px] font-bold ${colors.text} tracking-wider uppercase ${mirrored ? "text-right" : ""}`}
               >
                 {player?.tag || player?.teamTag || "TAG"}
               </p>
@@ -194,37 +194,37 @@ export default function PlayerCard3D({
               stats.assists > 0 ||
               stats.acs > 0) && (
               <div
-                className={`mt-2 grid grid-cols-4 gap-1.5 ${mirrored ? "flex-row-reverse" : ""}`}
+                className={`mt-1.5 grid grid-cols-4 gap-1 ${mirrored ? "flex-row-reverse" : ""}`}
               >
-                <div className="flex flex-col items-center rounded-lg border border-emerald-500/10 bg-emerald-500/5 py-1.5 transition-colors hover:bg-emerald-500/10">
-                  <span className="text-[7px] font-black tracking-widest text-emerald-500/70 uppercase">
+                <div className="flex flex-col items-center rounded-md border border-emerald-500/10 bg-emerald-500/5 py-1 transition-colors hover:bg-emerald-500/10">
+                  <span className="text-[6px] font-black tracking-widest text-emerald-500/70 uppercase">
                     Kills
                   </span>
-                  <span className="text-xs font-black text-white">
+                  <span className="text-[11px] font-black text-white">
                     {stats.kills || 0}
                   </span>
                 </div>
-                <div className="flex flex-col items-center rounded-lg border border-red-500/10 bg-red-500/5 py-1.5 transition-colors hover:bg-red-500/10">
-                  <span className="text-[7px] font-black tracking-widest text-red-500/70 uppercase">
+                <div className="flex flex-col items-center rounded-md border border-red-500/10 bg-red-500/5 py-1 transition-colors hover:bg-red-500/10">
+                  <span className="text-[6px] font-black tracking-widest text-red-500/70 uppercase">
                     Death
                   </span>
-                  <span className="text-xs font-black text-white">
+                  <span className="text-[11px] font-black text-white">
                     {stats.deaths || 0}
                   </span>
                 </div>
-                <div className="flex flex-col items-center rounded-lg border border-amber-500/10 bg-amber-500/5 py-1.5 transition-colors hover:bg-amber-500/10">
-                  <span className="text-[7px] font-black tracking-widest text-amber-500/70 uppercase">
+                <div className="flex flex-col items-center rounded-md border border-amber-500/10 bg-amber-500/5 py-1 transition-colors hover:bg-amber-500/10">
+                  <span className="text-[6px] font-black tracking-widest text-amber-500/70 uppercase">
                     Assist
                   </span>
-                  <span className="text-xs font-black text-white">
+                  <span className="text-[11px] font-black text-white">
                     {stats.assists || 0}
                   </span>
                 </div>
-                <div className="flex flex-col items-center rounded-lg border border-purple-500/10 bg-purple-500/5 py-1.5 transition-colors hover:bg-purple-500/10">
-                  <span className="text-[7px] font-black tracking-widest text-purple-500/70 uppercase">
+                <div className="flex flex-col items-center rounded-md border border-purple-500/10 bg-purple-500/5 py-1 transition-colors hover:bg-purple-500/10">
+                  <span className="text-[6px] font-black tracking-widest text-purple-500/70 uppercase">
                     ACS
                   </span>
-                  <span className="text-xs font-black text-white">
+                  <span className="text-[11px] font-black text-white">
                     {stats.acs || 0}
                   </span>
                 </div>

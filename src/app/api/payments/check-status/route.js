@@ -112,6 +112,16 @@ export async function POST(request) {
                 );
             } else {
                 // Create New Registration if missing
+                // Strip payment-flow-specific fields from metadata before storing in registration
+                let regMetadata = payReq.metadata;
+                try {
+                    const parsed = typeof payReq.metadata === 'string' ? JSON.parse(payReq.metadata) : payReq.metadata;
+                    const { payment_links, verifiedVia, ...registrationMeta } = parsed;
+                    regMetadata = JSON.stringify(registrationMeta);
+                } catch (e) {
+                    // If parsing fails, use as-is
+                }
+
                 await adminDatabases.createDocument(
                     DATABASE_ID,
                     REGISTRATIONS_COLLECTION_ID,
@@ -120,7 +130,7 @@ export async function POST(request) {
                         tournamentId,
                         userId,
                         teamName,
-                        metadata: payReq.metadata,
+                        metadata: regMetadata,
                         registeredAt: new Date().toISOString(),
                         checkedIn: false,
                         transactionId: utr,

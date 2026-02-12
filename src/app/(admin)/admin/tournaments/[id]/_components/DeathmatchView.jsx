@@ -9,6 +9,7 @@ import {
   Loader as LoaderIcon,
   Clock,
   Medal,
+  Download,
 } from "lucide-react";
 import {
   updateParticipantScore,
@@ -44,7 +45,16 @@ export default function DeathmatchView({
     matchFormat: "Auto",
   });
 
-  const { handleUpdateMatchStatus } = actions;
+  const {
+    handleUpdateMatchStatus,
+    handleImportDMMatchJSON,
+    valMatchId,
+    setValMatchId,
+    valRegion,
+    setValRegion,
+    isFetchingVal,
+    importStatus,
+  } = actions;
 
   const {
     handleStartTournament,
@@ -145,10 +155,40 @@ export default function DeathmatchView({
       initialValues[reg.$id] = {
         kills: meta?.kills || 0,
         deaths: meta?.deaths || 0,
+        score: meta?.score || 0,
       };
     });
     setBulkEditValues(initialValues);
     setEditing(true);
+  };
+
+  const handleAutoFetch = async () => {
+    const result = await handleImportDMMatchJSON(registrations);
+    if (!result) return; // error already toasted by hook
+
+    // Pre-populate bulk edit values with fetched data
+    const initialValues = {};
+    registrations.forEach((reg) => {
+      const meta = parseMetadata(reg.metadata);
+      const fetched = result.matched[reg.$id];
+      initialValues[reg.$id] = {
+        kills: fetched?.kills ?? meta?.kills ?? 0,
+        deaths: fetched?.deaths ?? meta?.deaths ?? 0,
+        score: fetched?.score ?? meta?.score ?? 0,
+      };
+    });
+
+    setBulkEditValues(initialValues);
+    setEditing(true);
+
+    const matchedCount = Object.keys(result.matched).length;
+    if (result.unmatched.length > 0) {
+      toast.warning(
+        `${matchedCount} matched, ${result.unmatched.length} API players not found in registrations`,
+      );
+    } else {
+      toast.success(`All ${matchedCount} players matched!`);
+    }
   };
 
   const handleBulkUpdateScores = async () => {
@@ -156,14 +196,14 @@ export default function DeathmatchView({
     try {
       await Promise.all(
         Object.entries(bulkEditValues).map(([regId, values]) =>
-          updateParticipantScore(regId, values.kills, values.deaths),
+          updateParticipantScore(regId, values.kills, values.deaths, values.score || null),
         ),
       );
 
       // Identify winner, runner-up
       const entries = Object.entries(bulkEditValues);
       if (entries.length >= 1) {
-        const sortedEntries = entries.sort((a, b) => b[1].kills - a[1].kills);
+        const sortedEntries = entries.sort((a, b) => (b[1].score || 0) - (a[1].score || 0) || (b[1].kills || 0) - (a[1].kills || 0));
         const winnerId = sortedEntries[0][0];
         const runnerUpId = sortedEntries[1] ? sortedEntries[1][0] : null;
 
@@ -200,7 +240,7 @@ export default function DeathmatchView({
             const tournamentLink = `${origin}/tournaments/${tournament.$id}`;
 
             // 1. Channel specific message (with stats)
-            let message = `🏆 **DEATHMATCH RESULT**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths`;
+            let message = `🏆 **DEATHMATCH RESULT**\n\n**Winner:** ${winnerName} 👑\n**Stats:** ${winnerKills} Kills / ${winnerDeaths} Deaths / ${sortedEntries[0][1].score || 0} Score`;
             if (runnerUpId) {
               message += `\n**Runner Up:** ${runnerName} 🥈\n**Stats:** ${runnerKills} Kills / ${runnerDeaths} Deaths`;
             }
@@ -587,6 +627,70 @@ export default function DeathmatchView({
             </p>
           </div>
 
+          {/* Auto-Fetch Section */}
+          {!editing && (
+            <div className="mb-6 rounded-2xl border border-white/5 bg-slate-900/50 p-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-[200px] flex-1 space-y-1.5">
+                  <label className="ml-1 text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    Valorant Match ID
+                  </label>
+                  <input
+                    type="text"
+                    value={valMatchId}
+                    onChange={(e) => setValMatchId(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-sm font-bold text-white outline-none focus:border-rose-500"
+                    placeholder="e.g. a1b2c3d4-e5f6-..."
+                    disabled={isFetchingVal}
+                  />
+                </div>
+                <div className="w-28 space-y-1.5">
+                  <label className="ml-1 text-[9px] font-black tracking-widest text-slate-500 uppercase">
+                    Region
+                  </label>
+                  <select
+                    value={valRegion}
+                    onChange={(e) => setValRegion(e.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm font-bold text-white outline-none focus:border-rose-500"
+                    disabled={isFetchingVal}
+                  >
+                    <option value="ap">AP</option>
+                    <option value="eu">EU</option>
+                    <option value="na">NA</option>
+                    <option value="kr">KR</option>
+                    <option value="br">BR</option>
+                    <option value="latam">LATAM</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleAutoFetch}
+                  disabled={isFetchingVal || !valMatchId.trim()}
+                  className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-[10px] font-black text-white uppercase shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700 disabled:opacity-40"
+                >
+                  {isFetchingVal ? (
+                    <LoaderIcon className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Fetch Stats
+                </button>
+              </div>
+              {importStatus && (
+                <p
+                  className={`mt-3 text-[10px] font-bold ${
+                    importStatus.type === "success"
+                      ? "text-emerald-400"
+                      : importStatus.type === "error"
+                        ? "text-rose-400"
+                        : "text-slate-400"
+                  }`}
+                >
+                  {importStatus.message}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="overflow-hidden rounded-2xl border border-white/5">
             <table className="w-full">
               <thead>
@@ -603,8 +707,8 @@ export default function DeathmatchView({
                   <th className="px-4 py-3 text-center text-[9px] font-black tracking-widest text-rose-500/70 uppercase">
                     Deaths
                   </th>
-                  <th className="px-4 py-3 text-center text-[9px] font-black tracking-widest text-slate-500 uppercase">
-                    K/D
+                  <th className="px-4 py-3 text-center text-[9px] font-black tracking-widest text-amber-500/70 uppercase">
+                    Score
                   </th>
                 </tr>
               </thead>
@@ -620,16 +724,20 @@ export default function DeathmatchView({
                       : (meta?.deaths ?? 0);
                     const kd =
                       deaths === 0 ? kills : (kills / deaths).toFixed(2);
+                    const score = editing
+                      ? (bulkEditValues[reg.$id]?.score ?? meta?.score ?? 0)
+                      : (meta?.score ?? 0);
                     return {
                       reg,
                       meta,
                       kills,
                       deaths,
                       kd: parseFloat(kd) || 0,
+                      score,
                       playerName: meta?.playerName || reg.teamName,
                     };
                   })
-                  .sort((a, b) => b.kd - a.kd || b.kills - a.kills)
+                  .sort((a, b) => b.score - a.score || b.kills - a.kills)
                   .map((player, idx) => (
                     <tr
                       key={player.reg.$id}
@@ -714,11 +822,31 @@ export default function DeathmatchView({
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span
-                          className={`text-sm font-black ${player.kd >= 1 ? "text-emerald-500" : "text-slate-500"}`}
-                        >
-                          {player.kd.toFixed(2)}
-                        </span>
+                        {editing ? (
+                          <input
+                            type="number"
+                            className="w-20 rounded-lg border border-white/10 bg-slate-950 px-2 py-1.5 text-center text-sm font-bold text-amber-400 outline-none focus:border-amber-500"
+                            value={
+                              bulkEditValues[player.reg.$id]?.score ??
+                              player.score
+                            }
+                            onChange={(e) =>
+                              setBulkEditValues({
+                                ...bulkEditValues,
+                                [player.reg.$id]: {
+                                  ...bulkEditValues[player.reg.$id],
+                                  score: parseInt(e.target.value) || 0,
+                                },
+                              })
+                            }
+                          />
+                        ) : (
+                          <span
+                            className={`text-sm font-black ${player.score > 0 ? "text-amber-400" : "text-slate-500"}`}
+                          >
+                            {player.score}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

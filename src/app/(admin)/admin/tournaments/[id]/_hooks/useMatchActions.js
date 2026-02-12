@@ -468,6 +468,94 @@ export function useMatchActions(
     }
   };
 
+  /**
+   * Auto-fetch DM match stats from Henrik Valorant API.
+   * Matches API players to tournament registrations by Riot ID.
+   * Returns { matched: { [regId]: { kills, deaths } }, unmatched: string[] }
+   */
+  const handleImportDMMatchJSON = async (dmRegistrations) => {
+    try {
+      const matchIdToUse = valMatchId.trim();
+      if (!matchIdToUse) {
+        toast.error("Please enter a Match ID.");
+        return null;
+      }
+
+      setIsFetchingVal(true);
+      setImportStatus({ type: "info", message: "Fetching DM match data..." });
+
+      const jsonData = await getMatchV4(valRegion, matchIdToUse);
+      const matchData = jsonData.data || jsonData;
+
+      if (!matchData || !matchData.players || !Array.isArray(matchData.players)) {
+        throw new Error("Invalid match data — no players array found.");
+      }
+
+      // Validate that this is actually a Deathmatch
+      const matchMode = matchData.metadata?.mode?.toLowerCase() || matchData.metadata?.queue?.toLowerCase() || "";
+      if (matchMode && !matchMode.includes("deathmatch")) {
+        throw new Error(`This match is "${matchData.metadata?.mode || matchData.metadata?.queue}" — not a Deathmatch. Please use a DM match ID.`);
+      }
+
+      const apiPlayers = matchData.players;
+      const matched = {};
+      const unmatchedApi = [];
+
+      // Build a lookup from registration playerName (name portion) -> registration
+      const regLookup = {};
+      (dmRegistrations || []).forEach((reg) => {
+        const meta = parseMetadata(reg.metadata);
+        if (meta?.playerName) {
+          // playerName is stored as "ingameName#tag" — extract the name part
+          const namePart = meta.playerName.split("#")[0].trim().toLowerCase();
+          regLookup[namePart] = reg;
+        }
+      });
+
+      // Match each API player to a registration
+      for (const ap of apiPlayers) {
+        const apiName = (ap.name || "").trim().toLowerCase();
+        const reg = regLookup[apiName];
+        if (reg) {
+          matched[reg.$id] = {
+            kills: ap.stats?.kills || 0,
+            deaths: ap.stats?.deaths || 0,
+            score: ap.stats?.score || 0,
+          };
+        } else {
+          unmatchedApi.push(ap.name || "Unknown");
+        }
+      }
+
+      const matchedCount = Object.keys(matched).length;
+      const totalRegs = (dmRegistrations || []).length;
+
+      if (matchedCount === 0) {
+        throw new Error(
+          "No players matched. Ensure registered Riot IDs match the match participants."
+        );
+      }
+
+      let statusMsg = `Matched ${matchedCount}/${totalRegs} players.`;
+      if (unmatchedApi.length > 0) {
+        statusMsg += ` Unmatched API players: ${unmatchedApi.join(", ")}`;
+      }
+
+      setImportStatus({ type: "success", message: statusMsg });
+      setValMatchId("");
+      setTimeout(() => setImportStatus(null), 5000);
+
+      return { matched, unmatched: unmatchedApi };
+    } catch (e) {
+      console.error("DM Import Error:", e);
+      setImportStatus({ type: "error", message: e.message });
+      setTimeout(() => setImportStatus(null), 5000);
+      return null;
+    } finally {
+      setIsFetchingVal(false);
+    }
+  };
+
   const handleStartVeto = async (matchId) => {
     setUpdating(true);
     try {
@@ -782,6 +870,7 @@ export function useMatchActions(
     closeMatchEditor,
     handleSaveMatchDetails,
     handleImportMatchJSON,
+    handleImportDMMatchJSON,
     handleUpdateMatchStatus,
     handleStartVeto,
     handleResetIndividualMatch,
