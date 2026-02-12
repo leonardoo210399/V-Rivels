@@ -312,6 +312,27 @@ export async function finalizeMatch(matchId, scoreA, scoreB) {
 
     // 1. Get current match and tournament
     const match = await databases.getDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matchId);
+
+    // Idempotency check: If match is already completed, don't update global stats again
+    if (match.status === 'completed') {
+        const currentWinnerId = match.winner;
+        const newWinnerId = scoreA > scoreB ? match.teamA : (scoreB > scoreA ? match.teamB : null);
+        
+        if (currentWinnerId === newWinnerId) {
+            // Just update scores if winner is the same
+            await databases.updateDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matchId, {
+                scoreA,
+                scoreB
+            });
+            return currentWinnerId;
+        } else {
+            // Winner changed - recommendation is to reset the match first, but we could 
+            // theoretically handle it here. For safety and simplicity, we'll throw an error
+            // to ensure the admin uses the reset flow which correctly handles global stats.
+            throw new Error("Match already completed with a different winner. Please reset the match before changing the winner to maintain leaderboard sync.");
+        }
+    }
+
     const tournament = await databases.getDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, match.tournamentId);
     
     // 2. Determine winner (registration ID)
@@ -485,11 +506,24 @@ export async function finalizeDeathmatch(tournamentId, winnerRegId, runnerUpRegI
         }
 
         // 3. Mark tournament with winners for reversal support
-
         await databases.updateDocument(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, tournamentId, {
             winnerRegId,
-            runnerUpRegId
+            runnerUpRegId,
+            status: 'completed'
         });
+
+        // 4. Mark the Match (Lobby) doc as completed (Sync Leaderboard)
+        try {
+            const matches = await getMatches(tournamentId);
+            if (matches.length > 0) {
+                await databases.updateDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matches[0].$id, {
+                    status: 'completed',
+                    winner: winnerRegId
+                });
+            }
+        } catch (matchErr) {
+            console.warn("Failed to update DM match doc status:", matchErr);
+        }
 
         return true;
     } catch (err) {
@@ -507,6 +541,26 @@ export async function revertTournamentStats(tournamentId) {
         
         // If not completed or no winner, nothing to revert
         if (tournament.status !== 'completed' || !tournament.winnerRegId) return false;
+
+        // 0. Revert individual match wins for ALL matches in this tournament (Sync Leaderboard)
+        try {
+            const matches = await getMatches(tournamentId);
+            for (const m of matches) {
+                if (m.status === 'completed' && m.winner) {
+                    try {
+                        const reg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, m.winner);
+                        const profile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, reg.userId);
+                        await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, reg.userId, {
+                            matchesWon: Math.max(0, (profile.matchesWon || 0) - 1)
+                        });
+                    } catch (e) {
+                        console.warn(`Failed to revert match win for registration ${m.winner}`, e);
+                    }
+                }
+            }
+        } catch (matchErr) {
+            console.warn("Failed to revert individual match wins for tournament:", matchErr);
+        }
 
         // 1. Revert Winner
         try {
@@ -678,7 +732,28 @@ export function parsePlayerStats(match) {
  * Clears scores, winner, veto data, player stats, and sets status back to scheduled
  */
 export async function resetMatch(matchId) {
+    const USERS_COLLECTION_ID = "users";
+    const REGISTRATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_REGISTRATIONS_COLLECTION_ID;
+
     try {
+        // 1. Fetch current match to see if we need to revert stats
+        const match = await databases.getDocument(DATABASE_ID, MATCHES_COLLECTION_ID, matchId);
+
+        // 2. If it was completed, decrement the winner's match win count
+        if (match.status === 'completed' && match.winner) {
+            try {
+                const reg = await databases.getDocument(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, match.winner);
+                const profile = await databases.getDocument(DATABASE_ID, USERS_COLLECTION_ID, reg.userId);
+                
+                await databases.updateDocument(DATABASE_ID, USERS_COLLECTION_ID, reg.userId, {
+                    matchesWon: Math.max(0, (profile.matchesWon || 0) - 1)
+                });
+            } catch (statError) {
+                console.warn("Failed to revert winner stats during match reset:", statError);
+            }
+        }
+
+        // 3. Reset match document
         return await databases.updateDocument(
             DATABASE_ID,
             MATCHES_COLLECTION_ID,

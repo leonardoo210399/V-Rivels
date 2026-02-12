@@ -77,3 +77,11 @@ export async function getAgents() {
     }
     return response.json();
 }
+
+export async function getStatus(region = "ap") {
+    const response = await fetch(`${HENRIK_API_BASE}/v1/status/${region}`);
+    if (!response.ok) {
+        throw new Error("Failed to fetch API status");
+    }
+    return response.json();
+}

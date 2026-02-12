@@ -228,7 +228,11 @@ export default function MatchHistory({
               .filter((m) => {
                 if (!m || !m.metadata) return false;
                 if (activeTab === "All") return true;
-                const mode = m.metadata.mode?.toLowerCase() || "";
+                const modeMeta = m.metadata.mode;
+                const modeStr = (typeof modeMeta === 'object' && modeMeta !== null) 
+                  ? (modeMeta.name || modeMeta.localized || String(modeMeta)) 
+                  : String(modeMeta || "");
+                const mode = modeStr.toLowerCase();
                 const tab = activeTab.toLowerCase();
 
                 if (tab === "deathmatch") return mode.includes("deathmatch");

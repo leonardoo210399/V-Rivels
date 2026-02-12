@@ -313,13 +313,18 @@ export function useMatchActions(
       const jsonData = await getMatchV4(valRegion, matchIdToUse);
       const matchData = jsonData.data || jsonData;
 
-      if (!matchData || !matchData.players || !matchData.teams) {
-        throw new Error("Invalid match data structure received from the API.");
+      const jsonPlayers = (Array.isArray(matchData.players) ? matchData.players : matchData.players?.all_players) || [];
+      const jsonTeamsRaw = matchData.teams || {};
+      const jsonTeams = Array.isArray(jsonTeamsRaw) 
+        ? jsonTeamsRaw 
+        : Object.entries(jsonTeamsRaw).map(([key, val]) => ({ ...val, team_id: key, team: key }));
+
+      if (!jsonPlayers.length || !jsonTeams.length) {
+        throw new Error("Invalid match data structure received from the API (Empty players or teams).");
       }
 
-      const jsonPlayers = matchData.players;
-      const jsonTeams = matchData.teams;
-      const totalRounds = (jsonTeams[0]?.rounds?.won || 0) + (jsonTeams[0]?.rounds?.lost || 0);
+      const t0 = jsonTeams[0] || {};
+      const totalRounds = (t0.rounds?.won || t0.rounds_won || 0) + (t0.rounds?.lost || t0.rounds_lost || 0) || matchData.metadata?.rounds_played || 0;
 
       let jsonTeamAId = null;
       let jsonTeamBId = null;
@@ -327,10 +332,10 @@ export function useMatchActions(
       // 1. Map Team A
       for (const p of jsonPlayers) {
         const foundA = teamAPlayers.some(
-          (tp) => tp.ingameName.toLowerCase() === p.name.toLowerCase(),
+          (tp) => (tp.ingameName || "").toLowerCase() === (p.name || "").toLowerCase(),
         );
         if (foundA) {
-          jsonTeamAId = p.team_id;
+          jsonTeamAId = p.team_id || p.team;
           break;
         }
       }
@@ -341,15 +346,15 @@ export function useMatchActions(
       } else {
         for (const p of jsonPlayers) {
           const foundB = teamBPlayers.some(
-            (tp) => tp.ingameName.toLowerCase() === p.name.toLowerCase(),
+            (tp) => (tp.ingameName || "").toLowerCase() === (p.name || "").toLowerCase(),
           );
           if (foundB) {
-            jsonTeamBId = p.team_id;
+            jsonTeamBId = p.team_id || p.team;
             break;
           }
         }
         if (jsonTeamBId) {
-          jsonTeamAId = jsonTeams.find((t) => t.team_id !== jsonTeamBId)?.team_id;
+          jsonTeamAId = jsonTeams.find((t) => (t.team_id || t.team) !== jsonTeamBId)?.team_id || jsonTeams.find((t) => (t.team_id || t.team) !== jsonTeamBId)?.team;
         }
       }
 
@@ -365,8 +370,8 @@ export function useMatchActions(
         tournamentPlayers.forEach((tp, idx) => {
           const jp = jsonPlayers.find(
             (p) =>
-              p.team_id === targetTeamId &&
-              p.name.toLowerCase() === tp.ingameName.toLowerCase(),
+              (p.team_id === targetTeamId || p.team === targetTeamId) &&
+              (p.name || "").toLowerCase() === (tp.ingameName || "").toLowerCase(),
           );
           if (jp) {
             const playerScore = jp.stats.score || 0;
@@ -436,6 +441,12 @@ export function useMatchActions(
             if (s.a > s.b) winsA++;
             else if (s.b > s.a) winsB++;
           });
+        } else {
+          // Normalize score logic for single map import
+          const teamAObj = jsonTeams.find(t => (t.team_id || t.team) === jsonTeamAId);
+          const teamBObj = jsonTeams.find(t => (t.team_id || t.team) === jsonTeamBId);
+          winsA = teamAObj?.rounds_won ?? teamAObj?.rounds?.won ?? scoreA;
+          winsB = teamBObj?.rounds_won ?? teamBObj?.rounds?.won ?? scoreB;
         }
 
         return {
@@ -487,35 +498,74 @@ export function useMatchActions(
       const jsonData = await getMatchV4(valRegion, matchIdToUse);
       const matchData = jsonData.data || jsonData;
 
-      if (!matchData || !matchData.players || !Array.isArray(matchData.players)) {
-        throw new Error("Invalid match data — no players array found.");
+      const apiPlayers = (Array.isArray(matchData.players) ? matchData.players : matchData.players?.all_players) || [];
+
+      if (!apiPlayers.length) {
+        throw new Error("Invalid match data — no players found.");
       }
 
       // Validate that this is actually a Deathmatch
-      const matchMode = matchData.metadata?.mode?.toLowerCase() || matchData.metadata?.queue?.toLowerCase() || "";
-      if (matchMode && !matchMode.includes("deathmatch")) {
-        throw new Error(`This match is "${matchData.metadata?.mode || matchData.metadata?.queue}" — not a Deathmatch. Please use a DM match ID.`);
+      const metadata = matchData.metadata || {};
+      const extractStr = (val) => {
+        if (!val) return "";
+        if (typeof val === "string") return val;
+        return val.name || val.localized || val.id || String(val);
+      };
+
+      // 1. Check metadata strings (standard detection)
+      const isDetailedMatch = Object.values(metadata).some(val => 
+        extractStr(val).toLowerCase().includes("deathmatch")
+      );
+      
+      // 2. Smart Detection: Check if it's an FFA match (team IDs are PUUIDs, not "Red" or "Blue")
+      const isFFA = apiPlayers.some(p => {
+        const team = String(p.team || p.team_id || "").toLowerCase();
+        return team && team !== "red" && team !== "blue" && team !== "neutral";
+      });
+
+      const isDM = isDetailedMatch || isFFA;
+      
+      if (!isDM) {
+        const displayMode = extractStr(metadata.mode) || "Unknown";
+        const displayQueue = extractStr(metadata.queue) || "Unknown";
+        throw new Error(`This match is "${displayMode}" (Queue: ${displayQueue}) — not a Deathmatch. Please use a DM match ID.`);
       }
 
-      const apiPlayers = matchData.players;
+      // No change needed here anymore as apiPlayers is already defined above
       const matched = {};
       const unmatchedApi = [];
 
-      // Build a lookup from registration playerName (name portion) -> registration
+      // Build a lookup from registration data
       const regLookup = {};
       (dmRegistrations || []).forEach((reg) => {
-        const meta = parseMetadata(reg.metadata);
-        if (meta?.playerName) {
-          // playerName is stored as "ingameName#tag" — extract the name part
-          const namePart = meta.playerName.split("#")[0].trim().toLowerCase();
+        const meta = parseMetadata(reg.metadata) || {};
+        const possibleNames = [
+          reg.teamName,
+          meta.playerName,
+          meta.riotId,
+          meta.ingameName
+        ].filter(Boolean);
+
+        possibleNames.forEach(nameStr => {
+          // 1. Name part (before #)
+          const namePart = nameStr.split("#")[0].trim().toLowerCase();
           regLookup[namePart] = reg;
-        }
+          
+          // 2. Full ID (normalized by removing spaces)
+          const fullIdNormalized = nameStr.replace(/[#\s]/g, "").toLowerCase();
+          regLookup[fullIdNormalized] = reg;
+        });
       });
 
       // Match each API player to a registration
       for (const ap of apiPlayers) {
         const apiName = (ap.name || "").trim().toLowerCase();
-        const reg = regLookup[apiName];
+        const apiTag = (ap.tag || "").trim().toLowerCase();
+        const apiFullNormalized = (apiName + apiTag).replace(/\s/g, "");
+        
+        // Try matching by name part or full normalized ID
+        const reg = regLookup[apiName] || regLookup[apiFullNormalized];
+        
         if (reg) {
           matched[reg.$id] = {
             kills: ap.stats?.kills || 0,
@@ -523,7 +573,7 @@ export function useMatchActions(
             score: ap.stats?.score || 0,
           };
         } else {
-          unmatchedApi.push(ap.name || "Unknown");
+          unmatchedApi.push(`${ap.name}#${ap.tag}`);
         }
       }
 
@@ -531,8 +581,9 @@ export function useMatchActions(
       const totalRegs = (dmRegistrations || []).length;
 
       if (matchedCount === 0) {
+        const sampleApi = apiPlayers.slice(0, 5).map(p => `${p.name}#${p.tag}`).join(", ");
         throw new Error(
-          "No players matched. Ensure registered Riot IDs match the match participants."
+          `No players matched. API has players like: [${sampleApi}]. Ensure your tournament registrations match these exactly.`
         );
       }
 
