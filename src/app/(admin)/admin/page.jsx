@@ -7,7 +7,8 @@ import Loader from "@/components/Loader";
 import { databases } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import MaintenanceToggle from "@/components/admin/MaintenanceToggle";
-import { syncLeaderboardWithDB } from "@/lib/maintenance";
+import { getStatus } from "@/lib/valorant";
+import Link from "next/link";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const USERS_COLLECTION_ID = "users";
@@ -24,30 +25,72 @@ export default function AdminDashboard() {
     tournaments: 0,
     registrations: 0,
   });
+  const [systemStatus, setSystemStatus] = useState({
+    server: "Checking...",
+    database: "Connecting...",
+    latency: 0,
+    valorantApi: "Checking...",
+  });
 
   const fetchCounts = async () => {
+    const startTime = performance.now();
     try {
       setLoading(true);
-      const [usersRes, tournamentsRes, regsRes] = await Promise.all([
+      const [usersRes, tournamentsRes, regsRes, valorantStatusRes] = await Promise.all([
         databases.listDocuments(DATABASE_ID, USERS_COLLECTION_ID, []),
         databases.listDocuments(DATABASE_ID, TOURNAMENTS_COLLECTION_ID, []),
         databases.listDocuments(DATABASE_ID, REGISTRATIONS_COLLECTION_ID, [
           Query.limit(100),
         ]),
+        getStatus("ap").catch(() => null), // Fail gracefully
       ]);
+
+      const endTime = performance.now();
+      const latency = Math.round(endTime - startTime);
 
       // Filter out orphans for the total count display
       const liveRegs = regsRes.documents.filter((reg) =>
         tournamentsRes.documents.some((t) => t.$id === reg.tournamentId),
       );
 
+      // Parse Valorant API Status
+      // API returns { status: 200, data: { maintenances: [], incidents: [] } } usually
+      // If data.maintenances or incidents are empty, it's Operational.
+      let vStatus = "Unknown";
+      let vTrend = "neutral";
+      if (valorantStatusRes && valorantStatusRes.data) {
+        const hasIssues =
+          valorantStatusRes.data.maintenances?.length > 0 ||
+          valorantStatusRes.data.incidents?.length > 0;
+        vStatus = hasIssues ? "Issues" : "Online";
+        vTrend = hasIssues ? "down" : "up";
+      } else {
+         vStatus = "Offline";
+         vTrend = "down";
+      }
+
       setCounts({
         users: usersRes.total,
         tournaments: tournamentsRes.total,
         registrations: liveRegs.length,
       });
+
+      setSystemStatus({
+        server: "Online",
+        database: "Secure",
+        latency: latency,
+        valorantApi: vStatus,
+        valorantTrend: vTrend,
+      });
     } catch (error) {
       console.error("Failed to fetch admin stats", error);
+      setSystemStatus({
+        server: "Offline",
+        database: "Error",
+        latency: 0,
+        valorantApi: "Error",
+        valorantTrend: "down",
+      });
     } finally {
       setLoading(false);
     }
@@ -80,13 +123,14 @@ export default function AdminDashboard() {
       trend: "neutral",
     },
     {
-      name: "Server Status",
-      value: "Online",
+      name: "Valorant API",
+      value: systemStatus.valorantApi,
       icon: Zap,
-      change: "API Live",
-      trend: "up",
+      change: "AP Region",
+      trend: systemStatus.valorantTrend,
     },
   ];
+
 
   const handleCleanup = () => {
     toast("Cleanup Orphaned Records?", {
@@ -212,6 +256,8 @@ export default function AdminDashboard() {
                   className={`rounded-md px-2 py-1 text-[10px] font-bold tracking-widest uppercase ${
                     stat.trend === "up"
                       ? "bg-emerald-500/10 text-emerald-500"
+                      : stat.trend === "down"
+                      ? "bg-rose-500/10 text-rose-500"
                       : "bg-slate-800 text-slate-400"
                   }`}
                 >
@@ -241,22 +287,28 @@ export default function AdminDashboard() {
             Quick Actions
           </h3>
           <div className="grid grid-cols-2 gap-4">
-            <button className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5">
+            <Link
+              href="/admin/tournaments"
+              className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5"
+            >
               <p className="mb-1 text-xs font-bold text-slate-500 uppercase">
                 Tournaments
               </p>
               <p className="text-sm font-bold text-white group-hover:text-rose-500">
                 Create New
               </p>
-            </button>
-            <button className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5">
+            </Link>
+            <Link
+              href="/admin/users"
+              className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5"
+            >
               <p className="mb-1 text-xs font-bold text-slate-500 uppercase">
                 Users
               </p>
               <p className="text-sm font-bold text-white group-hover:text-rose-500">
                 View All
               </p>
-            </button>
+            </Link>
             <button
               onClick={handleCleanup}
               className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5"
@@ -268,9 +320,9 @@ export default function AdminDashboard() {
                 Cleanup Records
               </p>
             </button>
-            <button 
-                onClick={handleSyncLeaderboard}
-                className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5"
+            <button
+              onClick={handleSyncLeaderboard}
+              className="group rounded-xl border border-white/5 bg-slate-950 p-4 text-left transition-all hover:bg-white/5"
             >
               <p className="mb-1 text-xs font-bold text-slate-500 uppercase">
                 Leaderboard
@@ -291,14 +343,20 @@ export default function AdminDashboard() {
               <span className="text-sm text-slate-400">
                 Database Connection
               </span>
-              <span className="text-xs font-bold text-emerald-500 uppercase">
-                Secure
+              <span
+                className={`text-xs font-bold uppercase ${
+                  systemStatus.database === "Secure"
+                    ? "text-emerald-500"
+                    : "text-rose-500"
+                }`}
+              >
+                {systemStatus.database}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg border border-white/5 bg-slate-950 p-3">
-              <span className="text-sm text-slate-400">Total Storage</span>
+              <span className="text-sm text-slate-400">System Latency</span>
               <span className="text-xs font-bold text-white uppercase">
-                4.2 GB
+                {systemStatus.latency} ms
               </span>
             </div>
           </div>
