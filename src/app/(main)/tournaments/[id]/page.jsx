@@ -1388,24 +1388,45 @@ export default function TournamentDetailPage({ params }) {
               ) : isPaymentRejected ? (
                 <div className="flex flex-col gap-3 md:gap-4">
                   <div className="flex items-start gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
-                    <UserX className="h-4 w-4 md:h-5 md:w-5" />
+                    <UserX className="h-4 w-4 shrink-0 mt-0.5 md:h-5 md:w-5" />
                     <div className="min-w-0 flex-1">
                       <p className="mb-0.5 text-[10px] font-black tracking-widest uppercase md:text-xs">
                         Payment Rejected
                       </p>
                       <p className="text-[9px] leading-tight font-medium opacity-80 md:text-[10px]">
                         {paymentRequest?.rejectionReason ||
-                          "Your payment was rejected. Please contact support."}
+                          "Your payment was rejected. Please try again or contact support."}
                       </p>
-                      <Link
-                        href="/support"
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-white/5 bg-slate-900 px-4 py-2 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
-                      >
-                        <Info className="h-3 w-3 md:h-4 md:w-4" />
-                        Help / Support
-                      </Link>
                     </div>
                   </div>
+
+                  <button
+                    onClick={async () => {
+                      setRefreshingStatus(true);
+                      try {
+                        await deletePaymentRequest(paymentRequest.$id);
+                        setPaymentRequest(null);
+                        setShowPaymentModal(true);
+                      } catch (e) {
+                        toast.error("Failed to retry: " + e.message);
+                      } finally {
+                        setRefreshingStatus(false);
+                      }
+                    }}
+                    disabled={refreshingStatus}
+                    className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-rose-600 px-6 py-3 text-[11px] font-black tracking-widest text-white uppercase shadow-lg shadow-rose-900/20 transition-all hover:bg-rose-500 active:scale-[0.98] disabled:opacity-50"
+                  >
+                    <RotateCcw className={`h-4 w-4 transition-transform group-hover:-rotate-45 ${refreshingStatus ? "animate-spin" : ""}`} />
+                    {refreshingStatus ? "Processing..." : "Retry Payment"}
+                  </button>
+
+                  <Link
+                    href="/support"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/5 bg-slate-900/60 px-4 py-2.5 text-[10px] font-bold text-slate-400 transition-all hover:bg-slate-800 hover:text-white md:text-xs"
+                  >
+                    <Info className="h-3 w-3 md:h-4 md:w-4" />
+                    Help / Support
+                  </Link>
                 </div>
               ) : isFull ? (
                 <div className="flex items-center gap-2 rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-rose-500 md:rounded-xl md:p-4">
