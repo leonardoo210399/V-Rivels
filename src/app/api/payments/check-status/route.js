@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { databases as adminDatabases } from "@/lib/server/appwrite";
 import { Query } from "node-appwrite";
 import { announceRegistrationApprovedAction } from "@/app/actions/discord";
+import { assignTournamentRole, addMemberToTournamentChannels } from "@/lib/discord-bot";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
 const PAYMENT_REQUESTS_COLLECTION_ID = "payment_requests";
@@ -165,9 +166,29 @@ export async function POST(request) {
                 const meta = typeof payReq.metadata === 'string' ? JSON.parse(payReq.metadata) : payReq.metadata;
                 const registrantName = teamName || meta?.playerName || "A Player";
 
+                // 1. Assign Role / Channel Access (New Logic for Paid Tournaments)
+                if (discordId) {
+                    try {
+                        if (tournament.discordRoleId) {
+                            await assignTournamentRole(tournament.discordRoleId, discordId);
+                            console.log(`[CheckStatus] Assigned role ${tournament.discordRoleId} to ${discordId}`);
+                        } else if (tournament.discordChannelId || tournament.discordVoiceChannelId) {
+                            await addMemberToTournamentChannels(
+                                [tournament.discordChannelId, tournament.discordVoiceChannelId],
+                                discordId
+                            );
+                            console.log(`[CheckStatus] Added ${discordId} to channels`);
+                        }
+                    } catch (roleErr) {
+                         console.warn("[CheckStatus] Failed to assign Discord role/channels:", roleErr.message);
+                    }
+                }
+
+                // 2. Announce in Discord
                 await announceRegistrationApprovedAction(tournament.name, registrantName, utr, discordId);
+
             } catch (discordErr) {
-                console.warn("Discord announcement failed during check-status:", discordErr);
+                console.warn("Discord actions failed during check-status:", discordErr);
             }
         } catch (dbErr) {
             console.error("Failed to complete registration in check-status:", dbErr);
